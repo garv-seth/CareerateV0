@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,19 +15,21 @@ function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
-    <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/tools" component={Tools} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/resume-analysis" component={ResumeAnalysis} />
-        </>
-      )}
-      <Route component={NotFound} />
-    </Switch>
+    <Router>
+      <Routes>
+        {isLoading || !isAuthenticated ? (
+          <Route path="/" element={<Landing />} />
+        ) : (
+          <>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/tools" element={<Tools />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/resume-analysis" element={<ResumeAnalysis />} />
+          </>
+        )}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
   );
 }
 
@@ -35,8 +37,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Router />
+        <Router>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+          </Routes>
+          <Toaster />
+        </Router>
       </TooltipProvider>
     </QueryClientProvider>
   );
