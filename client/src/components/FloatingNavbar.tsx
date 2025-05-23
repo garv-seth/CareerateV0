@@ -43,7 +43,7 @@ export function FloatingNavbar() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between w-full max-w-6xl mx-auto">
         {/* Logo */}
         <Link href="/">
           <motion.div
