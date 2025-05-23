@@ -1,0 +1,45 @@
+[vite] connecting...
+[vite] connected.
+Warning: validateDOMNesting(...): <a> cannot appear as a descendant of &lt;a&gt;.
+    at a
+    at MotionComponent (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=0dcac33c:6536:40)
+    at a
+    at https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0dcac33c:337:18
+    at div
+    at div
+    at div
+    at nav
+    at MotionComponent (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=0dcac33c:6536:40)
+    at FloatingNavbar (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/src/components/FloatingNavbar.tsx:27:39)
+    at div
+    at Landing
+    at Route (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0dcac33c:323:16)
+    at Switch (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0dcac33c:379:17)
+    at Router (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/src/App.tsx?v=Qd74Yn3p3_LJqV9jM47rc:32:42)
+    at Provider (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PLT6GTVM.js?v=0dcac33c:38:15)
+    at TooltipProvider (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=0dcac33c:60:5)
+    at QueryClientProvider (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=0dcac33c:2805:3)
+    at App
+at a
+at MotionComponent (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=0dcac33c:6536:40)
+at a
+at https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0dcac33c:337:18
+at div
+at div
+at div
+at nav
+at MotionComponent (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/framer-motion.js?v=0dcac33c:6536:40)
+at FloatingNavbar (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/src/components/FloatingNavbar.tsx:27:39)
+at div
+at Landing
+at Route (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0dcac33c:323:16)
+at Switch (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=0dcac33c:379:17)
+at Router (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/src/App.tsx?v=Qd74Yn3p3_LJqV9jM47rc:32:42)
+at Provider (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-PLT6GTVM.js?v=0dcac33c:38:15)
+at TooltipProvider (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=0dcac33c:60:5)
+at QueryClientProvider (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=0dcac33c:2805:3)
+at App
+at t.value (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://6a8edf08-b0a4-4230-94d7-362a390925a6-00-2xw65e5k15qkw.picard.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400

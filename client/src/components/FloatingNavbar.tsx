@@ -60,7 +60,7 @@ export function FloatingNavbar() {
           <div className="flex items-center space-x-6">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href}>
-                <motion.a
+                <motion.span
                   className={`text-foreground hover:text-primary transition-colors cursor-pointer ${
                     location === item.href ? "text-primary font-medium" : ""
                   }`}
@@ -68,7 +68,7 @@ export function FloatingNavbar() {
                   whileTap={{ scale: 0.95 }}
                 >
                   {item.label}
-                </motion.a>
+                </motion.span>
               </Link>
             ))}
           </div>
@@ -82,7 +82,7 @@ export function FloatingNavbar() {
                     <User className="w-3 h-3 text-primary-foreground" />
                   </div>
                   <span className="text-sm font-medium">
-                    {user?.firstName || "User"}
+                    {(user as any)?.firstName || "User"}
                   </span>
                 </div>
                 <Button
@@ -122,7 +122,7 @@ export function FloatingNavbar() {
                 <div className="space-y-4">
                   {navItems.map((item) => (
                     <Link key={item.href} href={item.href}>
-                      <motion.a
+                      <motion.span
                         className={`block text-lg text-foreground hover:text-primary transition-colors cursor-pointer ${
                           location === item.href ? "text-primary font-medium" : ""
                         }`}
@@ -130,7 +130,7 @@ export function FloatingNavbar() {
                         whileHover={{ x: 5 }}
                       >
                         {item.label}
-                      </motion.a>
+                      </motion.span>
                     </Link>
                   ))}
                 </div>
@@ -144,10 +144,10 @@ export function FloatingNavbar() {
                         </div>
                         <div>
                           <div className="font-medium">
-                            {user?.firstName || "User"}
+                            {(user as any)?.firstName || "User"}
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            {user?.email}
+                            {(user as any)?.email}
                           </div>
                         </div>
                       </div>
