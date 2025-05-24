@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as AppRouter, Routes, Route } from 'react-router-dom';
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -10,41 +10,41 @@ import Tools from "@/pages/Tools";
 import Profile from "@/pages/Profile";
 import ResumeAnalysis from "@/pages/ResumeAnalysis";
 import NotFound from "@/pages/not-found";
+import Footer from "./components/Footer";
 
-function Router() {
+function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
-    <Router>
-      <Routes>
-        {isLoading || !isAuthenticated ? (
-          <Route path="/" element={<Landing />} />
-        ) : (
-          <>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/tools" element={<Tools />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/resume-analysis" element={<ResumeAnalysis />} />
-          </>
-        )}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+    <Routes>
+      {isLoading || !isAuthenticated ? (
+        <Route path="/" element={<Landing />} />
+      ) : (
+        <>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/tools" element={<Tools />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/resume-analysis" element={<ResumeAnalysis />} />
+        </>
+      )}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 }
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Router>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-          </Routes>
-          <Toaster />
-        </Router>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <div className="min-h-screen flex flex-col font-sfpro bg-background">
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AppRouter>
+            <AppRoutes />
+            <Toaster />
+          </AppRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+      <Footer />
+    </div>
   );
 }
 

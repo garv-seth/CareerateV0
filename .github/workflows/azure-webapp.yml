@@ -1,0 +1,50 @@
+name: Azure Web App CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
+      AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+      - name: Install backend dependencies
+        run: |
+          cd api
+          npm ci
+      - name: Install frontend dependencies
+        run: |
+          cd client
+          npm ci
+      - name: Build frontend
+        run: |
+          cd client
+          npm run build
+      - name: Build backend
+        run: |
+          cd api
+          npm run build
+      - name: Run backend tests
+        run: |
+          cd api
+          npm test
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          slot-name: 'production'
+          package: ./api 

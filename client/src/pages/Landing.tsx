@@ -16,6 +16,7 @@ import {
   Linkedin,
   Github
 } from "lucide-react";
+import logo from '/CareerateICON.png';
 
 export default function Landing() {
   const features = [
@@ -137,30 +138,34 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background font-sfpro">
       <FloatingNavbar />
       
       {/* Hero Section */}
       <section className="spiral-bg min-h-screen flex items-center justify-center px-6 py-24 relative overflow-hidden">
         <SpiralAnimation />
-        
+        {/* Animated Gradient Overlay */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-600/40 via-blue-400/30 to-blue-900/60 animate-gradient-move pointer-events-none" />
         <div className="max-w-6xl mx-auto text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6 leading-tight">
-              Master <span className="text-primary">AI</span> for Your<br />
-              <span className="text-secondary">Career Success</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+            <div className="flex flex-col items-center justify-center mb-8 gap-4">
+              <img src={logo} alt="Careerate Logo" className="w-20 h-20 rounded-full shadow-2xl border-4 border-white/30 bg-white/10 animate-float" />
+              <h1 className="text-5xl md:text-7xl font-extrabold text-foreground mb-2 leading-tight drop-shadow-lg">
+                Master <span className="text-primary bg-gradient-to-r from-blue-400 via-blue-600 to-blue-800 bg-clip-text text-transparent animate-gradient-move">AI</span> for Your<br />
+                <span className="text-secondary bg-gradient-to-r from-blue-300 via-blue-500 to-blue-700 bg-clip-text text-transparent animate-gradient-move">Career Success</span>
+              </h1>
+            </div>
+            <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed backdrop-blur-md bg-white/10 rounded-xl p-4 shadow-lg">
               Personalized AI guidance to help tech professionals adapt, learn, and leverage cutting-edge AI tools for accelerated career growth.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Button 
                 size="lg" 
-                className="px-8 py-4 text-lg font-medium shadow-lg hover:shadow-xl"
+                className="px-8 py-4 text-lg font-semibold shadow-xl hover:shadow-2xl bg-gradient-to-r from-blue-500 to-blue-700 text-white border-none"
                 onClick={handleGetStarted}
               >
                 Start Your AI Journey
@@ -168,7 +173,7 @@ export default function Landing() {
               <Button 
                 variant="outline" 
                 size="lg"
-                className="px-8 py-4 text-lg font-medium"
+                className="px-8 py-4 text-lg font-semibold border-blue-400/60 hover:bg-blue-50/20"
                 onClick={() => scrollToSection('dashboard')}
               >
                 Watch Demo
@@ -184,15 +189,15 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.3 }}
           >
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">10K+</div>
+              <div className="text-4xl font-extrabold text-primary mb-2 drop-shadow">10K+</div>
               <div className="text-muted-foreground">Professionals Empowered</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-secondary mb-2">95%</div>
+              <div className="text-4xl font-extrabold text-secondary mb-2 drop-shadow">95%</div>
               <div className="text-muted-foreground">Career Advancement Rate</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">200+</div>
+              <div className="text-4xl font-extrabold text-primary mb-2 drop-shadow">200+</div>
               <div className="text-muted-foreground">AI Tools Integrated</div>
             </div>
           </motion.div>
