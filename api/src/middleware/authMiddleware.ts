@@ -51,6 +51,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
   let token;
   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
     token = req.headers.authorization.split(' ')[1];
+  } else if (req.headers['x-ms-token-aad-access-token']) {
+    token = req.headers['x-ms-token-aad-access-token'] as string;
   }
 
   if (!token) {
