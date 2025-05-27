@@ -69,13 +69,14 @@ export class AgentOrchestrator {
 
     // Analyze workflow
     const analysis = await this.analyzeWorkflow(userId);
-    state.workflowData = { ...state.workflowData, ...analysis };
+    state.workflowData = { ...state.workflowData, analysis };
 
     // Discover tools
     state.discoveredTools = await this.discoverTools(userId);
 
     // Create learning paths
-    state.learningPaths = await this.createLearningPath(userId, state.discoveredTools);
+    const learningPath = await this.createLearningPath(userId, state.discoveredTools);
+    state.learningPaths = [learningPath];
 
     // Generate implementation guides
     state.implementationGuides = await this.generateGuides(
@@ -85,7 +86,7 @@ export class AgentOrchestrator {
     );
 
     // Save results
-    await this.saveResults(userId, { tools: state.discoveredTools, learningPathId: state.learningPaths[0].id });
+    await this.saveResults(userId, { tools: state.discoveredTools, learningPathId: state.learningPaths[0]?.id || 0 });
 
     return {
       status: 'success',
@@ -123,7 +124,7 @@ export class AgentOrchestrator {
       }]
     });
 
-    return analysis.content[0].text;
+    return analysis.content[0]?.text || "";
   }
 
   async discoverTools(userId: string) {
@@ -166,7 +167,7 @@ export class AgentOrchestrator {
     const path: InsertLearningPath = {
       userId,
       tools: tools.map(t => t.id),
-      steps: learningPath.choices[0].message.content?.split('\n') || [],
+      steps: learningPath.choices[0]?.message?.content?.split('\n') || [],
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -220,7 +221,7 @@ export class AgentOrchestrator {
     return insights;
   }
 
-  async saveResults(userId: string, results: { tools: Tool[], learningPathId: string }) {
+  async saveResults(userId: string, results: { tools: Tool[], learningPathId: number }) {
     // Save tools and learning paths to database
     const recommendation: InsertRecommendation = {
       userId,

@@ -96,4 +96,7 @@ export class DatabaseStorage implements IStorage {
       [p.skillName || '']: p.progressPercentage || 0,
     }), {} as Record<string, number>);
   }
-} 
+}
+
+// Export a singleton instance
+export const storage = new DatabaseStorage(); 

@@ -108,7 +108,7 @@ export default function Profile() {
         }, 2000);
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: AIReadinessAssessment) => {
       // Update user's AI readiness score
       updateProfileMutation.mutate({ aiReadinessScore: data.score });
       toast({
@@ -130,11 +130,11 @@ export default function Profile() {
     updateProfileMutation.mutate(formData);
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: keyof Partial<UserType>, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const aiReadinessScore = user?.aiReadinessScore || 0;
+  const aiReadinessScore = user?.aiReadinessScore ?? 0;
   const getScoreColor = (score: number) => {
     if (score >= 80) return "text-secondary";
     if (score >= 60) return "text-yellow-500";
@@ -258,7 +258,7 @@ export default function Profile() {
                           <Label htmlFor="currentLevel">AI Experience Level</Label>
                           <Select
                             value={formData.currentLevel}
-                            onValueChange={(value) => handleInputChange("currentLevel", value)}
+                            onValueChange={(value: string) => handleInputChange("currentLevel", value)}
                             disabled={!isEditing}
                           >
                             <SelectTrigger>
