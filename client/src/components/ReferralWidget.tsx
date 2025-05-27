@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Gift, Link, Share2, TrendingUp, Copy, Check } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ReferralInvite {
   id: string;
@@ -22,18 +23,25 @@ interface ReferralStats {
 }
 
 export default function ReferralWidget() {
+  const { user, isAuthenticated } = useAuth();
   const [referralStats, setReferralStats] = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState('');
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetchReferralStats();
-  }, []);
+    if (isAuthenticated && user) {
+      fetchReferralStats();
+    }
+  }, [isAuthenticated, user]);
 
   const fetchReferralStats = async () => {
+    if (!user) return;
+    
     try {
-      const response = await fetch('/api/referral/stats/user-123'); // Mock user ID
+      const response = await fetch(`/api/referral/stats/${user.id}`, {
+        credentials: 'include'
+      });
       const data = await response.json();
       // Add referralLink to the mock data if it's not there
       if (data && data.referralCode && !data.referralLink) {
@@ -49,14 +57,15 @@ export default function ReferralWidget() {
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail || !referralStats?.referralCode) return;
+    if (!inviteEmail || !referralStats?.referralCode || !user) return;
     
     try {
       await fetch('/api/referral/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
-          referrerUserId: 'user-123',
+          referrerUserId: user.id,
           inviteeEmail: inviteEmail,
           referralCode: referralStats.referralCode,
           channel: 'dashboard_invite'

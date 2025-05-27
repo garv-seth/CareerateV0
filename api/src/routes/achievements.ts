@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { Badge, UserAchievement, UserStats } from '../models/Badge';
 
 const router = Router();
 
@@ -48,7 +49,7 @@ interface UserStats {
 // Get all available badges
 router.get('/badges', async (req: Request, res: Response) => {
   try {
-    const badges = getAllBadges();
+    const badges = await getAllBadges();
     res.json(badges);
   } catch (error) {
     console.error('Badges fetch error:', error);
@@ -125,8 +126,14 @@ router.post('/activity/:userId', async (req: Request, res: Response) => {
 });
 
 // Get all available badges
-function getAllBadges(): Badge[] {
-  return [
+async function getAllBadges() {
+  try {
+    // Try to get badges from database first
+    let badges = await Badge.find({ isActive: true }).sort({ category: 1, rarity: 1 });
+    
+    // If no badges in database, seed with default badges
+    if (badges.length === 0) {
+      const defaultBadges = [
     // Milestone badges
     {
       id: 'welcome',
@@ -331,13 +338,24 @@ function getAllBadges(): Badge[] {
       earnedBy: 280,
       points: 750
     }
-  ];
+      ];
+      
+      // Insert default badges into database
+      await Badge.insertMany(defaultBadges);
+      badges = await Badge.find({ isActive: true }).sort({ category: 1, rarity: 1 });
+    }
+    
+    return badges;
+  } catch (error) {
+    console.error('Error fetching badges:', error);
+    throw error;
+  }
 }
 
 // Get user achievements and stats
 async function getUserAchievements(userId: string): Promise<UserStats> {
   // This would fetch from database, for now return mock data
-  const allBadges = getAllBadges();
+  const allBadges = await getAllBadges();
   
   // Mock user achievements (in production, fetch from database)
   const userAchievements: UserAchievement[] = [
@@ -417,7 +435,7 @@ async function getUserAchievements(userId: string): Promise<UserStats> {
 // Award a badge to a user
 async function awardBadge(userId: string, badgeId: string, context: any) {
   // This would update the database and trigger notifications
-  const badge = getAllBadges().find(b => b.id === badgeId);
+  const badge = await Badge.findOne({ id: badgeId, isActive: true });
   
   if (!badge) {
     throw new Error('Badge not found');

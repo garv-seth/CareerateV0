@@ -74,8 +74,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   private calculateMostActiveHours(progress: UserProgress[]) {
-    // TODO: Implement time-based analysis
-    return [];
+    // Analyze user activity patterns by hour of day
+    const hourCounts = new Array(24).fill(0);
+    
+    progress.forEach(p => {
+      if (p.createdAt) {
+        const hour = new Date(p.createdAt).getHours();
+        hourCounts[hour]++;
+      }
+      if (p.updatedAt) {
+        const hour = new Date(p.updatedAt).getHours();
+        hourCounts[hour]++;
+      }
+    });
+    
+    // Find the top 3 most active hours
+    const hourActivity = hourCounts
+      .map((count, hour) => ({ hour, count }))
+      .filter(({ count }) => count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+    
+    return hourActivity.map(({ hour }) => {
+      if (hour === 0) return '12:00 AM';
+      if (hour < 12) return `${hour}:00 AM`;
+      if (hour === 12) return '12:00 PM';
+      return `${hour - 12}:00 PM`;
+    });
   }
 
   private calculatePreferredTools(progress: UserProgress[]) {

@@ -1,4 +1,6 @@
 import { Router, Request, Response } from 'express';
+import LearningPath, { ILearningPath, ILearningStep } from '../models/LearningPath';
+import User from '../models/User';
 
 const router = Router();
 
@@ -94,11 +96,26 @@ router.post('/:userId/generate', async (req: Request, res: Response) => {
 });
 
 // Generate personalized learning path
-async function generateLearningPath(userId: string): Promise<LearningPath> {
-  // This would typically fetch user data and analyze their skills/goals
-  // For now, return a comprehensive mock path
+async function generateLearningPath(userId: string): Promise<ILearningPath> {
+  try {
+    // Check if user already has an active learning path
+    let existingPath = await LearningPath.findOne({ userId, isActive: true });
+    
+    if (existingPath) {
+      return existingPath;
+    }
+
+    // Fetch user data to personalize the path
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Generate path based on user's profile and goals
+    const targetRole = user.profile.goals?.[0] || 'AI Specialist';
+    const currentSkills = user.profile.skills || [];
   
-  const steps: LearningStep[] = [
+    const steps: ILearningStep[] = [
     {
       id: 'step-1',
       title: 'Introduction to Artificial Intelligence',
@@ -219,23 +236,32 @@ async function generateLearningPath(userId: string): Promise<LearningPath> {
     }
   ];
 
-  const totalHours = steps.reduce((sum, step) => sum + step.estimatedHours, 0);
-  
-  return {
-    id: `path-${userId}`,
-    title: 'AI Professional Development Path',
-    description: 'Comprehensive journey from AI basics to professional-level skills',
-    totalSteps: steps.length,
-    completedSteps: 0,
-    progressPercentage: 0,
-    estimatedTotalHours: totalHours,
-    remainingHours: totalHours,
-    targetRole: 'AI-Enhanced Professional',
-    skills: ['AI Fundamentals', 'Python', 'Machine Learning', 'Prompt Engineering', 'TensorFlow'],
-    steps,
-    milestones,
-    lastUpdated: new Date().toISOString()
-  };
+    const totalHours = steps.reduce((sum, step) => sum + step.estimatedHours, 0);
+    
+    // Create new learning path
+    const newPath = new LearningPath({
+      userId,
+      title: 'AI Professional Development Path',
+      description: 'Comprehensive journey from AI basics to professional-level skills',
+      totalSteps: steps.length,
+      completedSteps: 0,
+      progressPercentage: 0,
+      estimatedTotalHours: totalHours,
+      remainingHours: totalHours,
+      targetRole: targetRole,
+      skills: ['AI Fundamentals', 'Python', 'Machine Learning', 'Prompt Engineering', 'TensorFlow'],
+      steps,
+      milestones,
+      isActive: true
+    });
+
+    // Save to database
+    await newPath.save();
+    return newPath;
+  } catch (error) {
+    console.error('Error generating learning path:', error);
+    throw error;
+  }
 }
 
 // Update learning progress
@@ -244,39 +270,50 @@ async function updateLearningProgress(
   stepId: string, 
   completed: boolean, 
   hoursSpent: number
-): Promise<LearningPath> {
-  // This would update the database and recalculate progress
-  // For now, return updated mock data
-  
-  const path = await generateLearningPath(userId);
-  
-  // Update the specific step
-  const stepIndex = path.steps.findIndex(step => step.id === stepId);
-  if (stepIndex !== -1) {
-    path.steps[stepIndex].completed = completed;
+): Promise<ILearningPath> {
+  try {
+    const path = await LearningPath.findOne({ userId, isActive: true });
+    if (!path) {
+      throw new Error('Learning path not found');
+    }
     
-    // Recalculate progress
-    const completedSteps = path.steps.filter(step => step.completed).length;
-    path.completedSteps = completedSteps;
-    path.progressPercentage = Math.round((completedSteps / path.totalSteps) * 100);
-    
-    // Update remaining hours
-    const completedHours = path.steps
-      .filter(step => step.completed)
-      .reduce((sum, step) => sum + step.estimatedHours, 0);
-    path.remainingHours = path.estimatedTotalHours - completedHours;
-    
-    // Check milestones
-    path.milestones.forEach(milestone => {
-      if (milestone.stepId === stepId && completed) {
-        milestone.achieved = true;
+    // Update the specific step
+    const stepIndex = path.steps.findIndex(step => step.id === stepId);
+    if (stepIndex !== -1) {
+      path.steps[stepIndex].completed = completed;
+      if (completed && hoursSpent) {
+        path.steps[stepIndex].hoursSpent = hoursSpent;
+        path.steps[stepIndex].completedAt = new Date();
       }
-    });
+      
+      // Recalculate progress
+      const completedSteps = path.steps.filter(step => step.completed).length;
+      path.completedSteps = completedSteps;
+      path.progressPercentage = Math.round((completedSteps / path.totalSteps) * 100);
+      
+      // Update remaining hours
+      const completedHours = path.steps
+        .filter(step => step.completed)
+        .reduce((sum, step) => sum + (step.hoursSpent || step.estimatedHours), 0);
+      path.remainingHours = Math.max(0, path.estimatedTotalHours - completedHours);
+      
+      // Check milestones
+      path.milestones.forEach(milestone => {
+        if (milestone.stepId === stepId && completed) {
+          milestone.achieved = true;
+          milestone.achievedAt = new Date();
+        }
+      });
+      
+      path.lastUpdated = new Date();
+      await path.save();
+    }
+    
+    return path;
+  } catch (error) {
+    console.error('Error updating learning progress:', error);
+    throw error;
   }
-  
-  path.lastUpdated = new Date().toISOString();
-  
-  return path;
 }
 
 // Generate custom learning path
@@ -285,7 +322,7 @@ async function generateCustomPath(
   targetRole: string,
   currentSkills: string[],
   timeAvailable: number
-): Promise<LearningPath> {
+): Promise<ILearningPath> {
   // This would use AI to generate a customized path based on inputs
   // For now, return a role-specific mock path
   
@@ -353,8 +390,9 @@ async function generateCustomPath(
   
   const totalHours = customSteps.reduce((sum, step) => sum + step.estimatedHours, 0);
   
-  return {
-    id: `custom-path-${userId}`,
+  // Create new custom learning path
+  const customPath = new LearningPath({
+    userId,
     title: pathTitle,
     description: pathDescription,
     totalSteps: customSteps.length,
@@ -366,8 +404,11 @@ async function generateCustomPath(
     skills: [...new Set(customSteps.flatMap(step => step.skills))],
     steps: customSteps,
     milestones: [],
-    lastUpdated: new Date().toISOString()
-  };
+    isActive: true
+  });
+
+  await customPath.save();
+  return customPath;
 }
 
 export default router; 

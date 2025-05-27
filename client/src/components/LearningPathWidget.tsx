@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Clock, Trophy, CheckCircle, ArrowRight, Star, Target, Play } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LearningStep {
   id: string;
@@ -37,17 +38,24 @@ interface LearningPath {
 }
 
 export default function LearningPathWidget() {
+  const { user, isAuthenticated } = useAuth();
   const [learningPath, setLearningPath] = useState<LearningPath | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeStep, setActiveStep] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLearningPath();
-  }, []);
+    if (isAuthenticated && user) {
+      fetchLearningPath();
+    }
+  }, [isAuthenticated, user]);
 
   const fetchLearningPath = async () => {
+    if (!user) return;
+    
     try {
-      const response = await fetch('/api/learning-path/user-123'); // Mock user ID
+      const response = await fetch(`/api/learning-path/${user.id}`, {
+        credentials: 'include'
+      });
       const data = await response.json();
       setLearningPath(data);
       
@@ -64,10 +72,13 @@ export default function LearningPathWidget() {
   };
 
   const markStepComplete = async (stepId: string) => {
+    if (!user) return;
+    
     try {
-      await fetch('/api/learning-path/user-123/progress', {
+      await fetch(`/api/learning-path/${user.id}/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ stepId, completed: true, hoursSpent: 0 })
       });
       

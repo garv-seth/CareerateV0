@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Share2, Download, Eye, ThumbsUp, BarChart2, CreditCard, Image } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ShareableCard {
   id: string;
@@ -15,6 +16,7 @@ interface ShareableCard {
 }
 
 export default function ShareableCardWidget() {
+  const { user, isAuthenticated } = useAuth();
   const [userCards, setUserCards] = useState<ShareableCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCardType, setSelectedCardType] = useState<string>('achievement');
@@ -22,13 +24,19 @@ export default function ShareableCardWidget() {
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    fetchUserCards();
-  }, []);
+    if (isAuthenticated && user) {
+      fetchUserCards();
+    }
+  }, [isAuthenticated, user]);
 
   const fetchUserCards = async (type?: string) => {
+    if (!user) return;
+    
     setLoading(true);
     try {
-      const response = await fetch(`/api/share-card/user/user-123?limit=5&type=${type || selectedCardType}`); // Mock user ID
+      const response = await fetch(`/api/share-card/user/${user.id}?limit=5&type=${type || selectedCardType}`, {
+        credentials: 'include'
+      });
       const data = await response.json();
       setUserCards(data.cards || []);
     } catch (error) {
@@ -40,18 +48,29 @@ export default function ShareableCardWidget() {
   };
 
   const handleGenerateCard = async () => {
+    if (!user) return;
+    
     setGenerating(true);
-    // Mock data for generation - in real app, this would come from user's actual data
+    // Use real user data for generation
     let cardData = {};
     switch(selectedCardType) {
         case 'ai-risk':
-            cardData = { riskLevel: 'Medium', riskScore: 55 };
+            cardData = { 
+              riskLevel: user.aiRisk.level, 
+              riskScore: user.aiRisk.score 
+            };
             break;
         case 'milestone':
-            cardData = { milestoneName: 'Completed Advanced Python', completedAt: new Date().toISOString() };
+            cardData = { 
+              milestoneName: 'Completed Advanced Python', 
+              completedAt: new Date().toISOString() 
+            };
             break;
         case 'achievement':
-            cardData = { badgeName: 'Python Pro', badgeDescription: 'Mastered Python fundamentals' };
+            cardData = { 
+              badgeName: 'Python Pro', 
+              badgeDescription: 'Mastered Python fundamentals' 
+            };
             break;
         default:
             cardData = { genericData: 'Some cool data' }; 
@@ -61,8 +80,9 @@ export default function ShareableCardWidget() {
       const response = await fetch('/api/share-card/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
-          userId: 'user-123', // Mock user ID
+          userId: user.id,
           type: selectedCardType,
           data: cardData,
           customMessage

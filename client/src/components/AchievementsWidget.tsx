@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, Zap, Award, Activity, BarChart, Users, Crown } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Badge {
   id: string;
@@ -48,17 +49,24 @@ const allBadgesData: Badge[] = [
 ];
 
 export default function AchievementsWidget() {
+  const { user, isAuthenticated } = useAuth();
   const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<'overview' | 'badges' | 'leaderboard'>('overview');
 
   useEffect(() => {
-    fetchUserAchievements();
-  }, []);
+    if (isAuthenticated && user) {
+      fetchUserAchievements();
+    }
+  }, [isAuthenticated, user]);
 
   const fetchUserAchievements = async () => {
+    if (!user) return;
+    
     try {
-      const response = await fetch('/api/achievements/user/user-123'); // Mock user ID
+      const response = await fetch(`/api/achievements/user/${user.id}`, {
+        credentials: 'include'
+      });
       const data = await response.json();
       setUserStats(data);
     } catch (error) {

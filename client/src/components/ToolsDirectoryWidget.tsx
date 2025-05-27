@@ -28,6 +28,7 @@ export default function ToolsDirectoryWidget() {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [filters, setFilters] = useState<{ difficulty: string[], pricing: string[] }>({ difficulty: [], pricing: [] });
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     fetchToolsData();
@@ -55,8 +56,41 @@ export default function ToolsDirectoryWidget() {
     setExpandedCategories(prev => ({ ...prev, [categoryId]: !prev[categoryId] }));
   };
 
-  // TODO: Implement filter logic based on filters state
-  const filteredToolsData = toolsData; 
+  const toggleFilter = (type: 'difficulty' | 'pricing', value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [type]: prev[type].includes(value)
+        ? prev[type].filter(v => v !== value)
+        : [...prev[type], value]
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({ difficulty: [], pricing: [] });
+  };
+
+  // Filter tools based on search term and filters
+  const filteredToolsData = toolsData ? {
+    ...toolsData,
+    categories: toolsData.categories.map(category => ({
+      ...category,
+      tools: category.tools.filter(tool => {
+        // Search term filter
+        const matchesSearch = tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            tool.description.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        // Difficulty filter
+        const matchesDifficulty = filters.difficulty.length === 0 || 
+                                filters.difficulty.includes(tool.difficulty);
+        
+        // Pricing filter
+        const matchesPricing = filters.pricing.length === 0 || 
+                             filters.pricing.includes(tool.pricing);
+        
+        return matchesSearch && matchesDifficulty && matchesPricing;
+      })
+    })).filter(category => category.tools.length > 0) // Only show categories with matching tools
+  } : null; 
 
   if (loading) {
     return (
@@ -103,11 +137,65 @@ export default function ToolsDirectoryWidget() {
           />
           <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
         </div>
-        {/* TODO: Add Filter Button */}
-        {/* <button className="p-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+        <button 
+          onClick={() => setShowFilters(!showFilters)}
+          title="Toggle filters"
+          className={`p-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors ${
+            showFilters ? 'bg-blue-50 border-blue-300 text-blue-600' : ''
+          }`}
+        >
           <Filter className="w-5 h-5" />
-        </button> */}        
+        </button>        
       </div>
+
+      {/* Filter Panel */}
+      {showFilters && (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-semibold text-gray-900">Filters</h4>
+            <button 
+              onClick={clearFilters}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Clear All
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
+              <div className="space-y-2">
+                {['beginner', 'intermediate', 'advanced'].map(difficulty => (
+                  <label key={difficulty} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.difficulty.includes(difficulty)}
+                      onChange={() => toggleFilter('difficulty', difficulty)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700 capitalize">{difficulty}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Pricing</label>
+              <div className="space-y-2">
+                {['free', 'freemium', 'paid'].map(pricing => (
+                  <label key={pricing} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={filters.pricing.includes(pricing)}
+                      onChange={() => toggleFilter('pricing', pricing)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700 capitalize">{pricing}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {filteredToolsData.categories.map(category => (
         <div key={category.id} className="mb-6 last:mb-0">
@@ -124,7 +212,7 @@ export default function ToolsDirectoryWidget() {
 
           {expandedCategories[category.id] && (
             <div className="border border-t-0 border-gray-200 rounded-b-lg p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {category.tools.filter(tool => tool.name.toLowerCase().includes(searchTerm.toLowerCase())).map(tool => (
+              {category.tools.map(tool => (
                 <div key={tool.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between mb-2">
                     <h5 className="font-semibold text-gray-900 truncate" title={tool.name}>{tool.name}</h5>
@@ -143,9 +231,9 @@ export default function ToolsDirectoryWidget() {
                   <p className="text-xs text-gray-500 mt-1 text-right">Popularity: {tool.popularity}%</p>
                 </div>
               ))}
-              {category.tools.filter(tool => tool.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && searchTerm &&
-                 <p className="text-sm text-gray-500 md:col-span-2 lg:col-span-3 text-center py-4">No tools found for "{searchTerm}" in this category.</p>
-              }
+              {category.tools.length === 0 && (
+                 <p className="text-sm text-gray-500 md:col-span-2 lg:col-span-3 text-center py-4">No tools match the current filters.</p>
+              )}
             </div>
           )}
         </div>

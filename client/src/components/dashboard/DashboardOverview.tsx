@@ -15,21 +15,55 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
+interface WeeklyStats {
+  toolsExplored: number;
+  hoursLearned: number;
+  skillsGained: number;
+}
+
+interface UserProgress {
+  id: number;
+  progressType: string;
+  status: string;
+  skillName?: string;
+  hoursSpent?: number;
+  progressPercentage?: number;
+}
+
+interface Recommendation {
+  id: number;
+  type: string;
+  title: string;
+  description: string;
+}
+
 export function DashboardOverview() {
-  const { data: weeklyStats, isLoading: statsLoading } = useQuery({
+  const { data: weeklyStats, isLoading: statsLoading } = useQuery<WeeklyStats>({
     queryKey: ["/api/progress/weekly-stats"],
+    queryFn: async () => {
+      const response = await fetch('/api/progress/weekly-stats');
+      return response.json();
+    }
   });
 
-  const { data: progress, isLoading: progressLoading } = useQuery({
+  const { data: progress, isLoading: progressLoading } = useQuery<UserProgress[]>({
     queryKey: ["/api/progress"],
+    queryFn: async () => {
+      const response = await fetch('/api/progress');
+      return response.json();
+    }
   });
 
-  const { data: recommendations, isLoading: recommendationsLoading } = useQuery({
+  const { data: recommendations, isLoading: recommendationsLoading } = useQuery<Recommendation[]>({
     queryKey: ["/api/recommendations", { limit: 3 }],
+    queryFn: async () => {
+      const response = await fetch('/api/recommendations?limit=3');
+      return response.json();
+    }
   });
 
   const currentLearningPath = progress?.find(
-    (p: any) => p.progressType === "learning_path" && p.status === "in_progress"
+    (p: UserProgress) => p.progressType === "learning_path" && p.status === "in_progress"
   );
 
   const achievements = [
