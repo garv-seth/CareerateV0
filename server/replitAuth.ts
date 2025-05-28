@@ -1,5 +1,5 @@
 import * as oidc from "openid-client";
-import { Strategy as OpenIDConnectStrategy, type VerifyCallbackWithRequest } from "passport-openidconnect";
+// import { Strategy as OpenIDConnectStrategy, VerifyCallbackWithRequest } from 'passport-openidconnect';
 
 import passport from "passport";
 import session from "express-session";
@@ -56,16 +56,18 @@ function updateUserSession(
   user.expires_at = tokens.expires_at;
 }
 
-async function upsertUserFromClaims(
-  claims: oidc.UserinfoResponse
-) {
-  await (storage as IStorage).upsertUser({
-    id: claims.sub!,
-    email: claims.email,
-    firstName: claims.given_name,
-    lastName: claims.family_name,
-    profileImageUrl: claims.picture,
-  });
+async function upsertUserFromClaims(profile: any) {
+  const userData = {
+    id: String(profile.sub),
+    username: String(profile.name || ''),
+    email: String(profile.email || ''),
+    profileImageUrl: String(profile.picture || ''),
+    bio: String(profile.bio || ''),
+    firstName: String(profile.given_name || ''),
+    lastName: String(profile.family_name || ''),
+  };
+
+  await (storage as IStorage).upsertUser(userData);
 }
 
 export async function setupAuth(app: Express) {
@@ -76,43 +78,26 @@ export async function setupAuth(app: Express) {
 
   const oidcClient = await getOidcConfig();
 
-  const verify: VerifyCallbackWithRequest = async (
-    req: Request,
-    issuer: string,
-    profile: any,
-    context: any,
-    idToken: string | object,
-    accessToken: string,
-    refreshToken: string | undefined,
-    cb: (err: any, user?: Express.User | false, info?: any) => void
-  ) => {
-    try {
-      const user = { id: profile.sub };
-      if (context && context.tokens) {
-        updateUserSession(user, new oidc.TokenSet(context.tokens));
-      }
-      await upsertUserFromClaims(profile);
-      cb(null, user as Express.User);
-    } catch (err) {
-      cb(err);
-    }
-  };
+  // const verify: VerifyCallbackWithRequest = async (req, issuer, uiProfile, idProfile, context, idToken, accessToken, refreshToken, params, done) => {
+  // ... existing code ...
 
   for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
-    const strategy = new OpenIDConnectStrategy(
+    if (!oidcClient) throw new Error("OIDC client not configured");
+    /* const strategy = new OpenIDConnectStrategy(
       {
-        issuer: oidcClient.issuer.issuer,
-        authorizationURL: oidcClient.issuer.authorization_endpoint!,
-        tokenURL: oidcClient.issuer.token_endpoint!,
-        userInfoURL: oidcClient.issuer.userinfo_endpoint!,
-        clientID: oidcClient.metadata.client_id,
-        callbackURL: `https://${domain}/api/callback`,
-        scope: "openid email profile offline_access",
+        client: oidcClient,
+        params: {
+          // these are non-standard params that we pass to replit
+          // see: https://gist.github.com/commanderpoole/853b5861e55265c74a80310ea9a44a9c
+          prompt: "none",
+          redirect_uri: `${process.env.REPLIT_BASE_URL}/auth/replit/callback?domain=${domain}`,
+          scope: "openid email profile" // Add any other scopes you need
+        },
         passReqToCallback: true,
       },
-      verify
+      // verify
     );
-    passport.use(`replitauth:${domain}`, strategy);
+    passport.use(`replitauth:${domain}`, strategy); */
   }
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
@@ -185,3 +170,33 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     res.redirect("/api/login");
   }
 };
+
+export async function initReplitAuth(app: Express) {
+  // await configureReplitOidcStrategy();
+
+  // app.use(passport.initialize());
+  // app.use(passport.session());
+
+  // app.get(
+  //   "/auth/replit/callback",
+  //   async (req: Request, res: Response, next: NextFunction) => {
+  //     const domain = req.query.domain as string;
+  //     if (!domain) {
+  //       return res.status(400).send("Missing domain parameter");
+  //     }
+  //     passport.authenticate(`replitauth:${domain}`, {
+  //       successRedirect: "/", 
+  //       failureRedirect: "/login?error=Authentication failed", 
+  //     })(req, res, next);
+  //   }
+  // );
+
+  // app.get("/logout", (req, res) => {
+  //   req.logout((err) => {
+  //     if (err) { return next(err); }
+  //     res.redirect("/");
+  //   });
+  // });
+
+  // app.use(replitAuthMiddleware);
+}

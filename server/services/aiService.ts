@@ -36,10 +36,10 @@ class AIService {
         messages: [{ role: 'user', content: prompt }],
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
+      const messageContent = response.content && response.content[0];
+      if (messageContent && messageContent.type === 'text') {
         try {
-          return JSON.parse(content.text);
+          return JSON.parse(messageContent.text);
         } catch {
           // Fallback if JSON parsing fails
           return {
@@ -82,7 +82,7 @@ class AIService {
         User context:
         - Role: ${user.role || 'Not specified'}
         - Company: ${user.company || 'Not specified'}
-        - Experience: ${user.yearsExperience || 'Not specified'} years
+        - Experience: ${user.yearsExperience || 0} years
         - AI Readiness Score: ${user.aiReadinessScore || 0}/100
         - Current Level: ${user.currentLevel || 'beginner'}
         
@@ -106,9 +106,9 @@ class AIService {
         }],
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
-        return content.text;
+      const chatContent = response.content && response.content[0];
+      if (chatContent && chatContent.type === 'text') {
+        return chatContent.text;
       }
 
       throw new Error("Invalid response format");
@@ -158,10 +158,10 @@ class AIService {
         messages: [{ role: 'user', content: prompt }],
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
+      const recommendationsContent = response.content && response.content[0];
+      if (recommendationsContent && recommendationsContent.type === 'text') {
         try {
-          return JSON.parse(content.text);
+          return JSON.parse(recommendationsContent.text);
         } catch {
           // Fallback recommendations
           return [
@@ -227,17 +227,17 @@ class AIService {
         messages: [{ role: 'user', content: prompt }],
       });
 
-      const content = response.content[0];
-      if (content.type === 'text') {
+      const learningPathContent = response.content && response.content[0];
+      if (learningPathContent && learningPathContent.type === 'text') {
         try {
-          return JSON.parse(content.text);
+          return JSON.parse(learningPathContent.text);
         } catch {
           // Fallback learning path
           return {
             title: `AI-Enhanced ${targetRole} Learning Path`,
             description: `Comprehensive path to transition to ${targetRole} with AI expertise`,
             estimatedHours: Math.max(20, timeCommitment * 8), // 8 weeks minimum
-            difficulty: user.yearsExperience > 3 ? 'intermediate' : 'beginner',
+            difficulty: (user.yearsExperience || 0) > 3 ? 'intermediate' : 'beginner',
             steps: [
               {
                 title: "Foundation AI Skills",

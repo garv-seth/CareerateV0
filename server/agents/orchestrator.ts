@@ -225,6 +225,8 @@ export class AgentOrchestrator {
     // Save tools and learning paths to database
     const recommendation: InsertRecommendation = {
       userId,
+      title: "Generated Recommendation",
+      type: "tool_recommendation",
       tools: results.tools,
       learningPathId: results.learningPathId,
       createdAt: new Date(),

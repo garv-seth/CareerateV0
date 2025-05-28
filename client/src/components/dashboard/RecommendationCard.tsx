@@ -50,7 +50,7 @@ export function RecommendationCard({
               </CardTitle>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <Badge variant={getPriorityColor(recommendation.priority)}>
+              <Badge variant={getPriorityColor(recommendation.priority || 'low')}>
                 {recommendation.priority}
               </Badge>
               {recommendation.matchScore && (

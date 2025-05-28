@@ -119,7 +119,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createResume(resume: InsertResume): Promise<ResumeType | null> {
-    const result = await db.insert(resumes).values(resume).returning();
+    const resumeData = {
+      ...resume,
+      analysisResults: resume.analysisResults ? resume.analysisResults as any : undefined,
+      suggestions: resume.suggestions ? (Array.isArray(resume.suggestions) ? resume.suggestions : [resume.suggestions]) : undefined,
+    };
+    const result = await db.insert(resumes).values(resumeData).returning();
     return result[0] || null;
   }
 

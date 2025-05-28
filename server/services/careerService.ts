@@ -23,7 +23,6 @@ class CareerService {
       // Add AI tool recommendations
       aiRecommendations.forEach(rec => {
         recommendations.push({
-          toolId: rec.toolId,
           type: 'ai_tool',
           title: rec.title,
           description: rec.description,
@@ -31,6 +30,7 @@ class CareerService {
           matchScore: rec.matchScore,
           priority: rec.priority,
           status: 'pending',
+          tools: [{ id: rec.toolId, name: rec.title }],
           metadata: {
             category: 'ai_tool',
             source: 'ai_analysis'
@@ -57,7 +57,7 @@ class CareerService {
       });
 
       // Add learning path recommendation
-      if (user.currentLevel === 'beginner' || user.aiReadinessScore < 50) {
+      if (user.currentLevel === 'beginner' || (user.aiReadinessScore || 0) < 50) {
         recommendations.push({
           type: 'learning_path',
           title: 'AI Fundamentals Learning Path',
@@ -114,9 +114,9 @@ class CareerService {
         insightType: 'learning_path',
         title: learningPathData.title,
         content: learningPathData.description,
-        actionItems: learningPathData.steps.map(step => step.title),
+        actionItems: learningPathData.steps.map((step: any) => String(step.title)) as string[],
         relevanceScore: 95,
-        sources: ['ai_analysis', 'market_data']
+        sources: ['ai_analysis', 'market_data'] as string[]
       };
     } catch (error) {
       console.error("Error generating learning path:", error);
@@ -142,9 +142,9 @@ class CareerService {
             'Research these trending topics in detail',
             'Consider upskilling in high-demand areas',
             'Update your resume to highlight relevant experience'
-          ],
+          ] as string[],
           relevanceScore: 90,
-          sources: marketData.map(data => data.url).slice(0, 3)
+          sources: marketData.map((data: any) => String(data.url)).slice(0, 3) as string[]
         });
       }
 
@@ -159,25 +159,25 @@ class CareerService {
           'Assess your current skills against market demands',
           'Prioritize learning high-demand skills',
           'Consider AI tools to enhance your workflow'
-        ],
+        ] as string[],
         relevanceScore: 85,
-        sources: ['market_analysis']
+        sources: ['market_analysis'] as string[]
       });
 
       // Career opportunity insight
-      if (user.aiReadinessScore < 70) {
+      if ((user.aiReadinessScore || 0) < 70) {
         insights.push({
           insightType: 'opportunity',
           title: 'AI Skills Opportunity',
-          content: `Your AI readiness score of ${user.aiReadinessScore} indicates significant room for growth. Professionals with strong AI skills command higher salaries and have more career opportunities.`,
+          content: `Your AI readiness score of ${user.aiReadinessScore || 0} indicates significant room for growth. Professionals with strong AI skills command higher salaries and have more career opportunities.`,
           actionItems: [
             'Take the AI skills assessment',
             'Enroll in an AI fundamentals course',
             'Start using AI tools in your daily work',
             'Build an AI-enhanced project portfolio'
-          ],
+          ] as string[],
           relevanceScore: 95,
-          sources: ['skill_assessment', 'market_data']
+          sources: ['skill_assessment', 'market_data'] as string[]
         });
       }
 
@@ -191,9 +191,9 @@ class CareerService {
           insightType: 'market_trend',
           title: 'AI Skills in High Demand',
           content: 'The job market shows increasing demand for AI skills across all tech roles.',
-          actionItems: ['Learn AI fundamentals', 'Practice with AI tools'],
+          actionItems: ['Learn AI fundamentals', 'Practice with AI tools'] as string[],
           relevanceScore: 80,
-          sources: ['general_market_data']
+          sources: ['general_market_data'] as string[]
         }
       ];
     }

@@ -90,7 +90,7 @@ export default function ResumeAnalysis() {
       return;
     }
     if (file) {
-      uploadMutation.mutate(file as File);
+      uploadMutation.mutate(file);
     }
   };
 
@@ -99,8 +99,9 @@ export default function ResumeAnalysis() {
     setIsDragging(false);
     
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      handleFileSelect(files[0]);
+    const firstFile = files[0];
+    if (firstFile) {
+      handleFileSelect(firstFile);
     }
   };
 
