@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Star, ExternalLink, CheckCircle, X } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Recommendation } from "@shared/schema";
+import type { ReactNode } from 'react';
 
 interface RecommendationCardProps {
   recommendation: Recommendation;
@@ -33,6 +34,21 @@ export function RecommendationCard({
       default: return '💡';
     }
   };
+
+  // Logic to prepare metadata elements for rendering
+  let metadataElements: ReactNode[] = [];
+  if (recommendation.metadata && typeof recommendation.metadata === 'object') {
+    metadataElements = Object.entries(recommendation.metadata).map(([key, value]): ReactNode => {
+      if (key === 'category' || key === 'difficulty') {
+        return (
+          <Badge key={key} variant="outline" className="text-xs">
+            {String(value)}
+          </Badge>
+        );
+      }
+      return null;
+    }).filter(Boolean); // Filter out nulls to ensure ReactNode[] if Badge can't be null
+  }
 
   return (
     <motion.div
@@ -79,18 +95,9 @@ export function RecommendationCard({
           )}
 
           {/* Metadata Display */}
-          {recommendation.metadata && (
+          {metadataElements.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {Object.entries(recommendation.metadata as Record<string, any>).map(([key, value]) => {
-                if (key === 'category' || key === 'difficulty') {
-                  return (
-                    <Badge key={key} variant="outline" className="text-xs">
-                      {String(value)}
-                    </Badge>
-                  );
-                }
-                return null;
-              })}
+              {metadataElements}
             </div>
           )}
 
