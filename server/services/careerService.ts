@@ -114,9 +114,9 @@ class CareerService {
         insightType: 'learning_path',
         title: learningPathData.title,
         content: learningPathData.description,
-        actionItems: learningPathData.steps.map((step: any) => String(step.title)) as string[],
+        actionItems: JSON.stringify(learningPathData.steps.map((step: any) => String(step.title))),
         relevanceScore: 95,
-        sources: ['ai_analysis', 'market_data'] as string[]
+        sources: JSON.stringify(['ai_analysis', 'market_data'])
       };
     } catch (error) {
       console.error("Error generating learning path:", error);
@@ -138,13 +138,13 @@ class CareerService {
           insightType: 'market_trend',
           title: 'Latest Market Trends in Your Field',
           content: `Current trending topics include: ${trendingTopics}. These areas show significant growth and opportunity.`,
-          actionItems: [
+          actionItems: JSON.stringify([
             'Research these trending topics in detail',
             'Consider upskilling in high-demand areas',
             'Update your resume to highlight relevant experience'
-          ] as string[],
+          ]),
           relevanceScore: 90,
-          sources: marketData.map((data: any) => String(data.url)).slice(0, 3) as string[]
+          sources: JSON.stringify(marketData.map((data: any) => String(data.url)).slice(0, 3))
         });
       }
 
@@ -155,13 +155,13 @@ class CareerService {
         insightType: 'skill_gap',
         title: 'Skill Gap Analysis',
         content: `Based on market analysis, professionals in your role should focus on: ${marketInsights.trendingSkills.join(', ')}. AI adoption in your field is at ${marketInsights.aiAdoptionRate}%.`,
-        actionItems: [
+        actionItems: JSON.stringify([
           'Assess your current skills against market demands',
           'Prioritize learning high-demand skills',
           'Consider AI tools to enhance your workflow'
-        ] as string[],
+        ]),
         relevanceScore: 85,
-        sources: ['market_analysis'] as string[]
+        sources: JSON.stringify(['market_analysis'])
       });
 
       // Career opportunity insight
@@ -170,14 +170,14 @@ class CareerService {
           insightType: 'opportunity',
           title: 'AI Skills Opportunity',
           content: `Your AI readiness score of ${user.aiReadinessScore || 0} indicates significant room for growth. Professionals with strong AI skills command higher salaries and have more career opportunities.`,
-          actionItems: [
+          actionItems: JSON.stringify([
             'Take the AI skills assessment',
             'Enroll in an AI fundamentals course',
             'Start using AI tools in your daily work',
             'Build an AI-enhanced project portfolio'
-          ] as string[],
+          ]),
           relevanceScore: 95,
-          sources: ['skill_assessment', 'market_data'] as string[]
+          sources: JSON.stringify(['skill_assessment', 'market_data'])
         });
       }
 
@@ -191,9 +191,9 @@ class CareerService {
           insightType: 'market_trend',
           title: 'AI Skills in High Demand',
           content: 'The job market shows increasing demand for AI skills across all tech roles.',
-          actionItems: ['Learn AI fundamentals', 'Practice with AI tools'] as string[],
+          actionItems: JSON.stringify(['Learn AI fundamentals', 'Practice with AI tools']),
           relevanceScore: 80,
-          sources: ['general_market_data'] as string[]
+          sources: JSON.stringify(['general_market_data'])
         }
       ];
     }

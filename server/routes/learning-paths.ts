@@ -14,12 +14,13 @@ router.get('/', (req: Request, res: Response, next: express.NextFunction) => {
     try {
       const userId = req.query.userId as string;
       if (!userId) {
-        return res.status(400).json({ error: 'User ID is required' });
+        res.status(400).json({ error: 'User ID is required' });
+        return; // Added return to satisfy TS7030
       }
 
       const tools = await orchestrator.discoverTools(userId);
       const paths = await orchestrator.createLearningPath(userId, tools);
-      return res.json({ paths });
+      res.json({ paths });
     } catch (error) {
       console.error('Error fetching learning paths:', error);
       next(error); // Pass error to Express error handler

@@ -14,11 +14,12 @@ router.get('/', (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.query.userId as string;
       if (!userId) {
-        return res.status(400).json({ error: 'User ID is required' });
+        res.status(400).json({ error: 'User ID is required' });
+        return;
       }
 
       const tools = await orchestrator.discoverTools(userId);
-      return res.json({ tools });
+      res.json({ tools });
     } catch (error) {
       console.error('Error fetching tools:', error);
       next(error);
