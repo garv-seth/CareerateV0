@@ -32,8 +32,23 @@ const InputOTPSlot = React.forwardRef<
   React.ElementRef<"div">,
   React.ComponentPropsWithoutRef<"div"> & { index: number }
 >(({ index, className, ...props }, ref) => {
-  const inputOTPContext = React.useContext(OTPInputContext)
-  const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index]
+  // Define a type for the context value based on usage
+  interface OTPContextValue {
+    slots: Array<{
+      char: React.ReactNode;
+      hasFakeCaret: boolean;
+      isActive: boolean;
+    }>;
+    // Add other properties if the context provides more that are used elsewhere
+  }
+  const inputOTPContext = React.useContext(OTPInputContext) as OTPContextValue;
+  const slot = inputOTPContext.slots[index];
+
+  if (!slot) {
+    // Or return a placeholder/error UI if appropriate
+    return null; 
+  }
+  const { char, hasFakeCaret, isActive } = slot;
 
   return (
     <div

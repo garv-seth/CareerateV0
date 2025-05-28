@@ -34,11 +34,11 @@ export default function Tools() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const { data: tools, isLoading } = useQuery({
+  const { data: tools, isLoading } = useQuery<AiTool[] | undefined>({
     queryKey: ["/api/tools", selectedCategory !== "all" ? { category: selectedCategory } : {}],
   });
 
-  const { data: recommendations } = useQuery({
+  const { data: recommendations } = useQuery<AiTool[] | undefined>({
     queryKey: ["/api/tools/recommendations", { limit: 6 }],
   });
 

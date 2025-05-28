@@ -23,7 +23,9 @@ export const sessions = pgTable(
     sess: jsonb("sess").notNull(),
     expire: timestamp("expire").notNull(),
   },
-  (table) => [index("IDX_session_expire").on(table.expire)],
+  (table) => ({
+    expireIndex: index("IDX_session_expire").on(table.expire)
+  })
 );
 
 // User storage table.
@@ -39,7 +41,7 @@ export const users = pgTable("users", {
   yearsExperience: integer("years_experience"),
   aiReadinessScore: integer("ai_readiness_score").default(0),
   currentLevel: varchar("current_level").default("beginner"),
-  preferences: jsonb("preferences"),
+  preferences: jsonb("preferences").$type<{ theme?: string; notifications?: Record<string, boolean> }>(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -79,6 +81,14 @@ export const userProgress = pgTable("user_progress", {
 export const recommendations = pgTable("recommendations", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(),
+  type: varchar("type").notNull(),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  priority: varchar("priority").default('medium'),
+  matchScore: integer("match_score"),
+  reasoning: text("reasoning"),
+  metadata: jsonb("metadata"),
+  status: varchar("status").default('pending'),
   tools: json("tools").$type<any[]>(),
   learningPathId: integer("learning_path_id"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -90,7 +100,20 @@ export const resumes = pgTable("resumes", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   fileName: varchar("file_name").notNull(),
   fileUrl: varchar("file_url").notNull(),
-  analysisResults: jsonb("analysis_results"),
+  analysisResults: jsonb("analysis_results").$type<{
+    overallScore?: number;
+    scoreBreakdown?: any;
+    strengths?: string[];
+    improvements?: string[];
+    missingKeywords?: string[];
+    skills?: { 
+        technical?: string[]; 
+        soft?: string[];
+        missing?: string[]; 
+        emerging?: string[] 
+    };
+    aiEnhancedSections?: any;
+  }>(),
   suggestions: text("suggestions").array(),
   aiEnhancedVersion: text("ai_enhanced_version"),
   scoreBreakdown: jsonb("score_breakdown"),

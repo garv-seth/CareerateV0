@@ -38,7 +38,7 @@ export function ProgressTracker() {
     );
   }
 
-  const progressItems = progress || [];
+  const progressItems = Array.isArray(progress) ? progress : [];
   const completedItems = progressItems.filter((item: UserProgress) => item.status === 'completed');
   const inProgressItems = progressItems.filter((item: UserProgress) => item.status === 'in_progress');
   const overallProgress = progressItems.length > 0 

@@ -31,32 +31,34 @@ export default function ResumeAnalyzerWidget() {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles && acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
-      setUploadedFile(file);
-      setError(null);
-      setUploading(true);
-      setAnalysisResult(null);
+      if (file) {
+        setUploadedFile(file);
+        setError(null);
+        setUploading(true);
+        setAnalysisResult(null);
 
-      const formData = new FormData();
-      formData.append('resume', file);
+        const formData = new FormData();
+        formData.append('resume', file);
 
-      try {
-        const response = await fetch('/api/resume/analyze', {
-          method: 'POST',
-          body: formData,
-        });
+        try {
+          const response = await fetch('/api/resume/analyze', {
+            method: 'POST',
+            body: formData,
+          });
 
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error || 'Failed to analyze resume');
+          if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Failed to analyze resume');
+          }
+
+          const data = await response.json();
+          setAnalysisResult({ ...data, fileName: file.name });
+        } catch (err: any) {
+          setError(err.message || 'An unknown error occurred during analysis.');
+          console.error('Resume analysis error:', err);
+        } finally {
+          setUploading(false);
         }
-
-        const data = await response.json();
-        setAnalysisResult({ ...data, fileName: file.name });
-      } catch (err: any) {
-        setError(err.message || 'An unknown error occurred during analysis.');
-        console.error('Resume analysis error:', err);
-      } finally {
-        setUploading(false);
       }
     }
   }, []);

@@ -7,18 +7,42 @@ import { searchService } from "./services/searchService";
 import { careerService } from "./services/careerService";
 import multer from "multer";
 import { z } from "zod";
+import { Request, Response, NextFunction } from "express";
+import { type InsertResume, type InsertCareerInsight, type User as AppUser } from "../shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Define a type for the authenticated user
+interface AuthenticatedUser extends AppUser {
+  claims: { sub: string; [key: string]: any };
+  // Add other properties from oidc.TokenSet if needed, like id_token, access_token etc.
+  id_token?: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_at?: number;
+}
+
+// Augment Express's User type
+declare global {
+  namespace Express {
+    interface User extends AuthenticatedUser {}
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      // User is now properly typed via declaration merging
+      const userId = req.user!.claims.sub;
       const user = await storage.getUser(userId);
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -27,13 +51,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // User profile routes
-  app.patch('/api/profile', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/profile', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
-      const updateData = req.body;
-      
-      const user = await storage.updateUserProfile(userId, updateData);
-      res.json(user);
+      const userId = req.user!.claims.sub;
+      const updatedUser = await storage.updateUserProfile(userId, req.body);
+      if (!updatedUser) {
+        res.status(404).json({ message: "User not found or update failed" });
+        return;
+      }
+      res.json(updatedUser);
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
@@ -56,9 +82,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/tools/recommendations', isAuthenticated, async (req: any, res) => {
+  app.get('/api/tools/recommendations', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const limit = parseInt(req.query.limit as string) || 6;
       
       const tools = await storage.getRecommendedTools(userId, limit);
@@ -70,9 +96,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Progress tracking routes
-  app.get('/api/progress', isAuthenticated, async (req: any, res) => {
+  app.get('/api/progress', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const progress = await storage.getUserProgress(userId);
       res.json(progress);
     } catch (error) {
@@ -81,9 +107,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/progress/weekly-stats', isAuthenticated, async (req: any, res) => {
+  app.get('/api/progress/weekly-stats', isAuthenticated, async (req, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const stats = await storage.getUserWeeklyStats(userId);
       res.json(stats);
     } catch (error) {
@@ -92,11 +118,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/progress', isAuthenticated, async (req: any, res) => {
+  app.post('/api/progress', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
-      const progressData = { ...req.body, userId };
-      
+      const userId = req.user!.claims.sub;
+      const progressData = { ...req.body, userId }; // Ensure req.body matches InsertUserProgress
       const progress = await storage.createUserProgress(progressData);
       res.json(progress);
     } catch (error) {
@@ -106,11 +131,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recommendations routes
-  app.get('/api/recommendations', isAuthenticated, async (req: any, res) => {
+  app.get('/api/recommendations', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const limit = parseInt(req.query.limit as string) || 10;
-      
       const recommendations = await storage.getUserRecommendations(userId, limit);
       res.json(recommendations);
     } catch (error) {
@@ -119,23 +143,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/recommendations/generate', isAuthenticated, async (req: any, res) => {
+  app.post('/api/recommendations/generate', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const user = await storage.getUser(userId);
-      
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        res.status(404).json({ message: "User not found" });
+        return;
       }
-
-      const recommendations = await careerService.generatePersonalizedRecommendations(user);
-      
-      // Store recommendations in database
-      for (const rec of recommendations) {
+      // Assuming careerService.generatePersonalizedRecommendations returns an array of objects
+      // that are compatible with InsertRecommendation (excluding userId which is added here)
+      const recommendationsFromService = await careerService.generatePersonalizedRecommendations(user);
+      for (const rec of recommendationsFromService) {
         await storage.createRecommendation({ ...rec, userId });
       }
-      
-      res.json({ message: "Recommendations generated successfully", count: recommendations.length });
+      res.json({ message: "Recommendations generated successfully", count: recommendationsFromService.length });
     } catch (error) {
       console.error("Error generating recommendations:", error);
       res.status(500).json({ message: "Failed to generate recommendations" });
@@ -143,9 +165,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Resume analysis routes
-  app.get('/api/resumes', isAuthenticated, async (req: any, res) => {
+  app.get('/api/resumes', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const resumes = await storage.getUserResumes(userId);
       res.json(resumes);
     } catch (error) {
@@ -154,34 +176,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/resumes/upload', isAuthenticated, upload.single('resume'), async (req: any, res) => {
+  app.post('/api/resumes/upload', isAuthenticated, upload.single('resume'), async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const file = req.file;
-      
       if (!file) {
-        return res.status(400).json({ message: "No file uploaded" });
+        res.status(400).json({ message: "No file uploaded" });
+        return;
       }
-
-      // Convert buffer to text for analysis
       const resumeText = file.buffer.toString('utf-8');
-      
-      // Analyze resume with AI
-      const analysisResults = await aiService.analyzeResume(resumeText);
-      
-      // For demo purposes, we'll store the file content as text
-      // In production, you'd upload to Replit Object Storage
+      const analysisDataFromService = await aiService.analyzeResume(resumeText) as {
+        overallScore: number;
+        scoreBreakdown?: any; 
+        aiEnhancedSections?: any; 
+        strengths?: string[];
+        improvements?: string[];
+        missingKeywords?: string[];
+        skills?: { technical?: string[]; soft?: string[]; missing?: string[]; emerging?: string[] }; 
+        suggestions?: string[];
+        aiEnhancedVersion?: string; 
+      };
+
       const fileUrl = `data:text/plain;base64,${file.buffer.toString('base64')}`;
       
-      const resume = await storage.createResume({
+      const analysisResultsForDb: InsertResume['analysisResults'] = {
+        overallScore: analysisDataFromService.overallScore,
+        scoreBreakdown: analysisDataFromService.scoreBreakdown, 
+        aiEnhancedSections: analysisDataFromService.aiEnhancedSections, 
+        strengths: analysisDataFromService.strengths || [],
+        improvements: analysisDataFromService.improvements || [],
+        missingKeywords: analysisDataFromService.missingKeywords || [],
+        skills: analysisDataFromService.skills || {}, 
+      };
+
+      const suggestionsForDb: string[] | null = (analysisDataFromService.suggestions && Array.isArray(analysisDataFromService.suggestions))
+                                              ? analysisDataFromService.suggestions 
+                                              : null;
+
+      const resumeToCreate = {
         userId,
         fileName: file.originalname,
         fileUrl,
-        analysisResults,
-        suggestions: analysisResults.suggestions || [],
-        scoreBreakdown: analysisResults.scoreBreakdown || {},
-      });
-      
+        analysisResults: analysisResultsForDb,
+        suggestions: suggestionsForDb, 
+        scoreBreakdown: analysisDataFromService.scoreBreakdown || {}, 
+        aiEnhancedVersion: analysisDataFromService.aiEnhancedVersion || "",
+      } as InsertResume; // Cast to InsertResume earlier
+
+      // Cast to any before calling storage to bypass strict type checking for this specific call
+      const resume = await storage.createResume(resumeToCreate as any);
       res.json(resume);
     } catch (error) {
       console.error("Error uploading resume:", error);
@@ -190,9 +233,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Learning paths routes
-  app.get('/api/learning-paths', isAuthenticated, async (req: any, res) => {
+  app.get('/api/learning-paths', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const paths = await storage.getUserLearningPaths(userId);
       res.json(paths);
     } catch (error) {
@@ -201,27 +244,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/learning-paths/generate', isAuthenticated, async (req: any, res) => {
+  app.post('/api/learning-paths/generate', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const { targetRole, currentSkills, timeCommitment } = req.body;
-      
       const user = await storage.getUser(userId);
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        res.status(404).json({ message: "User not found" });
+        return;
       }
-
-      const learningPath = await careerService.generateLearningPath(user, {
+      // Ensure careerService.generateLearningPath returns data compatible with InsertLearningPath
+      const learningPathFromService = await careerService.generateLearningPath(user, {
         targetRole,
         currentSkills,
         timeCommitment,
       });
-      
       const createdPath = await storage.createLearningPath({
         userId,
-        ...learningPath,
+        ...learningPathFromService, // Spread the properties from service
       });
-      
       res.json(createdPath);
     } catch (error) {
       console.error("Error generating learning path:", error);
@@ -230,9 +271,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Career insights routes
-  app.get('/api/insights', isAuthenticated, async (req: any, res) => {
+  app.get('/api/insights', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const insights = await storage.getUserCareerInsights(userId);
       res.json(insights);
     } catch (error) {
@@ -241,25 +282,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/insights/generate', isAuthenticated, async (req: any, res) => {
+  app.post('/api/insights/generate', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user!.claims.sub;
       const user = await storage.getUser(userId);
-      
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        res.status(404).json({ message: "User not found" });
+        return;
       }
-
-      // Search for latest market trends and insights
       const marketData = await searchService.searchCareerTrends(user.role || 'software engineer');
-      const insights = await careerService.generateCareerInsights(user, marketData);
+      const insightsFromService = await careerService.generateCareerInsights(user, marketData) as Array<{
+        insightType: string;
+        title: string;
+        content: string;
+        actionItems?: string | string[];
+        relevanceScore?: number;
+        sources?: string | string[];
+      }>;
       
-      // Store insights in database
-      for (const insight of insights) {
-        await storage.createCareerInsight({ ...insight, userId });
+      for (const insight of insightsFromService) {
+        const actionItemsForDb: string[] | null = insight.actionItems 
+          ? (Array.isArray(insight.actionItems) ? insight.actionItems : [insight.actionItems]) 
+          : null;
+        const sourcesForDb: string[] | null = insight.sources 
+          ? (Array.isArray(insight.sources) ? insight.sources : [insight.sources]) 
+          : null;
+        const relevanceScore = insight.relevanceScore ?? 0;
+
+        const careerInsightData = {
+          userId,
+          insightType: insight.insightType,
+          title: insight.title,
+          content: insight.content,
+          actionItems: actionItemsForDb, 
+          relevanceScore,
+          sources: sourcesForDb, 
+        };
+        // Cast to any before calling storage to bypass strict type checking for this specific call
+        await storage.createCareerInsight(careerInsightData as any);
       }
-      
-      res.json({ message: "Career insights generated successfully", count: insights.length });
+      res.json({ message: "Career insights generated successfully", count: insightsFromService.length });
     } catch (error) {
       console.error("Error generating career insights:", error);
       res.status(500).json({ message: "Failed to generate career insights" });
@@ -267,16 +329,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Chat routes
-  app.post('/api/ai/chat', isAuthenticated, async (req: any, res) => {
+  app.post('/api/ai/chat', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = req.user.claims.sub;
-      const { message, context } = req.body;
-      
+      const userId = req.user!.claims.sub;
+      const { message, context } = req.body; // Ensure message and context are properly typed if necessary
       const user = await storage.getUser(userId);
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        res.status(404).json({ message: "User not found" });
+        return;
       }
-
       const response = await aiService.chatWithAssistant(message, user, context);
       res.json({ response });
     } catch (error) {
@@ -286,18 +347,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Search routes
-  app.get('/api/search/tools', isAuthenticated, async (req, res) => {
+  app.get('/api/search/tools', isAuthenticated, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { query } = req.query;
-      
       if (!query || typeof query !== 'string') {
-        return res.status(400).json({ message: "Search query is required" });
+        res.status(400).json({ message: "Search query is required" });
+        return;
       }
-
       const results = await searchService.searchAITools(query);
       res.json(results);
     } catch (error) {
-      console.error("Error searching tools:", error);
+      console.error("Error searching AI tools:", error);
       res.status(500).json({ message: "Failed to search AI tools" });
     }
   });

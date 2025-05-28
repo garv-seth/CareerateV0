@@ -1,12 +1,12 @@
-import * as client from "openid-client";
-import { Strategy, type VerifyFunction } from "openid-client/passport";
+import * as oidc from "openid-client";
+import { Strategy as OpenIDConnectStrategy, type VerifyCallbackWithRequest } from "passport-openidconnect";
 
 import passport from "passport";
 import session from "express-session";
-import type { Express, RequestHandler } from "express";
+import type { Express, Request, Response, NextFunction, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
-import { storage } from "./storage";
+import { storage, IStorage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
@@ -14,10 +14,12 @@ if (!process.env.REPLIT_DOMAINS) {
 
 const getOidcConfig = memoize(
   async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
+    const issuer = await oidc.Issuer.discover(process.env.ISSUER_URL ?? "https://replit.com/oidc");
+    return new issuer.Client({
+      client_id: process.env.REPL_ID!,
+      redirect_uris: process.env.REPLIT_DOMAINS!.split(",").map(d => `https://${d}/api/callback`),
+      response_types: ['code'],
+    });
   },
   { maxAge: 3600 * 1000 }
 );
@@ -46,23 +48,23 @@ export function getSession() {
 
 function updateUserSession(
   user: any,
-  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
+  tokens: oidc.TokenSet
 ) {
   user.claims = tokens.claims();
   user.access_token = tokens.access_token;
   user.refresh_token = tokens.refresh_token;
-  user.expires_at = user.claims?.exp;
+  user.expires_at = tokens.expires_at;
 }
 
-async function upsertUser(
-  claims: any,
+async function upsertUserFromClaims(
+  claims: oidc.UserinfoResponse
 ) {
-  await storage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
+  await (storage as IStorage).upsertUser({
+    id: claims.sub!,
+    email: claims.email,
+    firstName: claims.given_name,
+    lastName: claims.family_name,
+    profileImageUrl: claims.picture,
   });
 }
 
@@ -72,30 +74,45 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const config = await getOidcConfig();
+  const oidcClient = await getOidcConfig();
 
-  const verify: VerifyFunction = async (
-    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-    verified: passport.AuthenticateCallback
+  const verify: VerifyCallbackWithRequest = async (
+    req: Request,
+    issuer: string,
+    profile: any,
+    context: any,
+    idToken: string | object,
+    accessToken: string,
+    refreshToken: string | undefined,
+    cb: (err: any, user?: Express.User | false, info?: any) => void
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      const user = { id: profile.sub };
+      if (context && context.tokens) {
+        updateUserSession(user, new oidc.TokenSet(context.tokens));
+      }
+      await upsertUserFromClaims(profile);
+      cb(null, user as Express.User);
+    } catch (err) {
+      cb(err);
+    }
   };
 
-  for (const domain of process.env
-    .REPLIT_DOMAINS!.split(",")) {
-    const strategy = new Strategy(
+  for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
+    const strategy = new OpenIDConnectStrategy(
       {
-        name: `replitauth:${domain}`,
-        config,
-        scope: "openid email profile offline_access",
+        issuer: oidcClient.issuer.issuer,
+        authorizationURL: oidcClient.issuer.authorization_endpoint!,
+        tokenURL: oidcClient.issuer.token_endpoint!,
+        userInfoURL: oidcClient.issuer.userinfo_endpoint!,
+        clientID: oidcClient.metadata.client_id,
         callbackURL: `https://${domain}/api/callback`,
+        scope: "openid email profile offline_access",
+        passReqToCallback: true,
       },
-      verify,
+      verify
     );
-    passport.use(strategy);
+    passport.use(`replitauth:${domain}`, strategy);
   }
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
@@ -104,7 +121,6 @@ export async function setupAuth(app: Express) {
   app.get("/api/login", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
@@ -115,14 +131,23 @@ export async function setupAuth(app: Express) {
     })(req, res, next);
   });
 
-  app.get("/api/logout", (req, res) => {
-    req.logout(() => {
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
+  app.get("/api/logout", async (req, res) => {
+    const user = req.user as any;
+    const idTokenHint = user?.id_token;
+    req.logout(async (err) => {
+      if (err) {
+        return res.redirect('/');
+      }
+      try {
+        const oidcClientInstance = await getOidcConfig();
+        const endSessionUrl = oidcClientInstance.endSessionUrl({
+          id_token_hint: idTokenHint,
           post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
+        });
+        res.redirect(endSessionUrl);
+      } catch (e) {
+        res.redirect('/');
+      }
     });
   });
 }
@@ -130,26 +155,33 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
+  if (!req.isAuthenticated() || !user?.expires_at) {
+    res.status(401).json({ message: "Unauthorized" });
+    return;
   }
 
   const now = Math.floor(Date.now() / 1000);
   if (now <= user.expires_at) {
-    return next();
+    next();
+    return;
   }
 
   const refreshToken = user.refresh_token;
   if (!refreshToken) {
-    return res.redirect("/api/login");
+    res.redirect("/api/login");
+    return;
   }
 
   try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
-    return next();
+    const oidcClientInstance = await getOidcConfig();
+    const tokenSet = await oidcClientInstance.refresh(refreshToken);
+    updateUserSession(user, tokenSet);
+    req.login(user, (err) => {
+      if (err) { return next(err); }
+      next();
+    });
   } catch (error) {
-    return res.redirect("/api/login");
+    console.error("Token refresh error:", error);
+    res.redirect("/api/login");
   }
 };

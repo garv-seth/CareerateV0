@@ -32,7 +32,7 @@ export default function ResumeAnalysis() {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedResume, setSelectedResume] = useState<Resume | null>(null);
 
-  const { data: resumes, isLoading } = useQuery({
+  const { data: resumes, isLoading } = useQuery<Resume[] | undefined>({
     queryKey: ["/api/resumes"],
   });
 
@@ -89,8 +89,9 @@ export default function ResumeAnalysis() {
       });
       return;
     }
-
-    uploadMutation.mutate(file);
+    if (file) {
+      uploadMutation.mutate(file as File);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -245,7 +246,7 @@ export default function ResumeAnalysis() {
                                   {resume.fileName}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {new Date(resume.uploadedAt).toLocaleDateString()}
+                                  {resume.uploadedAt ? new Date(resume.uploadedAt).toLocaleDateString() : 'N/A'}
                                 </p>
                               </div>
                               {resume.analysisResults?.overallScore && (
@@ -293,7 +294,7 @@ export default function ResumeAnalysis() {
                         <div className="text-right">
                           <div className="text-sm text-muted-foreground mb-1">Analyzed</div>
                           <div className="text-sm font-medium">
-                            {new Date(currentResume.uploadedAt).toLocaleDateString()}
+                            {currentResume.uploadedAt ? new Date(currentResume.uploadedAt).toLocaleDateString() : 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -332,7 +333,7 @@ export default function ResumeAnalysis() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-4">
-                          {currentResume.suggestions.map((suggestion, index) => (
+                          {currentResume.suggestions.map((suggestion: string, index: number) => (
                             <div key={index} className="flex items-start gap-3 p-4 bg-muted rounded-lg">
                               <Target className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
                               <div>

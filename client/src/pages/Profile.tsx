@@ -51,7 +51,7 @@ export default function Profile() {
     preferences: user?.preferences || {},
   });
 
-  const { data: assessment, isLoading: assessmentLoading } = useQuery({
+  const { data: assessment, isLoading: assessmentLoading } = useQuery<AIReadinessAssessment>({
     queryKey: ["/api/profile/ai-assessment"],
     enabled: false, // Manual trigger
   });
@@ -350,8 +350,8 @@ export default function Profile() {
                             Strengths
                           </h4>
                           <div className="space-y-1">
-                            {currentAssessment.strengths.map((strength, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs block w-fit">
+                            {currentAssessment.strengths.map((strength: string, index: number) => (
+                              <Badge key={index} variant="secondary">
                                 {strength}
                               </Badge>
                             ))}
@@ -367,10 +367,10 @@ export default function Profile() {
                             Areas for Improvement
                           </h4>
                           <div className="space-y-1">
-                            {currentAssessment.weaknesses.map((weakness, index) => (
-                              <p key={index} className="text-xs text-muted-foreground">
-                                • {weakness}
-                              </p>
+                            {currentAssessment.weaknesses.map((weakness: string, index: number) => (
+                              <Badge key={index} variant="outline" className="border-yellow-500 text-yellow-600">
+                                {weakness}
+                              </Badge>
                             ))}
                           </div>
                         </div>
@@ -384,10 +384,11 @@ export default function Profile() {
                             Recommendations
                           </h4>
                           <div className="space-y-1">
-                            {currentAssessment.recommendations.slice(0, 3).map((recommendation, index) => (
-                              <p key={index} className="text-xs text-muted-foreground">
-                                • {recommendation}
-                              </p>
+                            {currentAssessment.recommendations.slice(0, 3).map((recommendation: string, index: number) => (
+                              <li key={index} className="flex items-start text-sm">
+                                <Lightbulb className="w-4 h-4 mr-2 mt-0.5 text-primary flex-shrink-0" />
+                                {recommendation}
+                              </li>
                             ))}
                           </div>
                         </div>
