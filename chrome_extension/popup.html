@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Careerate Tracker</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="popup.css" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <img src="icons/icon48.png" alt="Careerate Logo" class="logo">
+      <h1>Careerate Tracker</h1>
+    </div>
+    
+    <div class="status-section">
+      <p>Status: <span id="trackingStatus">Loading...</span></p>
+      <label class="switch" for="trackingToggle">
+        <input type="checkbox" id="trackingToggle" aria-label="Toggle tracking">
+        <span class="slider round"></span>
+      </label>
+    </div>
+
+    <button id="syncData" class="btn btn-primary">Sync Data Now</button>
+    <a href="#" id="openDashboard" class="btn btn-secondary">Open Dashboard</a>
+    <p class="footer-text">Helping you harness AI.</p>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html> 

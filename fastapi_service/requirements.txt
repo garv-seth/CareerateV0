@@ -1,0 +1,65 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+python-dotenv>=1.0.0
+pydantic-settings[azure-key-vault]>=2.2.1
+azure-identity>=1.16.0
+azure-keyvault-secrets>=4.8.0
+psycopg2-binary>=2.9.9
+pydantic>=2.6.0
+
+# AI/ML Libraries
+openai>=1.12.0
+anthropic>=0.18.0
+azure-openai>=1.13.0
+transformers>=4.37.0
+torch>=2.1.0
+scikit-learn>=1.4.0
+pandas>=2.2.0
+numpy>=1.26.0
+sentence-transformers>=2.3.0
+
+# Vector Database and Search
+azure-search-documents>=11.4.0
+chromadb>=0.4.24
+faiss-cpu>=1.7.4
+
+# Async Processing
+celery[redis]>=5.3.0
+redis>=5.0.0
+
+# Data Processing
+aiofiles>=23.2.0
+httpx>=0.27.0
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+
+# Monitoring and Observability
+azure-monitor-opentelemetry>=1.2.0
+azure-applicationinsights>=0.11.10
+prometheus-client>=0.19.0
+
+# Security
+cryptography>=42.0.0
+python-multipart>=0.0.9
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+
+# Machine Learning Ops
+mlflow>=2.10.0
+azure-ai-ml>=1.13.0
+
+# Utilities
+schedule>=1.2.0
+tenacity>=8.2.0
+slowapi>=0.1.9
+python-dateutil>=2.8.2
+
+# drizzle-orm - This is a JS/TS ORM, not Python. It should not be in requirements.txt. 
+# We will handle database interaction via psycopg2 or an async equivalent if needed.
+# If you intend to use Drizzle for migrations and schema management from outside Python, that's fine.
+# For Python interaction, psycopg2 or an async alternative (like asyncpg) would be used.
+# We'll keep psycopg2-binary for now for direct PG connection if needed.
+# Add other dependencies here as needed, e.g.:
+# azure-cosmos
+# azure-identity
+# azure-keyvault-secrets 

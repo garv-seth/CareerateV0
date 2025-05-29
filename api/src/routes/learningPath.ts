@@ -1,414 +1,366 @@
-import { Router, Request, Response } from 'express';
-import LearningPath, { ILearningPath, ILearningStep } from '../models/LearningPath';
-import User from '../models/User';
+import express from 'express';
+import jwt from 'jsonwebtoken';
 
-const router = Router();
+const router = express.Router();
 
-interface LearningStep {
-  id: string;
-  title: string;
-  description: string;
-  type: 'course' | 'tool' | 'project' | 'certification';
-  provider: string;
-  url: string;
-  estimatedHours: number;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  skills: string[];
-  completed: boolean;
-  order: number;
-}
-
-interface LearningPath {
-  id: string;
-  title: string;
-  description: string;
-  totalSteps: number;
-  completedSteps: number;
-  progressPercentage: number;
-  estimatedTotalHours: number;
-  remainingHours: number;
-  targetRole: string;
-  skills: string[];
-  steps: LearningStep[];
-  milestones: {
-    stepId: string;
-    title: string;
-    reward: string;
-    achieved: boolean;
-  }[];
-  lastUpdated: string;
-}
-
-// Get personalized learning path for a user
-router.get('/:userId', async (req: Request, res: Response) => {
-  try {
-    const { userId } = req.params;
-    
-    // Generate personalized learning path
-    const learningPath = await generateLearningPath(userId);
-    
-    res.json(learningPath);
-  } catch (error) {
-    console.error('Learning path error:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate learning path',
-      message: process.env.NODE_ENV !== 'production' ? (error as Error).message : undefined
-    });
-  }
-});
-
-// Update progress on a specific step
-router.post('/:userId/progress', async (req: Request, res: Response) => {
-  try {
-    const { userId } = req.params;
-    const { stepId, completed, hoursSpent } = req.body;
-    
-    // Update progress in database
-    const updatedPath = await updateLearningProgress(userId, stepId, completed, hoursSpent);
-    
-    res.json(updatedPath);
-  } catch (error) {
-    console.error('Progress update error:', error);
-    res.status(500).json({ 
-      error: 'Failed to update progress',
-      message: process.env.NODE_ENV !== 'production' ? (error as Error).message : undefined
-    });
-  }
-});
-
-// Generate a new learning path based on goals
-router.post('/:userId/generate', async (req: Request, res: Response) => {
-  try {
-    const { userId } = req.params;
-    const { targetRole, currentSkills, timeAvailable } = req.body;
-    
-    // Generate new customized path
-    const newPath = await generateCustomPath(userId, targetRole, currentSkills, timeAvailable);
-    
-    res.json(newPath);
-  } catch (error) {
-    console.error('Path generation error:', error);
-    res.status(500).json({ 
-      error: 'Failed to generate custom path',
-      message: process.env.NODE_ENV !== 'production' ? (error as Error).message : undefined
-    });
-  }
-});
-
-// Generate personalized learning path
-async function generateLearningPath(userId: string): Promise<ILearningPath> {
-  try {
-    // Check if user already has an active learning path
-    let existingPath = await LearningPath.findOne({ userId, isActive: true });
-    
-    if (existingPath) {
-      return existingPath;
-    }
-
-    // Fetch user data to personalize the path
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    // Generate path based on user's profile and goals
-    const targetRole = user.profile.goals?.[0] || 'AI Specialist';
-    const currentSkills = user.profile.skills || [];
-  
-    const steps: ILearningStep[] = [
-    {
-      id: 'step-1',
-      title: 'Introduction to Artificial Intelligence',
-      description: 'Foundational concepts of AI and machine learning',
-      type: 'course',
-      provider: 'Coursera',
-      url: 'https://coursera.org/learn/ai-for-everyone',
-      estimatedHours: 12,
-      difficulty: 'beginner',
-      skills: ['AI Fundamentals', 'Machine Learning Basics'],
-      completed: false,
-      order: 1
-    },
-    {
-      id: 'step-2',
-      title: 'Python for Data Science',
-      description: 'Learn Python programming for data analysis and ML',
-      type: 'course',
-      provider: 'DataCamp',
-      url: 'https://datacamp.com/courses/python-data-science',
-      estimatedHours: 20,
-      difficulty: 'beginner',
-      skills: ['Python', 'Data Analysis', 'Pandas', 'NumPy'],
-      completed: false,
-      order: 2
-    },
-    {
-      id: 'step-3',
-      title: 'ChatGPT and Prompt Engineering',
-      description: 'Master prompt engineering for LLMs',
-      type: 'course',
-      provider: 'Udemy',
-      url: 'https://udemy.com/course/prompt-engineering',
-      estimatedHours: 8,
-      difficulty: 'intermediate',
-      skills: ['Prompt Engineering', 'LLMs', 'ChatGPT'],
-      completed: false,
-      order: 3
-    },
-    {
-      id: 'step-4',
-      title: 'GitHub Copilot Integration',
-      description: 'Learn to use AI coding assistants effectively',
-      type: 'tool',
-      provider: 'GitHub',
-      url: 'https://github.com/features/copilot',
-      estimatedHours: 6,
-      difficulty: 'intermediate',
-      skills: ['GitHub Copilot', 'AI-Assisted Coding'],
-      completed: false,
-      order: 4
-    },
-    {
-      id: 'step-5',
-      title: 'Build an AI-Powered Web App',
-      description: 'Hands-on project using OpenAI API',
-      type: 'project',
-      provider: 'Self-directed',
-      url: 'https://openai.com/api',
-      estimatedHours: 25,
-      difficulty: 'intermediate',
-      skills: ['OpenAI API', 'Web Development', 'Project Management'],
-      completed: false,
-      order: 5
-    },
-    {
-      id: 'step-6',
-      title: 'Machine Learning with TensorFlow',
-      description: 'Deep dive into ML model building',
-      type: 'course',
-      provider: 'Google Cloud',
-      url: 'https://cloud.google.com/training/machinelearning-ai',
-      estimatedHours: 30,
-      difficulty: 'advanced',
-      skills: ['TensorFlow', 'Deep Learning', 'Neural Networks'],
-      completed: false,
-      order: 6
-    },
-    {
-      id: 'step-7',
-      title: 'AI/ML Professional Certificate',
-      description: 'Industry-recognized certification',
-      type: 'certification',
-      provider: 'Google',
-      url: 'https://grow.google/certificates/machine-learning',
-      estimatedHours: 40,
-      difficulty: 'advanced',
-      skills: ['ML Engineering', 'Professional Certification'],
-      completed: false,
-      order: 7
-    }
-  ];
-
-  const milestones = [
-    {
-      stepId: 'step-2',
-      title: 'Python Proficiency',
-      reward: 'Python Developer Badge',
-      achieved: false
-    },
-    {
-      stepId: 'step-4',
-      title: 'AI Tool Master',
-      reward: 'AI Tools Expert Badge',
-      achieved: false
-    },
-    {
-      stepId: 'step-5',
-      title: 'First AI Project',
-      reward: 'AI Builder Badge',
-      achieved: false
-    },
-    {
-      stepId: 'step-7',
-      title: 'AI Professional',
-      reward: 'AI Professional Certificate',
-      achieved: false
-    }
-  ];
-
-    const totalHours = steps.reduce((sum, step) => sum + step.estimatedHours, 0);
-    
-    // Create new learning path
-    const newPath = new LearningPath({
-      userId,
-      title: 'AI Professional Development Path',
-      description: 'Comprehensive journey from AI basics to professional-level skills',
-      totalSteps: steps.length,
-      completedSteps: 0,
-      progressPercentage: 0,
-      estimatedTotalHours: totalHours,
-      remainingHours: totalHours,
-      targetRole: targetRole,
-      skills: ['AI Fundamentals', 'Python', 'Machine Learning', 'Prompt Engineering', 'TensorFlow'],
-      steps,
-      milestones,
-      isActive: true
-    });
-
-    // Save to database
-    await newPath.save();
-    return newPath;
-  } catch (error) {
-    console.error('Error generating learning path:', error);
-    throw error;
-  }
-}
-
-// Update learning progress
-async function updateLearningProgress(
-  userId: string, 
-  stepId: string, 
-  completed: boolean, 
-  hoursSpent: number
-): Promise<ILearningPath> {
-  try {
-    const path = await LearningPath.findOne({ userId, isActive: true });
-    if (!path) {
-      throw new Error('Learning path not found');
-    }
-    
-    // Update the specific step
-    const stepIndex = path.steps.findIndex(step => step.id === stepId);
-    if (stepIndex !== -1) {
-      path.steps[stepIndex].completed = completed;
-      if (completed && hoursSpent) {
-        path.steps[stepIndex].hoursSpent = hoursSpent;
-        path.steps[stepIndex].completedAt = new Date();
+// Mock learning paths data
+const mockLearningPaths = [
+  {
+    id: 'path-1',
+    title: 'AI-Powered Writing Mastery',
+    description: 'Master advanced writing tools like GPT-4, Claude, and Jasper to become 10x more productive in content creation.',
+    progress: 65,
+    estimatedHours: 24,
+    difficulty: 'intermediate',
+    skills: ['GPT-4 Mastery', 'Prompt Engineering', 'Content Strategy', 'AI Writing Ethics'],
+    nextStep: 'Complete the Advanced Prompt Engineering module',
+    isActive: true,
+    modules: [
+      {
+        id: 'module-1',
+        title: 'Introduction to AI Writing',
+        status: 'completed',
+        duration: 2
+      },
+      {
+        id: 'module-2', 
+        title: 'Advanced Prompt Engineering',
+        status: 'in_progress',
+        duration: 4
+      },
+      {
+        id: 'module-3',
+        title: 'Content Strategy with AI',
+        status: 'locked',
+        duration: 6
       }
-      
-      // Recalculate progress
-      const completedSteps = path.steps.filter(step => step.completed).length;
-      path.completedSteps = completedSteps;
-      path.progressPercentage = Math.round((completedSteps / path.totalSteps) * 100);
-      
-      // Update remaining hours
-      const completedHours = path.steps
-        .filter(step => step.completed)
-        .reduce((sum, step) => sum + (step.hoursSpent || step.estimatedHours), 0);
-      path.remainingHours = Math.max(0, path.estimatedTotalHours - completedHours);
-      
-      // Check milestones
-      path.milestones.forEach(milestone => {
-        if (milestone.stepId === stepId && completed) {
-          milestone.achieved = true;
-          milestone.achievedAt = new Date();
-        }
-      });
-      
-      path.lastUpdated = new Date();
-      await path.save();
-    }
-    
-    return path;
-  } catch (error) {
-    console.error('Error updating learning progress:', error);
-    throw error;
+    ]
+  },
+  {
+    id: 'path-2',
+    title: 'Code Assistant Productivity Boost',
+    description: 'Learn to leverage GitHub Copilot, Tabnine, and other AI coding assistants to accelerate your development workflow.',
+    progress: 30,
+    estimatedHours: 18,
+    difficulty: 'beginner',
+    skills: ['GitHub Copilot', 'Code Review', 'Debugging', 'Test Generation'],
+    nextStep: 'Start the GitHub Copilot Fundamentals module',
+    isActive: true,
+    modules: [
+      {
+        id: 'module-4',
+        title: 'Setting up GitHub Copilot',
+        status: 'completed',
+        duration: 3
+      },
+      {
+        id: 'module-5',
+        title: 'Advanced Code Generation',
+        status: 'in_progress',
+        duration: 5
+      }
+    ]
+  },
+  {
+    id: 'path-3',
+    title: 'AI Research & Analysis Tools',
+    description: 'Discover and master research tools like Semantic Scholar, Elicit, and Consensus to accelerate your research process.',
+    progress: 0,
+    estimatedHours: 15,
+    difficulty: 'advanced',
+    skills: ['Research Methodology', 'Data Analysis', 'Literature Review', 'Citation Management'],
+    nextStep: 'Begin with Research Tool Overview',
+    isActive: false,
+    modules: [
+      {
+        id: 'module-6',
+        title: 'Research Tool Overview',
+        status: 'not_started',
+        duration: 2
+      },
+      {
+        id: 'module-7',
+        title: 'Advanced Search Techniques',
+        status: 'locked',
+        duration: 4
+      }
+    ]
   }
-}
+];
 
-// Generate custom learning path
-async function generateCustomPath(
-  userId: string,
-  targetRole: string,
-  currentSkills: string[],
-  timeAvailable: number
-): Promise<ILearningPath> {
-  // This would use AI to generate a customized path based on inputs
-  // For now, return a role-specific mock path
-  
-  let customSteps: LearningStep[] = [];
-  let pathTitle = '';
-  let pathDescription = '';
-  
-  switch (targetRole) {
-    case 'ML Engineer':
-      pathTitle = 'Machine Learning Engineer Track';
-      pathDescription = 'Specialized path for ML engineering roles';
-      customSteps = [
+// Get personalized learning paths
+router.get('/personalized', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(
+      token, 
+      process.env.JWT_SECRET || 'fallback-secret'
+    ) as any;
+
+    const userId = decoded.userId;
+
+    // In a real implementation, this would:
+    // 1. Get user's skill level, work domain, and goals
+    // 2. Analyze their activity patterns
+    // 3. Generate or filter learning paths based on their profile
+    // 4. Consider their current progress
+
+    // For now, return mock data with some personalization
+    const personalizedPaths = mockLearningPaths.map(path => ({
+      ...path,
+      // Simulate some personalization based on user data
+      relevanceScore: Math.random() * 100,
+      estimatedTimeToComplete: Math.max(1, path.estimatedHours - Math.floor(Math.random() * 5))
+    }));
+
+    res.json(personalizedPaths);
+  } catch (error) {
+    console.error('Error fetching learning paths:', error);
+    res.status(500).json({ error: 'Failed to fetch learning paths' });
+  }
+});
+
+// Get specific learning path details
+router.get('/:pathId', async (req, res) => {
+  try {
+    const { pathId } = req.params;
+    
+    const path = mockLearningPaths.find(p => p.id === pathId);
+    
+    if (!path) {
+      return res.status(404).json({ error: 'Learning path not found' });
+    }
+
+    // Add detailed module information
+    const detailedPath = {
+      ...path,
+      modules: path.modules.map(module => ({
+        ...module,
+        description: `Detailed description for ${module.title}`,
+        learningObjectives: [
+          'Understand core concepts',
+          'Apply practical techniques', 
+          'Complete hands-on exercises'
+        ],
+        resources: [
+          { type: 'video', title: 'Introduction Video', duration: 15 },
+          { type: 'article', title: 'Best Practices Guide', readTime: 10 },
+          { type: 'exercise', title: 'Practical Exercise', duration: 30 }
+        ]
+      }))
+    };
+
+    res.json(detailedPath);
+  } catch (error) {
+    console.error('Error fetching learning path:', error);
+    res.status(500).json({ error: 'Failed to fetch learning path' });
+  }
+});
+
+// Update learning path progress
+router.post('/:pathId/progress', async (req, res) => {
+  try {
+    const { pathId } = req.params;
+    const { moduleId, status, timeSpent, completedAt } = req.body;
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(
+      token, 
+      process.env.JWT_SECRET || 'fallback-secret'
+    ) as any;
+
+    // In a real implementation, update the database
+    // await updateLearningProgress(decoded.userId, pathId, moduleId, { status, timeSpent, completedAt });
+
+    // Calculate new overall progress
+    const path = mockLearningPaths.find(p => p.id === pathId);
+    if (!path) {
+      return res.status(404).json({ error: 'Learning path not found' });
+    }
+
+    // Mock progress calculation
+    const completedModules = path.modules.filter(m => m.status === 'completed').length;
+    const totalModules = path.modules.length;
+    const newProgress = Math.round((completedModules / totalModules) * 100);
+
+    res.json({
+      message: 'Progress updated successfully',
+      pathId,
+      moduleId,
+      newProgress,
+      status,
+      timeSpent,
+      completedAt
+    });
+  } catch (error) {
+    console.error('Error updating progress:', error);
+    res.status(500).json({ error: 'Failed to update progress' });
+  }
+});
+
+// Start a learning path
+router.post('/:pathId/start', async (req, res) => {
+  try {
+    const { pathId } = req.params;
+    
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(
+      token, 
+      process.env.JWT_SECRET || 'fallback-secret'
+    ) as any;
+
+    const path = mockLearningPaths.find(p => p.id === pathId);
+    if (!path) {
+      return res.status(404).json({ error: 'Learning path not found' });
+    }
+
+    // In a real implementation:
+    // await startLearningPath(decoded.userId, pathId);
+
+    res.json({
+      message: 'Learning path started successfully',
+      pathId,
+      startedAt: new Date().toISOString(),
+      nextStep: path.modules[0]?.title || 'No modules available'
+    });
+  } catch (error) {
+    console.error('Error starting learning path:', error);
+    res.status(500).json({ error: 'Failed to start learning path' });
+  }
+});
+
+// Get user's learning analytics
+router.get('/analytics/summary', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(
+      token, 
+      process.env.JWT_SECRET || 'fallback-secret'
+    ) as any;
+
+    // Mock analytics data
+    const analytics = {
+      totalPathsStarted: 3,
+      totalPathsCompleted: 1,
+      totalHoursLearned: 45,
+      skillsGained: 12,
+      currentStreak: 7,
+      longestStreak: 14,
+      averageSessionTime: 28, // minutes
+      weeklyGoalProgress: 78, // percentage
+      topSkillCategories: [
+        { category: 'AI Writing', progress: 85 },
+        { category: 'Code Assistance', progress: 60 },
+        { category: 'Research Tools', progress: 25 }
+      ],
+      recentAchievements: [
         {
-          id: 'ml-1',
-          title: 'Advanced Python for ML',
-          description: 'Deep dive into Python for machine learning',
-          type: 'course',
-          provider: 'DeepLearning.AI',
-          url: 'https://deeplearning.ai/courses',
-          estimatedHours: 15,
-          difficulty: 'intermediate',
-          skills: ['Python', 'NumPy', 'Scikit-learn'],
-          completed: false,
-          order: 1
+          id: 'achievement-1',
+          title: 'First Path Completed',
+          description: 'Completed your first learning path',
+          earnedAt: '2024-01-15T10:30:00Z',
+          icon: 'trophy'
         },
         {
-          id: 'ml-2',
-          title: 'MLOps Fundamentals',
-          description: 'Learn ML model deployment and operations',
-          type: 'course',
-          provider: 'Coursera',
-          url: 'https://coursera.org/learn/mlops',
-          estimatedHours: 20,
-          difficulty: 'advanced',
-          skills: ['MLOps', 'Docker', 'Kubernetes', 'CI/CD'],
-          completed: false,
-          order: 2
+          id: 'achievement-2',
+          title: 'Week Streak',
+          description: 'Learned for 7 consecutive days',
+          earnedAt: '2024-01-20T18:45:00Z',
+          icon: 'fire'
         }
-      ];
-      break;
-      
-    case 'AI Product Manager':
-      pathTitle = 'AI Product Manager Track';
-      pathDescription = 'Product management for AI-driven products';
-      customSteps = [
-        {
-          id: 'pm-1',
-          title: 'AI for Product Managers',
-          description: 'Understanding AI from a product perspective',
-          type: 'course',
-          provider: 'Product School',
-          url: 'https://productschool.com/ai-product-management',
-          estimatedHours: 12,
-          difficulty: 'intermediate',
-          skills: ['Product Management', 'AI Strategy', 'Data Analysis'],
-          completed: false,
-          order: 1
-        }
-      ];
-      break;
-      
-    default:
-      return generateLearningPath(userId);
-  }
-  
-  const totalHours = customSteps.reduce((sum, step) => sum + step.estimatedHours, 0);
-  
-  // Create new custom learning path
-  const customPath = new LearningPath({
-    userId,
-    title: pathTitle,
-    description: pathDescription,
-    totalSteps: customSteps.length,
-    completedSteps: 0,
-    progressPercentage: 0,
-    estimatedTotalHours: totalHours,
-    remainingHours: totalHours,
-    targetRole,
-    skills: [...new Set(customSteps.flatMap(step => step.skills))],
-    steps: customSteps,
-    milestones: [],
-    isActive: true
-  });
+      ]
+    };
 
-  await customPath.save();
-  return customPath;
-}
+    res.json(analytics);
+  } catch (error) {
+    console.error('Error fetching analytics:', error);
+    res.status(500).json({ error: 'Failed to fetch learning analytics' });
+  }
+});
+
+// Generate custom learning path based on user goals
+router.post('/generate', async (req, res) => {
+  try {
+    const { goals, skillLevel, timeAvailable, preferences } = req.body;
+    
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No authorization header' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(
+      token, 
+      process.env.JWT_SECRET || 'fallback-secret'
+    ) as any;
+
+    // In a real implementation, this would use AI to generate a custom path
+    // For now, create a mock custom path
+    const customPath = {
+      id: `custom-${Date.now()}`,
+      title: `Custom AI Learning Path for ${goals[0] || 'Productivity'}`,
+      description: `A personalized learning path tailored to your ${skillLevel} skill level and ${timeAvailable} hour weekly commitment.`,
+      progress: 0,
+      estimatedHours: timeAvailable * 4, // 4 weeks
+      difficulty: skillLevel,
+      skills: goals,
+      nextStep: 'Begin with fundamentals assessment',
+      isActive: false,
+      isCustom: true,
+      generatedAt: new Date().toISOString(),
+      modules: [
+        {
+          id: 'custom-module-1',
+          title: 'Skills Assessment',
+          status: 'not_started',
+          duration: 1,
+          description: 'Assess your current skill level'
+        },
+        {
+          id: 'custom-module-2',
+          title: 'Tool Discovery',
+          status: 'locked',
+          duration: Math.ceil(timeAvailable / 2),
+          description: 'Discover relevant AI tools for your goals'
+        },
+        {
+          id: 'custom-module-3',
+          title: 'Hands-on Practice',
+          status: 'locked',
+          duration: timeAvailable * 2,
+          description: 'Apply tools to real-world scenarios'
+        }
+      ]
+    };
+
+    res.json({
+      message: 'Custom learning path generated successfully',
+      path: customPath
+    });
+  } catch (error) {
+    console.error('Error generating custom path:', error);
+    res.status(500).json({ error: 'Failed to generate custom learning path' });
+  }
+});
 
 export default router; 
