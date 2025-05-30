@@ -34,7 +34,7 @@ jobs:
       - name: Install and Build Backend
         working-directory: ./api
         run: |
-          npm install --omit=dev
+          npm ci
           npm run build --if-present
 
       # Prepare package for deployment
@@ -92,5 +92,6 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'Careerate'
-          slot-name: 'Production'
+          slot-name: "production"
           package: deployed_app
+
