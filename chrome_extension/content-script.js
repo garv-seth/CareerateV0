@@ -1,5 +1,21 @@
 console.log("CareerateV0 Content Script Loaded");
 
+let currentUserId = null;
+
+window.addEventListener("message", (event) => {
+  // We only accept messages from ourselves
+  if (event.source !== window) {
+    return;
+  }
+
+  if (event.data.type && event.data.type === "CAREERATE_SET_USER_ID") {
+    console.log("Content Script: Received user ID:", event.data.userId);
+    currentUserId = event.data.userId;
+    // You can now store this userId or use it as needed, for example, when sending messages to background.js
+    // chrome.runtime.sendMessage({ type: "USER_ID_SET", userId: currentUserId });
+  }
+}, false);
+
 // Placeholder for ActivityDetector
 class ActivityDetector {
     constructor() {
