@@ -10,7 +10,7 @@ import path from 'path';
 dotenv.config();
 
 // Import Key Vault configuration
-import { initializeSecrets } from './config/keyVault';
+// import { initializeSecrets } from './config/keyVault'; // Commented out
 
 // Import middleware
 import { protect } from './middleware/authMiddleware';
@@ -33,7 +33,7 @@ const PORT = process.env.PORT || 3000;
 async function initializeApp() {
   try {
     // Initialize secrets from Key Vault
-    await initializeSecrets();
+    // await initializeSecrets(); // Commented out
 
     // Security middleware
     app.use(helmet({
