@@ -1,0 +1,125 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: #f4f7f9;
+  color: #333;
+  margin: 0;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+}
+
+.container {
+  background-color: #fff;
+  padding: 25px 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 600px;
+}
+
+h1 {
+  color: #2c3e50;
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 1.8em;
+}
+
+.settings-section {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.settings-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 20px;
+}
+
+.settings-section h2 {
+  font-size: 1.3em;
+  color: #34495e;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 5px;
+  display: inline-block;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #555;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group input[type="url"] {
+  width: calc(100% - 22px); /* Adjust for padding and border */
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1em;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="number"]:focus,
+.form_group input[type="url"]:focus {
+  border-color: #3498db;
+  outline: none;
+}
+
+.form-group input[type="checkbox"] {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.help-text {
+  font-size: 0.85em;
+  color: #777;
+  margin-top: 5px;
+}
+
+button#saveOptions {
+  background-color: #3498db;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1.1em;
+  font-weight: 600;
+  display: block;
+  width: 100%;
+  transition: background-color 0.3s ease;
+}
+
+button#saveOptions:hover {
+  background-color: #2980b9;
+}
+
+.status-message {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 5px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.status-message.success {
+  background-color: #e8f5e9; /* Light green */
+  color: #2e7d32; /* Dark green */
+  border: 1px solid #a5d6a7;
+}
+
+.status-message.error {
+  background-color: #ffebee; /* Light red */
+  color: #c62828; /* Dark red */
+  border: 1px solid #ef9a9a;
+} 
