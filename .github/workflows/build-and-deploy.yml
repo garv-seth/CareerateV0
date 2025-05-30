@@ -46,6 +46,8 @@ jobs:
           cp -r api/dist deployment_package/api/dist
           cp api/package.json deployment_package/api/package.json
           cp api/package-lock.json deployment_package/api/package-lock.json
+          # Copy API node_modules (dependencies needed to run the server)
+          cp -r api/node_modules deployment_package/api/node_modules
           
           # Copy client build output into a public folder in the API package
           mkdir -p deployment_package/api/public 
