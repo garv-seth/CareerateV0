@@ -464,6 +464,7 @@ scaleDownPeriodSeconds: 300
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+  "options_page": "options.html",
   "web_accessible_resources": [
     {
       "resources": ["icons/*.png"],
@@ -477,6 +478,9 @@ scaleDownPeriodSeconds: 300
 ```javascript
 // background.js
 // ... (imports and existing class structure) ...
+
+// Ensure placeholder or actual icon files (icon16.png, icon48.png, icon128.png)
+// exist in the chrome_extension/icons/ directory.
 
 class AdvancedActivityTracker {
   // ... (constructor, existing methods) ...
