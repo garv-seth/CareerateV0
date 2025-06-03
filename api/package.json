@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "start": "npm install --omit=dev && node dist/server.js",
+    "start": "node dist/server.js",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch --passWithNoTests"
   },
