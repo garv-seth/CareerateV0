@@ -143,7 +143,7 @@ const FloatingNavbar: React.FC = () => {
                 <User size={16} className="text-accent-foreground" />
               </div>
               <span className="text-sm font-medium text-foreground">
-                {user.name || user.email?.split('@')[0] || 'User'}
+                {user.displayName || user.email?.split('@')[0] || 'User'}
               </span>
             </motion.div>
           )}
@@ -266,7 +266,7 @@ const FloatingNavbar: React.FC = () => {
                       <User size={16} className="text-accent-foreground" />
                     </div>
                     <span className="font-medium text-foreground">
-                      {user.name || user.email?.split('@')[0] || 'User'}
+                      {user.displayName || user.email?.split('@')[0] || 'User'}
                     </span>
                   </div>
                 )}
