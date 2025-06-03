@@ -46,7 +46,7 @@ jobs:
           cp -r api/dist deployment_package/api/dist
           cp api/package.json deployment_package/api/package.json
           cp api/package-lock.json deployment_package/api/package-lock.json
-          cp -r api/node_modules deployment_package/api/node_modules
+          # api/node_modules will NOT be copied
           
           # Copy client build output into a public folder in the API package
           mkdir -p deployment_package/api/public 
@@ -82,9 +82,6 @@ jobs:
         with:
           name: node-app
 
-      - name: Unzip artifact for deployment
-        run: unzip release.zip -d deployed_app
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -98,5 +95,5 @@ jobs:
         with:
           app-name: 'Careerate'
           slot-name: "production"
-          package: deployed_app
+          package: release.zip # Deploy the zip file directly
 
