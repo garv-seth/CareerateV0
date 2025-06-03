@@ -14,6 +14,8 @@ import {
   Calendar
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import ResumeUploadModal from "./ResumeUploadModal";
 
 interface WeeklyStats {
   toolsExplored: number;
@@ -72,6 +74,8 @@ export function DashboardOverview() {
     { id: 3, name: "Quick Learner", icon: "⚡", earned: false },
     { id: 4, name: "Career Booster", icon: "🎯", earned: false },
   ];
+
+  const [showResumeModal, setShowResumeModal] = useState(false);
 
   if (statsLoading || progressLoading || recommendationsLoading) {
     return (
@@ -273,7 +277,7 @@ export function DashboardOverview() {
               <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="ghost" className="w-full justify-start">
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setShowResumeModal(true)}>
                 <Upload className="w-4 h-4 mr-3" />
                 Upload Resume
               </Button>
@@ -321,6 +325,7 @@ export function DashboardOverview() {
           </CardContent>
         </Card>
       )}
+      <ResumeUploadModal open={showResumeModal} onClose={() => setShowResumeModal(false)} />
     </motion.div>
   );
 }
