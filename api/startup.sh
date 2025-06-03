@@ -2,10 +2,28 @@
 
 echo "=== Careerate API Startup ==="
 
-# Install dependencies if node_modules doesn't exist or is empty
-if [ ! -d "node_modules" ] || [ -z "$(ls -A node_modules 2>/dev/null)" ]; then
-    echo "Installing dependencies..."
-    npm ci --omit=dev --no-optional
+# Check current directory
+echo "Current directory: $(pwd)"
+echo "Directory contents:"
+ls -la
+
+# Check if package.json exists
+if [ ! -f "package.json" ]; then
+    echo "ERROR: package.json not found!"
+    exit 1
+fi
+
+# Always install dependencies to ensure they're up to date
+echo "Installing dependencies..."
+npm ci --omit=dev --no-optional
+
+# Verify pg module is installed
+if [ -d "node_modules/pg" ]; then
+    echo "✅ pg module found in node_modules"
+else
+    echo "❌ pg module NOT found in node_modules"
+    echo "Contents of node_modules:"
+    ls -la node_modules/ | head -20
 fi
 
 echo "Starting server..."
