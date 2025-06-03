@@ -52,6 +52,10 @@ jobs:
           mkdir -p deployment_package/api/public 
           cp -r client/dist/* deployment_package/api/public/
           
+          echo "--- Contents of deployment_package/api before zipping ---"
+          ls -R deployment_package/api
+          echo "---------------------------------------------------------"
+          
           # Zip the contents of the api folder within deployment_package
           cd deployment_package/api
           zip -r ../../release.zip .
