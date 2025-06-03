@@ -5,18 +5,29 @@ import { PublicClientApplication } from '@azure/msal-node';
 
 const router = express.Router();
 
-// Azure AD MSAL configuration
+// Azure AD B2C MSAL configuration
+const b2cTenantName = process.env.B2C_TENANT_NAME; // e.g., "careerate"
+const b2cPolicyName = process.env.B2C_SIGNUP_SIGNIN_POLICY_NAME; // e.g., "B2C_1_signup_signin"
+const b2cClientId = process.env.B2C_CLIENT_ID;
+
+if (!b2cTenantName || !b2cPolicyName || !b2cClientId) {
+  console.error("Azure AD B2C configuration missing from environment variables (B2C_TENANT_NAME, B2C_SIGNUP_SIGNIN_POLICY_NAME, B2C_CLIENT_ID)");
+  // process.exit(1); // Or handle this more gracefully
+}
+
 const msalConfig = {
   auth: {
-    clientId: process.env.AZURE_CLIENT_ID || '',
-    authority: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}`,
-    clientSecret: process.env.AZURE_CLIENT_SECRET,
-  }
+    clientId: b2cClientId || '',
+    authority: `https://${b2cTenantName}.b2clogin.com/${b2cTenantName}.onmicrosoft.com/${b2cPolicyName}`,
+    knownAuthorities: [`${b2cTenantName}.b2clogin.com`], // Important for B2C
+    // clientSecret: process.env.AZURE_CLIENT_SECRET, // Typically not used for B2C web app with frontend redirect
+  },
+  // System options can be added here if needed, e.g., for logging
 };
 
 const msalInstance = new PublicClientApplication(msalConfig);
 
-// Login with Azure AD
+// Login with Azure AD B2C
 router.post('/login', async (req, res) => {
   try {
     const { authCode, redirectUri } = req.body;
