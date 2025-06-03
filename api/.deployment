@@ -1,2 +1,2 @@
 [config]
-command = npm install && npm run build && npm start 
+command = npm install --production && npm start 

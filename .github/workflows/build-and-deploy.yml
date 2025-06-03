@@ -46,6 +46,10 @@ jobs:
           cp -r api/dist deployment_package/api/dist
           cp api/package.json deployment_package/api/package.json
           cp api/package-lock.json deployment_package/api/package-lock.json
+          cp api/.deployment deployment_package/api/.deployment
+          cp api/deploy.cmd deployment_package/api/deploy.cmd
+          cp api/startup.cmd deployment_package/api/startup.cmd
+          cp api/web.config deployment_package/api/web.config
           # api/node_modules will NOT be copied
           
           # Copy client build output into a public folder in the API package
