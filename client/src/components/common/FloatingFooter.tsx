@@ -62,20 +62,17 @@ const FloatingFooter: React.FC = () => {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className={`floating-footer visible glass-nav ${
-            isAtBottom ? 'mb-4' : ''
-          }`}
+          className={`floating-footer visible glass-nav ${isAtBottom ? 'mb-4' : ''}`}
         >
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-4 px-6 py-4">
+          <div className="flex flex-col lg:flex-row items-center justify-center gap-8 px-8 py-4 w-full">
             {/* Left Section - Logo & Copyright */}
             <div className="flex flex-col lg:flex-row items-center gap-4">
               <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-purple-800 rounded-lg flex items-center justify-center">
                   <span className="text-primary-foreground font-bold text-xs">C</span>
                 </div>
                 <span className="font-semibold text-sm text-gradient">Careerate</span>
               </div>
-              
               <div className="flex items-center space-x-1 text-xs text-muted-foreground">
                 <span>© 2025 Careerate</span>
                 <span>•</span>
@@ -84,14 +81,13 @@ const FloatingFooter: React.FC = () => {
                 </span>
               </div>
             </div>
-
             {/* Center Section - Quick Links */}
-            <div className="hidden lg:flex items-center space-x-1">
+            <div className="flex flex-wrap justify-center gap-4">
               {quickLinks.map((link) => (
                 <motion.a
                   key={link.name}
                   href={link.url}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-muted/30"
+                  className="px-3 py-1.5 text-xs text-blue-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-blue-900/30"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -99,10 +95,8 @@ const FloatingFooter: React.FC = () => {
                 </motion.a>
               ))}
             </div>
-
             {/* Right Section - Social Links & Back to Top */}
             <div className="flex items-center space-x-2">
-              {/* Social Links */}
               <div className="flex items-center space-x-1">
                 {socialLinks.map((social) => (
                   <motion.a
@@ -110,7 +104,7 @@ const FloatingFooter: React.FC = () => {
                     href={social.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2 text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-muted/30"
+                    className="p-2 text-blue-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-blue-900/30"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     title={social.name}
@@ -119,14 +113,10 @@ const FloatingFooter: React.FC = () => {
                   </motion.a>
                 ))}
               </div>
-
-              {/* Divider */}
               <div className="w-px h-6 bg-border mx-2" />
-
-              {/* Back to Top Button */}
               <motion.button
                 onClick={scrollToTop}
-                className="p-2 text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-muted/30 flex items-center space-x-1"
+                className="p-2 text-blue-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-blue-900/30 flex items-center space-x-1"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 title="Back to top"
@@ -136,7 +126,6 @@ const FloatingFooter: React.FC = () => {
               </motion.button>
             </div>
           </div>
-
           {/* Mobile Quick Links */}
           <div className="lg:hidden border-t border-border/50 px-6 py-3">
             <div className="flex flex-wrap justify-center gap-2">
@@ -144,7 +133,7 @@ const FloatingFooter: React.FC = () => {
                 <motion.a
                   key={link.name}
                   href={link.url}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors duration-200 rounded-lg hover:bg-muted/30 flex items-center gap-1"
+                  className="px-3 py-1.5 text-xs text-blue-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-blue-900/30 flex items-center gap-1"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -154,9 +143,7 @@ const FloatingFooter: React.FC = () => {
               ))}
             </div>
           </div>
-
-          {/* Neon glow effect */}
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/5 via-secondary/5 to-accent/5 pointer-events-none" />
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-700/5 via-purple-800/5 to-blue-900/5 pointer-events-none" />
         </motion.footer>
       )}
     </AnimatePresence>

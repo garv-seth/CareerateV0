@@ -254,120 +254,55 @@ const LandingPage: React.FC = () => {
 
       {/* Hero Section with Flickering Grid */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Grid Animation */}
+        {/* Flickering Grid Background */}
         <div className="absolute inset-0">
           <FlickeringGrid
             className="absolute inset-0 z-0 [mask-image:radial-gradient(1200px_circle_at_center,white,transparent)]"
-            {...GRID_CONFIG.background}
+            gridColor="#3b82f6" // blue-600
+            maxOpacity={0.18}
+            flickerChance={0.14}
+            squareSize={4}
+            gridGap={4}
           />
         </div>
-
         {/* Hero Content */}
-        <div className="relative z-10 container mx-auto px-4 py-20 text-center">
-          <motion.div
-            className="max-w-5xl mx-auto"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 30 }}
-            transition={{ duration: 0.8 }}
-          >
-            {/* Badge */}
-            <motion.div
-              className="flex items-center justify-center gap-2 mb-8"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: isVisible ? 1 : 0, scale: isVisible ? 1 : 0.8 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <Badge variant="secondary" className="px-6 py-3 text-base font-medium glass-card border border-primary/20">
-                <Sparkles className="h-5 w-5 mr-2 text-primary" />
-                AI-Powered Career Acceleration Platform
-              </Badge>
-            </motion.div>
-            
-            {/* Main Headline */}
-            <motion.h1 
-              className="text-6xl lg:text-8xl font-bold mb-8 leading-tight"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
-              <span className="text-gradient">Master AI Tools.</span>
-              <br />
-              <span className="text-neon">Accelerate Your Career.</span>
-            </motion.h1>
-            
-            {/* Subtitle */}
-            <motion.p 
-              className="text-xl lg:text-2xl text-muted-foreground mb-12 leading-relaxed max-w-4xl mx-auto"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-            >
-              Discover, learn, and master the perfect AI tools for your workflow. 
-              Get personalized recommendations, track your productivity gains, and 
-              join <span className="text-primary font-semibold">25,000+ professionals</span> transforming their careers.
-            </motion.p>
-
-            {/* CTA Buttons */}
-            <motion.div
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-            >
-              <Button
-                size="lg"
-                onClick={handleGetStarted}
-                className="px-8 py-4 text-lg font-semibold pixel-btn bg-primary hover:bg-primary/90 neon-glow group"
-              >
-                Start Your AI Journey
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="lg"
-                className="px-8 py-4 text-lg font-semibold glass-card border-primary/30 hover:bg-primary/10"
-              >
-                <Play className="mr-2 h-5 w-5" />
-                Watch Demo
-              </Button>
-            </motion.div>
-
-            {/* Stats Preview */}
-            <motion.div
-              className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 1.0 }}
-            >
-              {stats.map((stat, index) => (
-                <motion.div
-                  key={stat.label}
-                  className="glass-card p-6 rounded-xl border border-primary/20 card-hover"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="flex items-center justify-center mb-3 text-primary">
-                    {stat.icon}
-                  </div>
-                  <div className="text-3xl font-bold text-gradient mb-1">{stat.value}</div>
-                  <div className="text-sm text-muted-foreground font-medium">{stat.label}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{stat.description}</div>
-                </motion.div>
-              ))}
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Scroll Indicator */}
         <motion.div
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
+          className="relative z-10 flex flex-col items-center justify-center text-center w-full"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
         >
-          <div className="w-6 h-10 border-2 border-primary/50 rounded-full flex justify-center">
-            <div className="w-1 h-3 bg-primary rounded-full mt-2 animate-pulse" />
-          </div>
+          <span className="inline-block px-6 py-2 mb-6 rounded-full bg-blue-700/80 text-blue-100 font-semibold text-base shadow-lg">
+            AI-Powered Career Acceleration Platform
+          </span>
+          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 text-gradient drop-shadow-lg">
+            Master AI Tools.<br />
+            <span className="block mt-2">Accelerate Your Career.</span>
+          </h1>
+          <motion.p
+            className="text-xl lg:text-2xl text-blue-200 mb-12 leading-relaxed max-w-4xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+          >
+            Discover, learn, and master the perfect AI tools for your workflow. Get personalized recommendations, track your productivity gains, and join <span className="text-blue-400 font-semibold">25,000+ professionals</span> transforming their careers.
+          </motion.p>
+          {/* CTA Button */}
+          <motion.div
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.8 }}
+          >
+            <Button
+              size="lg"
+              onClick={handleGetStarted}
+              className="px-8 py-4 text-lg font-semibold pixel-btn bg-blue-700 hover:bg-blue-800 group"
+            >
+              Start Your AI Journey
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </motion.div>
         </motion.div>
       </section>
 

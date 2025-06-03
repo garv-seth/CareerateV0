@@ -4,14 +4,14 @@
   --foreground: #ECEFF4;
   --muted: #2E3440;
   --muted-foreground: #81A1C1;
-  --primary: #5E81AC;
+  --primary: #3b82f6; /* blue-600 */
   --primary-foreground: #ECEFF4;
-  --secondary: #A3BE8C;
+  --secondary: #7c3aed; /* purple-700 */
   --secondary-foreground: #10141C;
-  --accent: #D08770;
+  --accent: #A3BE8C;
   --accent-foreground: #10141C;
   --border: #2E3440;
-  --ring: #5E81AC;
+  --ring: #3b82f6;
 }
 
 * {
@@ -27,6 +27,10 @@ body {
   color: var(--foreground);
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .popup-container {
@@ -36,13 +40,15 @@ body {
   background: rgba(9, 11, 17, 0.8);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(94, 129, 172, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  align-items: center;
+  justify-content: center;
 }
 
 /* Header Styles */
 .popup-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 16px;
   border-bottom: 1px solid var(--border);

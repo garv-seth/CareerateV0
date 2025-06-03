@@ -24,43 +24,34 @@
     </div>
 
     <!-- Main Content -->
-    <div class="popup-content">
+    <div class="popup-content" style="text-align:center;">
       <div class="welcome-message" id="welcomeMessage">
-        <h2>Welcome to Careerate!</h2>
-        <p>Your AI-powered career acceleration platform</p>
+        <h2 style="color:#3b82f6;">Welcome to Careerate!</h2>
+        <p style="color:#7c3aed;">Your AI-powered career acceleration platform.</p>
       </div>
-
-      <div class="quick-actions">
-        <button class="action-button primary" id="analyzePage">
-          <span class="icon">🔍</span>
-          Analyze Page
-        </button>
-        <button class="action-button secondary" id="viewInsights">
-          <span class="icon">📊</span>
-          View Insights
-        </button>
-      </div>
-
-      <div class="stats-container">
-        <div class="stat-item">
+      <div class="stats">
+        <div class="stat">
           <span class="stat-value">0</span>
-          <span class="stat-label">Tools Found</span>
+          <span class="stat-label">AI Tools Found</span>
         </div>
-        <div class="stat-item">
+        <div class="stat">
           <span class="stat-value">0</span>
           <span class="stat-label">Insights</span>
         </div>
+      </div>
+      <div class="actions">
+        <button id="analyzePage" class="footer-button" style="background:linear-gradient(90deg,#3b82f6,#7c3aed);color:#fff;">Analyze This Page</button>
+        <button id="viewInsights" class="footer-button" style="background:linear-gradient(90deg,#7c3aed,#3b82f6);color:#fff;">View Insights</button>
+        <button id="openDashboard" class="footer-button" style="background:linear-gradient(90deg,#3b82f6,#7c3aed);color:#fff;">Open Dashboard</button>
+        <button id="settings" class="footer-button" style="background:linear-gradient(90deg,#7c3aed,#3b82f6);color:#fff;">Settings</button>
       </div>
     </div>
 
     <!-- Footer -->
     <div class="popup-footer">
-      <button class="footer-button" id="openDashboard">
-        Open Dashboard
-      </button>
-      <button class="footer-button" id="settings">
-        Settings
-      </button>
+      <span style="color:#3b82f6;font-weight:600;">© 2025 Careerate</span>
+      <span style="color:#7c3aed;">•</span>
+      <span style="color:#7c3aed;">Made with <span style="color:#A3BE8C;">♥</span> for your career</span>
     </div>
   </div>
   <script src="popup.js"></script>

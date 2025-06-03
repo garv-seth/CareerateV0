@@ -88,9 +88,7 @@ const FloatingNavbar: React.FC = () => {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className={`floating-navbar hidden md:flex items-center justify-between px-6 py-3 glass-nav ${
-          isScrolled ? 'backdrop-blur-xl bg-opacity-90' : ''
-        }`}
+        className={`floating-navbar hidden md:flex items-center justify-center gap-8 px-8 py-3 glass-nav ${isScrolled ? 'backdrop-blur-xl bg-opacity-90' : ''}`}
       >
         {/* Logo */}
         <motion.div
@@ -99,7 +97,7 @@ const FloatingNavbar: React.FC = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-800 rounded-lg flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm">C</span>
           </div>
           <span className="font-bold text-xl text-gradient">Careerate</span>
@@ -111,11 +109,9 @@ const FloatingNavbar: React.FC = () => {
             <motion.button
               key={item.path}
               onClick={() => handleNavigation(item.path)}
-              className={`px-4 py-2 rounded-full flex items-center space-x-2 transition-all duration-200 ${
-                isActivePath(item.path)
-                  ? 'bg-primary/20 text-primary border border-primary/30'
-                  : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
-              }`}
+              className={`px-4 py-2 rounded-full flex items-center space-x-2 transition-all duration-200 ${isActivePath(item.path)
+                ? 'bg-blue-700/20 text-blue-400 border border-blue-700/30'
+                : 'hover:bg-purple-900/50 text-blue-300 hover:text-white'}`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -133,13 +129,13 @@ const FloatingNavbar: React.FC = () => {
         {/* Auth Button */}
         <div className="flex items-center space-x-3">
           {isAuthenticated && user && (
-            <motion.div 
+            <motion.div
               className="flex items-center space-x-2"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-accent to-secondary rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-800 rounded-full flex items-center justify-center">
                 <User size={16} className="text-accent-foreground" />
               </div>
               <span className="text-sm font-medium text-foreground">
@@ -147,12 +143,11 @@ const FloatingNavbar: React.FC = () => {
               </span>
             </motion.div>
           )}
-          
           <Button
             variant={isAuthenticated ? "outline" : "default"}
             size="sm"
             onClick={handleAuth}
-            className={`pixel-btn ${isAuthenticated ? '' : 'bg-primary hover:bg-primary/90'}`}
+            className={`pixel-btn ${isAuthenticated ? '' : 'bg-blue-700 hover:bg-blue-800'}`}
           >
             {isAuthenticated ? (
               <>
