@@ -1,2 +1,2 @@
 [config]
-command = npm install --production && npm start 
+command = deploy.cmd 
