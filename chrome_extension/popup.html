@@ -1,29 +1,67 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Careerate Tracker</title>
+  <title>Careerate</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="popup.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <img src="icons/icon48.png" alt="Careerate Logo" class="logo">
-      <h1>Careerate Tracker</h1>
-    </div>
-    
-    <div class="status-section">
-      <p>Status: <span id="trackingStatus">Loading...</span></p>
-      <label class="switch" for="trackingToggle">
-        <input type="checkbox" id="trackingToggle" aria-label="Toggle tracking">
-        <span class="slider round"></span>
-      </label>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="popup-header">
+      <div class="logo-container">
+        <div class="logo">C</div>
+        <span class="brand-name">Careerate</span>
+      </div>
+      <div class="user-status">
+        <div class="user-avatar">
+          <span class="user-initial">U</span>
+        </div>
+        <span class="user-name">Guest</span>
+      </div>
     </div>
 
-    <button id="syncData" class="btn btn-primary">Sync Data Now</button>
-    <a href="#" id="openDashboard" class="btn btn-secondary">Open Dashboard</a>
-    <p class="footer-text">Helping you harness AI.</p>
+    <!-- Main Content -->
+    <div class="popup-content">
+      <div class="welcome-message" id="welcomeMessage">
+        <h2>Welcome to Careerate!</h2>
+        <p>Your AI-powered career acceleration platform</p>
+      </div>
+
+      <div class="quick-actions">
+        <button class="action-button primary" id="analyzePage">
+          <span class="icon">🔍</span>
+          Analyze Page
+        </button>
+        <button class="action-button secondary" id="viewInsights">
+          <span class="icon">📊</span>
+          View Insights
+        </button>
+      </div>
+
+      <div class="stats-container">
+        <div class="stat-item">
+          <span class="stat-value">0</span>
+          <span class="stat-label">Tools Found</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">0</span>
+          <span class="stat-label">Insights</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="popup-footer">
+      <button class="footer-button" id="openDashboard">
+        Open Dashboard
+      </button>
+      <button class="footer-button" id="settings">
+        Settings
+      </button>
+    </div>
   </div>
   <script src="popup.js"></script>
 </body>

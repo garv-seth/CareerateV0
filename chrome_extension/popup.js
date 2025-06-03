@@ -52,4 +52,56 @@ openDashboardEl.addEventListener('click', (e) => {
 });
 
 // Initialize
-document.addEventListener('DOMContentLoaded', loadState); 
+document.addEventListener('DOMContentLoaded', async () => {
+  // Check if user has seen welcome message
+  const hasSeenWelcome = await chrome.storage.local.get('hasSeenWelcome');
+  const welcomeMessage = document.getElementById('welcomeMessage');
+  
+  if (hasSeenWelcome.hasSeenWelcome) {
+    welcomeMessage.style.display = 'none';
+  } else {
+    // Mark welcome message as seen
+    chrome.storage.local.set({ hasSeenWelcome: true });
+  }
+
+  // Get user info
+  const userInfo = await chrome.storage.local.get('userInfo');
+  if (userInfo.userInfo) {
+    const userInitial = document.querySelector('.user-initial');
+    const userName = document.querySelector('.user-name');
+    
+    userInitial.textContent = userInfo.userInfo.name?.[0]?.toUpperCase() || 'U';
+    userName.textContent = userInfo.userInfo.name || userInfo.userInfo.email?.split('@')[0] || 'Guest';
+  }
+
+  // Get stats
+  const stats = await chrome.storage.local.get(['toolsFound', 'insights']);
+  document.querySelector('.stat-value:nth-child(1)').textContent = stats.toolsFound || '0';
+  document.querySelector('.stat-value:nth-child(2)').textContent = stats.insights || '0';
+
+  // Button event listeners
+  document.getElementById('analyzePage').addEventListener('click', async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    chrome.tabs.sendMessage(tab.id, { action: 'analyzePage' });
+  });
+
+  document.getElementById('viewInsights').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://careerate.com/dashboard' });
+  });
+
+  document.getElementById('openDashboard').addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://careerate.com/dashboard' });
+  });
+
+  document.getElementById('settings').addEventListener('click', () => {
+    chrome.runtime.openOptionsPage();
+  });
+
+  // Listen for messages from content script
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'updateStats') {
+      document.querySelector('.stat-value:nth-child(1)').textContent = message.toolsFound || '0';
+      document.querySelector('.stat-value:nth-child(2)').textContent = message.insights || '0';
+    }
+  });
+}); 
