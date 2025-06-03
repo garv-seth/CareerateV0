@@ -61,8 +61,8 @@ async function initializeApp() {
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-    // Serve static files from the 'public' directory (for frontend)
-    app.use(express.static(path.join(__dirname, 'public')));
+    // Serve static files from the 'public' directory (relative to the dist folder's parent)
+    app.use(express.static(path.join(__dirname, '..', 'public')));
 
     // Session configuration
     app.use(session({
@@ -130,7 +130,7 @@ async function initializeApp() {
       if (req.path.startsWith('/api/') || req.path.includes('.')) {
         return res.status(404).json({ error: 'Resource not found' });
       }
-      res.sendFile(path.join(__dirname, 'public', 'index.html'), (err) => {
+      res.sendFile(path.join(__dirname, '..', 'public', 'index.html'), (err) => {
         if (err) {
           res.status(500).send(err);
         }
