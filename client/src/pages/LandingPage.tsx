@@ -63,16 +63,16 @@ const LandingPage: React.FC = () => {
   // Background grid configurations
   const GRID_CONFIG = {
     background: {
-      gridColor: "hsl(var(--primary))",
-      maxOpacity: 0.3,
-      flickerChance: 0.1,
+      gridColor: "hsl(var(--primary-rgb))",
+      maxOpacity: 0.15,
+      flickerChance: 0.08,
       squareSize: 3,
       gridGap: 3,
     },
     logo: {
-      gridColor: "hsl(var(--accent))",
-      maxOpacity: 0.75,
-      flickerChance: 0.15,
+      gridColor: "hsl(var(--accent-rgb))",
+      maxOpacity: 0.5,
+      flickerChance: 0.12,
       squareSize: 2,
       gridGap: 4,
     },
@@ -255,7 +255,6 @@ const LandingPage: React.FC = () => {
 
       {/* Hero Section */}
       <section className="relative w-full min-h-screen flex flex-col items-center justify-center text-center overflow-hidden cyber-grid-bg">
-        {/* FlickeringGrid will be a direct child to cover the full section */}
         <FlickeringGrid
           {...GRID_CONFIG.background}
           className="absolute inset-0 z-0"
@@ -270,7 +269,7 @@ const LandingPage: React.FC = () => {
             AI-Powered Career Acceleration Platform
           </Badge>
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-8">
-            <span className="block">Master AI Tools.</span>
+            <span className="block text-foreground">Master AI Tools.</span>
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-secondary">
               Accelerate Your Career.
             </span>
@@ -282,7 +281,7 @@ const LandingPage: React.FC = () => {
           </p>
           <Button 
             size="lg" 
-            className="px-10 py-7 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg shadow-primary/30 transition-all duration-300 transform hover:scale-105 neon-glow"
+            className="px-10 py-7 text-lg font-semibold bg-primary hover:bg-primary-hover text-primary-foreground rounded-full shadow-lg shadow-primary/30 transition-all duration-300 transform hover:scale-105"
             onClick={handleGetStarted}
           >
             Start Your AI Journey <ArrowRight className="ml-3 h-5 w-5" />
@@ -295,7 +294,7 @@ const LandingPage: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
-              Unlock Your Potential with Careerate
+              Unlock Your Potential
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
               Careerate provides a comprehensive suite of AI-powered tools to help you navigate the complexities of the modern tech landscape.
@@ -380,7 +379,7 @@ const LandingPage: React.FC = () => {
       <section id="testimonials" className="w-full py-20 md:py-32 bg-card">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
               Loved by Professionals Worldwide
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -438,7 +437,7 @@ const LandingPage: React.FC = () => {
       <section id="pricing" className="w-full py-20 md:py-32 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
               Flexible Pricing for Every Ambition
             </h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -520,10 +519,8 @@ const LandingPage: React.FC = () => {
             viewport={{ once: true }}
           >
             <Sparkles className="mx-auto h-12 w-12 text-primary mb-4" />
-            <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter mb-6">
-              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-secondary">
-                Ready to Transform Your Career?
-              </span>
+            <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter mb-6 text-foreground">
+              Ready to Transform Your Career?
             </h2>
             <p className="max-w-2xl mx-auto text-lg sm:text-xl text-muted-foreground mb-10">
               Join thousands of professionals who are already leveraging AI to accelerate

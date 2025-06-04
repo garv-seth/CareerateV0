@@ -90,17 +90,17 @@ const FloatingNavbar: React.FC = () => {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className={`floating-navbar hidden md:flex items-center justify-center gap-8 px-8 py-3 glass-nav ${isScrolled ? 'backdrop-blur-xl bg-opacity-90' : ''}`}
+        className={`floating-navbar hidden md:flex items-center justify-between gap-4 ${isScrolled ? 'py-2' : 'py-3'}`}
       >
         {/* Logo */}
         <motion.div
-          className="flex items-center space-x-3 cursor-pointer group"
+          className="flex items-center space-x-2 cursor-pointer group"
           onClick={() => navigate('/')}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <img src="/CareerateICON.png" alt="Careerate Logo" className="h-8 w-8 group-hover:opacity-90 transition-opacity" />
-          <span className="font-bold text-xl text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent group-hover:opacity-90 transition-opacity">
+          <img src="/CareerateICON.png" alt="Careerate Logo" className="h-9 w-9 transition-all duration-300 group-hover:opacity-80" />
+          <span className="font-bold text-xl text-foreground group-hover:text-primary transition-colors">
             Careerate
           </span>
         </motion.div>
@@ -109,19 +109,19 @@ const FloatingNavbar: React.FC = () => {
         <div className="flex items-center space-x-1">
           {navItems.map((item) => (
             <motion.button
-              key={item.path}
+              key={item.name}
               onClick={() => handleNavigation(item.path)}
-              className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full flex items-center space-x-2 transition-all duration-200 text-sm font-medium
+              className={`px-3.5 py-1.5 rounded-md flex items-center space-x-2 transition-colors duration-200 text-sm font-medium
                 ${isActivePath(item.path)
-                  ? 'bg-primary/20 text-primary' 
+                  ? 'bg-primary/15 text-primary' 
                   : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'}`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
             >
               {item.icon}
-              <span className="text-sm font-medium">{item.name}</span>
+              <span>{item.name}</span>
               {item.badge && (
-                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                <Badge variant="default" className="text-xs px-1.5 py-0.5 bg-accent text-accent-foreground ml-1">
                   {item.badge}
                 </Badge>
               )}
@@ -133,15 +133,15 @@ const FloatingNavbar: React.FC = () => {
         <div className="flex items-center space-x-3">
           {isAuthenticated && user && (
             <motion.div
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 pr-2"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-primary-foreground font-medium text-sm">
-                {user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || <User size={16}/>}
+              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-sm font-medium text-primary-foreground">
+                {user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || <User size={14}/>}
               </div>
-              <span className="text-sm font-medium text-foreground hidden lg:block">
+              <span className="text-sm font-medium text-muted-foreground hidden lg:block">
                 {user.displayName || user.email?.split('@')[0] || 'User'}
               </span>
             </motion.div>
@@ -150,19 +150,19 @@ const FloatingNavbar: React.FC = () => {
             variant={isAuthenticated ? "outline" : "default"}
             size="sm"
             onClick={handleAuth}
-            className={`${isAuthenticated 
-                ? 'border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground' 
-                : 'bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90'}
-                 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 transform hover:scale-105`}
+            className={`rounded-md text-sm font-medium transition-all duration-300 transform hover:scale-105 
+              ${isAuthenticated 
+                ? 'border-border text-muted-foreground hover:bg-muted/10 hover:text-foreground' 
+                : 'bg-primary text-primary-foreground hover:bg-primary-hover shadow-md shadow-primary/30'}`}
           >
             {isAuthenticated ? (
               <>
-                <LogOut size={16} className="mr-2" />
+                <LogOut size={16} className="mr-1.5" />
                 Sign Out
               </>
             ) : (
               <>
-                <LogIn size={16} className="mr-2" />
+                <LogIn size={16} className="mr-1.5" />
                 Sign In
               </>
             )}
@@ -170,56 +170,52 @@ const FloatingNavbar: React.FC = () => {
         </div>
       </motion.nav>
 
-      {/* Mobile Navbar */}
+      {/* Mobile Navbar - Ensure it uses theme colors too */}
       <motion.nav
-        initial={{ y: -100, opacity: 0 }}
+        initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className={`md:hidden fixed top-4 left-4 right-4 z-50 glass-nav rounded-2xl px-4 py-3 ${
-          isScrolled ? 'backdrop-blur-xl bg-opacity-90' : ''
-        }`}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+        className={`md:hidden fixed top-0 left-0 right-0 z-[1000] shadow-lg 
+          bg-card/80 backdrop-blur-md border-b border-border/70`}
       >
-        <div className="flex items-center justify-between">
+        <div className="container mx-auto px-4 py-2.5 flex items-center justify-between">
           {/* Logo */}
           <motion.div
             className="flex items-center space-x-2 cursor-pointer group"
-            onClick={() => navigate('/')}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            onClick={() => { navigate('/'); setIsMobileMenuOpen(false); }}
           >
-            <img src="/CareerateICON.png" alt="Careerate Logo" className="h-7 w-7 group-hover:opacity-90 transition-opacity" />
-            <span className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent group-hover:opacity-90 transition-opacity">
-              Careerate
-            </span>
+            <img src="/CareerateICON.png" alt="Careerate Logo" className="h-7 w-7" />
+            <span className="font-bold text-lg text-foreground">Careerate</span>
           </motion.div>
 
           {/* Menu Button */}
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2"
+            className="p-2 text-muted-foreground hover:text-primary"
+            aria-label="Toggle menu"
           >
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="wait" initial={false}>
               {isMobileMenuOpen ? (
                 <motion.div
                   key="close"
-                  initial={{ rotate: -90, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: 90, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  initial={{ rotate: -90, opacity: 0, scale: 0.7 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotate: 90, opacity: 0, scale: 0.7 }}
+                  transition={{ duration: 0.25, ease: "circOut" }}
                 >
-                  <X size={20} />
+                  <X size={22} />
                 </motion.div>
               ) : (
                 <motion.div
                   key="menu"
-                  initial={{ rotate: 90, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: -90, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  initial={{ rotate: 90, opacity: 0, scale: 0.7 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotate: -90, opacity: 0, scale: 0.7 }}
+                  transition={{ duration: 0.25, ease: "circOut" }}
                 >
-                  <Menu size={20} />
+                  <Menu size={22} />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -227,84 +223,67 @@ const FloatingNavbar: React.FC = () => {
         </div>
       </motion.nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Panel */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: "-100%" }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-            className="md:hidden fixed top-20 left-4 right-4 z-40 glass-nav rounded-2xl p-4"
+            exit={{ opacity: 0, y: "-100%" }}
+            transition={{ duration: 0.35, ease: [0.2, 0, 0, 1] }}
+            className="md:hidden fixed top-0 left-0 right-0 bottom-0 z-[999] pt-[60px] bg-background/95 backdrop-blur-lg overflow-y-auto"
           >
-            <div className="space-y-2">
+            <div className="container mx-auto px-6 py-8 space-y-3">
               {navItems.map((item) => (
                 <motion.button
-                  key={item.path}
+                  key={`mobile-${item.name}`}
                   onClick={() => handleNavigation(item.path)}
-                  className={`w-full px-4 py-3 rounded-xl flex items-center space-x-3 transition-all duration-200 text-base font-medium ${
-                    isActivePath(item.path)
+                  className={`w-full px-4 py-3.5 rounded-lg flex items-center space-x-3 transition-colors duration-200 text-base font-semibold 
+                    ${isActivePath(item.path)
                       ? 'bg-primary/15 text-primary'
-                      : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                      : 'text-foreground hover:bg-primary/10 hover:text-primary'}`}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: item.name.length * 0.02 }} // Stagger animation
                 >
-                  {item.icon}
-                  <span className="font-medium">{item.name}</span>
+                  {item.icon && React.cloneElement(item.icon as React.ReactElement, { size: 20 })}
+                  <span>{item.name}</span>
                   {item.badge && (
-                    <Badge variant="secondary" className="text-xs px-2 py-1 ml-auto">
+                    <Badge variant="default" className="text-xs px-2 py-1 ml-auto bg-accent text-accent-foreground">
                       {item.badge}
                     </Badge>
                   )}
                 </motion.button>
               ))}
-              
-              <div className="border-t border-border pt-3 mt-3">
-                {isAuthenticated && user && (
-                  <div className="flex items-center space-x-3 px-4 py-2 mb-3 rounded-xl bg-muted/30">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-primary-foreground font-medium text-sm">
-                      {user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || <User size={16}/>}
-                    </div>
-                    <span className="font-medium text-foreground">
-                      {user.displayName || user.email?.split('@')[0] || 'User'}
-                    </span>
-                  </div>
-                )}
-                
+              {/* Mobile Auth Button */}
+              <motion.div 
+                className="border-t border-border pt-6 mt-6"
+                initial={{ opacity: 0}} animate={{ opacity: 1}} transition={{delay: 0.2}}
+              >
                 <Button
                   variant={isAuthenticated ? "outline" : "default"}
-                  onClick={handleAuth}
-                  className={`w-full pixel-btn ${isAuthenticated ? '' : 'bg-primary hover:bg-primary/90'}`}
+                  size="lg"
+                  onClick={() => { handleAuth(); setIsMobileMenuOpen(false); }}
+                  className={`w-full text-base font-semibold rounded-lg transition-all duration-300 
+                    ${isAuthenticated 
+                      ? 'border-border text-muted-foreground hover:bg-muted/10 hover:text-foreground' 
+                      : 'bg-primary text-primary-foreground hover:bg-primary-hover shadow-md shadow-primary/30'}`}
                 >
                   {isAuthenticated ? (
                     <>
-                      <LogOut size={16} className="mr-2" />
+                      <LogOut size={18} className="mr-2" />
                       Sign Out
                     </>
                   ) : (
                     <>
-                      <LogIn size={16} className="mr-2" />
+                      <LogIn size={18} className="mr-2" />
                       Sign In
                     </>
                   )}
                 </Button>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Backdrop for mobile menu */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="md:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-30"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
         )}
       </AnimatePresence>
     </>

@@ -7,9 +7,11 @@ import {
   Twitter,
   Linkedin
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const FloatingFooter: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -57,60 +59,42 @@ const FloatingFooter: React.FC = () => {
   ];
 
   return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.footer
-          initial={{ y: '100%', opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: '100%', opacity: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className='floating-footer glass-nav px-4 py-3 md:px-6' // Centered by default due to .floating-footer class
+    <motion.footer
+      className={`floating-footer ${isVisible ? 'visible' : ''} hidden md:flex items-center justify-between text-sm`}
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: isVisible ? 0 : 100, opacity: isVisible ? 1 : 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    >
+      <div className="flex items-center space-x-2">
+        <motion.div 
+          className="cursor-pointer" 
+          onClick={() => navigate('/')}
+          whileHover={{scale: 1.1}} whileTap={{scale: 0.9}}
         >
-          <div className="w-full mx-auto flex items-center justify-between">
-            {/* Left Section - Logo & Copyright */}
-            <div className="flex items-center gap-3">
-              <img src="/CareerateICON.png" alt="Careerate Logo" className="h-7 w-7" />
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                &copy; {new Date().getFullYear()} Careerate
-              </p>
-            </div>
-
-            {/* Center Section - Social Links */}
-            <div className="flex items-center gap-1">
-              {socialLinks.map((social) => (
-                <motion.a
-                  key={social.name}
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 text-muted-foreground hover:text-primary transition-colors duration-200 rounded-full hover:bg-primary/10"
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                  title={social.name}
-                >
-                  {social.icon}
-                </motion.a>
-              ))}
-            </div>
-
-            {/* Right Section - Theme Toggle & Back to Top */}
-            <div className="flex items-center gap-1">
-              <ThemeToggle />
-              <motion.button
-                onClick={scrollToTop}
-                className="p-2 text-muted-foreground hover:text-primary transition-colors duration-200 rounded-full hover:bg-primary/10 flex items-center space-x-1"
-                whileHover={{ scale: 1.1, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-                title="Back to top"
-                aria-label="Scroll to top"
-              >
-                <ArrowUp size={18} />
-              </motion.button>
-            </div>
-          </div>
-        </motion.footer>
-      )}
-    </AnimatePresence>
+          <img src="/CareerateICON.png" alt="Careerate Logo" className="h-6 w-6" />
+        </motion.div>
+        <span className="text-muted-foreground">
+          &copy; {new Date().getFullYear()} Careerate. All rights reserved.
+        </span>
+      </div>
+      <div className="flex items-center space-x-4">
+        <motion.a 
+          href="/privacy-policy" 
+          className="text-muted-foreground hover:text-primary transition-colors"
+          whileHover={{scale: 1.05}} whileTap={{scale: 0.95}}
+        >
+          Privacy Policy
+        </motion.a>
+        <motion.a 
+          href="/terms-of-service" 
+          className="text-muted-foreground hover:text-primary transition-colors"
+          whileHover={{scale: 1.05}} whileTap={{scale: 0.95}}
+        >
+          Terms of Service
+        </motion.a>
+        <ThemeToggle />
+      </div>
+    </motion.footer>
   );
 };
 

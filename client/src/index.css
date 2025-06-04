@@ -6,66 +6,60 @@
 @tailwind utilities;
 
 :root {
-  /* Core Brand Colors - New Palette */
-  --background: 9 11 17; /* #090B11 - Deep Space (Dark Mode Default) */
-  --foreground: 236 239 244; /* #ECEFF4 - Frost White (Dark Mode Default) */
-  
-  --muted: 46 52 64; /* #2E3440 - Dark Grey */
-  --muted-foreground: 160 170 190; /* Adjusted for new palette */
-  
-  --popover: 16 20 28; /* #10141C - Card Dark */
-  --popover-foreground: 236 239 244; /* #ECEFF4 - Frost White */
-  --card: 20 24 32; /* Slightly lighter than popover for depth */
-  --card-foreground: 236 239 244; /* #ECEFF4 - Frost White */
-  
-  --border: 50 60 75; /* Adjusted for new palette */
-  --input: 50 60 75; /* Adjusted for new palette */
-  
-  /* Primary Brand Colors - Violet/Blue Dominant */
-  --primary: 120 80 220; /* #7850DC - Vivid Violet */
-  --primary-foreground: 240 240 255; /* Light lavender white */
-  --secondary: 70 180 200; /* #46B4C8 - Greenish Blue (Tealish) */
-  --secondary-foreground: 9 11 17; /* #090B11 - Deep Space */
-  --accent: 80 120 250; /* #5078FA - Bright Blue */
-  --accent-foreground: 240 240 255; /* Light lavender white */
+  /* New Color Palette - Professional & Modern */
+  /* Inspired by: Violet, Blue, Greenish-Blue, with Apple-like clarity */
+
+  /* Base (Dark Mode Default) */
+  --background-rgb: 18 18 20;    /* Almost Black - #121214 */
+  --foreground-rgb: 225 225 230;  /* Light Grey - #E1E1E6 */
+  --card-rgb: 28 28 30;          /* Dark Grey Card - #1C1C1E */
+  --popover-rgb: 38 38 40;       /* Slightly Lighter Popover - #262628 */
+  --border-rgb: 58 58 60;        /* Subtle Border - #3A3A3C */
+  --muted-rgb: 120 120 128;      /* Muted Text/Icons - #787880 */
+
+  /* Brand Colors */
+  --primary-rgb: 130 80 220;     /* Vivid Violet - #8250DC */
+  --primary-hover-rgb: 145 95 235; /* Lighter Violet for Hover */
+  --secondary-rgb: 0 122 255;     /* Apple Blue - #007AFF */
+  --accent-rgb: 80 200 180;       /* Greenish-Blue/Teal - #50C8B4 */
   
   /* Semantic Colors */
-  --destructive: 220 50 80; /* #DC3250 - Strong Red */
-  --destructive-foreground: 240 240 255; /* Light lavender white */
-  --success: 70 200 150; /* #46C896 - Bright Green */
-  --success-foreground: 9 11 17; /* #090B11 - Deep Space */
-  --warning: 255 190 0; /* #FFBE00 - Amber Yellow */
-  --warning-foreground: 9 11 17; /* #090B11 - Deep Space */
-  
-  /* Additional Brand Colors */
-  --pixel-cyan: var(--secondary); /* Use secondary for cyan */
-  --pixel-purple: var(--primary); /* Use primary for purple */
-  --neon-green: var(--success); 
-  --cyber-blue: var(--accent);
-  
-  --ring: var(--accent); /* Use accent for rings/focus */
-  --radius: 0.5rem;
-  
-  /* Sidebar Colors (example, might not be used on landing) */
-  --sidebar-background: 12 15 22; /* Slightly different dark */
-  --sidebar-foreground: 236 239 244;
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: 50 60 75;
-  --sidebar-accent-foreground: 236 239 244;
-  --sidebar-border: 50 60 75;
-  --sidebar-ring: var(--ring);
-  
-  /* Chart Colors */
-  --chart-1: var(--primary);
-  --chart-2: var(--secondary);
-  --chart-3: var(--accent);
-  --chart-4: 255 120 80; /* A contrasting orange if needed */
-  --chart-5: var(--destructive);
+  --destructive-rgb: 255 69 58;    /* Apple Red - #FF453A */
+  --warning-rgb: 255 214 10;      /* Apple Yellow - #FFD60A */
+  --success-rgb: 52 199 89;       /* Apple Green - #34C759 */
+
+  /* Derived CSS Variables */
+  --background: rgb(var(--background-rgb));
+  --foreground: rgb(var(--foreground-rgb));
+  --card: rgb(var(--card-rgb));
+  --card-foreground: rgb(var(--foreground-rgb));
+  --popover: rgb(var(--popover-rgb));
+  --popover-foreground: rgb(var(--foreground-rgb));
+  --primary: rgb(var(--primary-rgb));
+  --primary-foreground: 250 250 255; /* White/Off-white for primary buttons */
+  --primary-hover: rgb(var(--primary-hover-rgb));
+  --secondary: rgb(var(--secondary-rgb));
+  --secondary-foreground: 255 255 255; /* White */
+  --accent: rgb(var(--accent-rgb));
+  --accent-foreground: rgb(var(--background-rgb)); /* Dark text on accent */
+  --muted: rgb(var(--muted-rgb));
+  --muted-foreground: rgb(var(--muted-rgb)); /* Muted text is the muted color itself */
+  --border: rgb(var(--border-rgb));
+  --input: rgb(var(--border-rgb)); /* Use border for input background in dark */
+  --input-foreground: rgb(var(--foreground-rgb));
+  --ring: rgb(var(--secondary-rgb)); /* Focus ring with secondary blue */
+  --destructive: rgb(var(--destructive-rgb));
+  --destructive-foreground: 255 255 255; /* White */
+  --success: rgb(var(--success-rgb));
+  --success-foreground: rgb(var(--background-rgb));
+  --warning: rgb(var(--warning-rgb));
+  --warning-foreground: rgb(var(--background-rgb));
+
+  --radius: 0.6rem; /* Slightly more rounded */
   
   /* Fonts */
   --font-sfpro: 'SF Pro Display', 'Segoe UI', 'Arial', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Courier New', monospace;
 }
 
 .font-sfpro {
@@ -76,82 +70,78 @@
   font-family: var(--font-mono);
 }
 
-.dark {
-  /* Dark mode uses same colors as our base is already dark, but ensure they are all defined */
-  --background: 9 11 17;
-  --foreground: 236 239 244;
-  --muted: 46 52 64;
-  --muted-foreground: 160 170 190;
-  --popover: 16 20 28;
-  --popover-foreground: 236 239 244;
-  --card: 20 24 32;
-  --card-foreground: 236 239 244;
-  --border: 50 60 75;
-  --input: 50 60 75;
-  --primary: 120 80 220;
-  --primary-foreground: 240 240 255;
-  --secondary: 70 180 200;
-  --secondary-foreground: 9 11 17;
-  --accent: 80 120 250;
-  --accent-foreground: 240 240 255;
-  --destructive: 220 50 80;
-  --destructive-foreground: 240 240 255;
-  --ring: var(--accent);
-  --sidebar-background: 12 15 22;
-  --sidebar-foreground: 236 239 244;
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: 50 60 75;
-  --sidebar-accent-foreground: 236 239 244;
-  --sidebar-border: 50 60 75;
-  --sidebar-ring: var(--ring);
+.dark { /* Explicit dark theme, though it's the default */
+  --background-rgb: 18 18 20;
+  --foreground-rgb: 225 225 230;
+  --card-rgb: 28 28 30;
+  --popover-rgb: 38 38 40;
+  --border-rgb: 58 58 60;
+  --muted-rgb: 120 120 128;
+  --input: rgb(var(--border-rgb));
+  --input-foreground: rgb(var(--foreground-rgb));
+
+  /* Re-apply derived if any specific dark mode adjustments are needed beyond base */
+  --background: rgb(var(--background-rgb));
+  --foreground: rgb(var(--foreground-rgb));
+  --card: rgb(var(--card-rgb));
+  --card-foreground: rgb(var(--foreground-rgb));
+  --popover: rgb(var(--popover-rgb));
+  --popover-foreground: rgb(var(--foreground-rgb));
+  --border: rgb(var(--border-rgb));
+  --muted: rgb(var(--muted-rgb));
+  --muted-foreground: rgb(var(--muted-rgb));
 }
 
-/* Light mode - for accessibility and user preference */
 .light {
-  --background: 245 247 250; /* #F5F7FA - Light Cool Grey */
-  --foreground: 12 15 22;    /* #0C0F16 - Deep Blue Text */
+  --background-rgb: 242 242 247;  /* Apple Light Background - #F2F2F7 */
+  --foreground-rgb: 28 28 30;    /* Apple Dark Text - #1C1C1E */
+  --card-rgb: 255 255 255;        /* White Card - #FFFFFF */
+  --popover-rgb: 255 255 255;     /* White Popover */
+  --border-rgb: 200 200 205;      /* Light Subtle Border - #C8C8CD */
+  --muted-rgb: 142 142 147;      /* Light Muted Text - #8E8E93 */
   
-  --muted: 220 225 235; /* #DCE1EB - Lighter Grey */
-  --muted-foreground: 80 90 110; /* #505A6E - Muted Blue-Grey */
-  
-  --popover: 255 255 255; /* #FFFFFF - Pure White */
-  --popover-foreground: 12 15 22; /* #0C0F16 - Deep Blue Text */
-  --card: 255 255 255; /* #FFFFFF - Pure White */
-  --card-foreground: 12 15 22; /* #0C0F16 - Deep Blue Text */
-  
-  --border: 200 205 215; /* #C8CDD7 - Light Border */
-  --input: 200 205 215; /* #C8CDD7 - Light Input */
-  
-  --primary: 100 60 200; /* #643CCC - Slightly softer Violet for light mode */
-  --primary-foreground: 255 255 255; /* White */
-  --secondary: 60 160 180; /* #3CA0B4 - Softer Teal */
-  --secondary-foreground: 255 255 255; /* White */
-  --accent: 70 100 230; /* #4664E6 - Softer Bright Blue */
-  --accent-foreground: 255 255 255; /* White */
-  
-  --destructive: 200 40 70; /* #C82846 - Softer Red */
-  --destructive-foreground: 255 255 255; /* White */
-  --ring: var(--accent);
+  /* Brand Colors can remain same or be slightly adjusted if needed */
+  --primary-rgb: 120 70 210;     /* Violet for Light - slightly adjusted if needed */
+  --secondary-rgb: 0 122 255;     /* Apple Blue */
+  --accent-rgb: 70 190 170;       /* Teal for Light */
 
-  --sidebar-background: 250 250 255; /* Very light grey */
-  --sidebar-foreground: 12 15 22;
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: 255 255 255;
-  --sidebar-accent: 220 225 235;
-  --sidebar-accent-foreground: 12 15 22;
-  --sidebar-border: 200 205 215;
-  --sidebar-ring: var(--ring);
+  /* Derived for Light Mode */
+  --background: rgb(var(--background-rgb));
+  --foreground: rgb(var(--foreground-rgb));
+  --card: rgb(var(--card-rgb));
+  --card-foreground: rgb(var(--foreground-rgb));
+  --popover: rgb(var(--popover-rgb));
+  --popover-foreground: rgb(var(--foreground-rgb));
+  --primary: rgb(var(--primary-rgb));
+  --primary-foreground: 255 255 255; 
+  --primary-hover: rgb(135 85 225);
+  --secondary: rgb(var(--secondary-rgb));
+  --secondary-foreground: 255 255 255;
+  --accent: rgb(var(--accent-rgb));
+  --accent-foreground: rgb(var(--background-rgb));
+  --muted: rgb(var(--muted-rgb));
+  --muted-foreground: rgb(var(--muted-rgb));
+  --border: rgb(var(--border-rgb));
+  --input: rgb(225 225 230); /* Light grey input background */
+  --input-foreground: rgb(var(--foreground-rgb));
+  --ring: rgb(var(--secondary-rgb));
+  --destructive: rgb(var(--destructive-rgb));
+  --destructive-foreground: 255 255 255;
+  --success: rgb(var(--success-rgb));
+  --success-foreground: 255 255 255; /* White text on green for light */
+  --warning: rgb(var(--warning-rgb));
+  --warning-foreground: rgb(var(--foreground-rgb)); /* Dark text on yellow for light */
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border; /* Uses CSS var --border */
   }
-
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    @apply bg-background text-foreground; /* Uses CSS vars */
+    font-family: var(--font-sfpro);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -168,20 +158,17 @@
   /* Futuristic background effects */
   .cyber-grid-bg {
     background-image: 
-      linear-gradient(hsla(var(--primary), 0.15) 1px, transparent 1px),
-      linear-gradient(90deg, hsla(var(--primary), 0.15) 1px, transparent 1px);
-    background-size: 60px 60px; /* Slightly larger grid */
+      linear-gradient(hsla(var(--primary-rgb), 0.1) 1px, transparent 1px), /* Thinner, more subtle lines */
+      linear-gradient(90deg, hsla(var(--primary-rgb), 0.1) 1px, transparent 1px);
+    background-size: 40px 40px; /* Adjust grid size */
     position: relative;
   }
 
-  .cyber-grid-bg::before {
+  .cyber-grid-bg::before { /* Soft vignette */
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(ellipse at center, transparent 20%, hsla(var(--background), 0.9) 100%); /* Made gradient softer */
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, hsla(var(--background-rgb), 1) 90%);
     pointer-events: none;
   }
 
@@ -209,28 +196,41 @@
 
   .floating-navbar {
     position: fixed;
-    top: 20px;
+    top: 20px; /* Adjust as needed */
     left: 50%;
     transform: translateX(-50%);
-    z-index: 50;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000; /* Ensure it's on top */
     width: auto;
-    max-width: calc(100vw - 40px);
-    border-radius: 20px;
+    max-width: calc(100vw - 40px); /* Responsive padding */
+    border-radius: var(--radius);
+    /* Glassmorphism with new theme */
+    background: rgba(var(--card-rgb), 0.8); /* Slightly transparent card color */
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    border: 1px solid rgba(var(--border-rgb), 0.5);
+    box-shadow: 0 8px 32px rgba(var(--background-rgb), 0.2);
+    padding: 0.75rem 1.5rem; /* Example padding */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
+  
   .floating-footer {
     position: fixed;
-    bottom: 20px;
+    bottom: 20px; /* Adjust as needed */
     left: 50%;
     transform: translateX(-50%);
-    z-index: 40;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 999;
     width: auto;
-    max-width: calc(100vw - 40px);
-    border-radius: 20px;
+    max-width: calc(100vw - 60px); /* Responsive padding */
+    border-radius: var(--radius);
+    background: rgba(var(--card-rgb), 0.85);
+    backdrop-filter: blur(10px) saturate(150%);
+    -webkit-backdrop-filter: blur(10px) saturate(150%);
+    border: 1px solid rgba(var(--border-rgb), 0.4);
+    box-shadow: 0 -4px 20px rgba(var(--background-rgb), 0.15);
+    padding: 0.5rem 1rem; /* Example padding */
     opacity: 0;
     visibility: hidden;
+    transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
   }
 
   .floating-footer.visible {
@@ -316,6 +316,29 @@
       0 0 5px currentColor,
       0 0 10px currentColor,
       0 0 15px currentColor;
+  }
+
+  /* Hero Section Background Grid */
+  .cyber-grid-bg {
+    background-image: 
+      linear-gradient(hsla(var(--primary-rgb), 0.1) 1px, transparent 1px), /* Thinner, more subtle lines */
+      linear-gradient(90deg, hsla(var(--primary-rgb), 0.1) 1px, transparent 1px);
+    background-size: 40px 40px; /* Adjust grid size */
+    position: relative;
+  }
+
+  .cyber-grid-bg::before { /* Soft vignette */
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, hsla(var(--background-rgb), 1) 90%);
+    pointer-events: none;
+  }
+  
+  /* Example of a themed button (apply similar logic where buttons are styled) */
+  .button-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary-hover;
+    /* Add other button base styles like padding, border-radius, etc. */
   }
 }
 
