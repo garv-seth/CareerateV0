@@ -1,0 +1,120 @@
+:root {
+  --background-rgb: 9 11 17;
+  --foreground-rgb: 236 239 244;
+  --primary-rgb: 120 80 220;
+  --accent-rgb: 80 120 250;
+  --muted-rgb: 46 52 64;
+  --border-rgb: 50 60 75;
+  --card-rgb: 20 24 32;
+
+  --background: rgb(var(--background-rgb));
+  --foreground: rgb(var(--foreground-rgb));
+  --primary: rgb(var(--primary-rgb));
+  --accent: rgb(var(--accent-rgb));
+  --text-light: rgb(200, 210, 220);
+  --text-muted: rgb(129, 161, 193); /* Steel Blue like */
+
+  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--background);
+  color: var(--foreground);
+  margin: 0;
+  font-size: 13px;
+  width: 280px; /* Typical popup width */
+}
+
+.popup-container {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--card-rgb);
+  border: 1px solid rgba(var(--border-rgb), 0.3);
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  background-color: rgba(var(--primary-rgb), 0.15);
+  border-bottom: 1px solid rgba(var(--primary-rgb), 0.3);
+}
+
+.popup-header .logo {
+  width: 24px;
+  height: 24px;
+  margin-right: 10px;
+}
+
+.popup-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--primary);
+  margin: 0;
+}
+
+.popup-content {
+  padding: 15px;
+  line-height: 1.6;
+}
+
+.popup-content p {
+  margin: 0 0 10px 0;
+  color: var(--text-light);
+}
+
+.popup-content p strong {
+  color: var(--foreground);
+}
+
+#trackingStatus.enabled {
+  color: rgb(70 200 150); /* Bright Green for enabled */
+  font-weight: bold;
+}
+
+#trackingStatus.disabled {
+  color: rgb(220 50 80); /* Strong Red for disabled */
+  font-weight: bold;
+}
+
+#monitoringMode {
+    font-style: italic;
+    color: var(--accent);
+}
+
+.options-button {
+  background-color: var(--primary);
+  color: rgb(var(--foreground-rgb));
+  border: none;
+  padding: 8px 15px;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.options-button:hover {
+  background-color: rgba(var(--primary-rgb), 0.85);
+}
+
+.options-button:active {
+  transform: scale(0.98);
+}
+
+.popup-footer {
+  padding: 10px 15px;
+  background-color: rgba(var(--muted-rgb), 0.2);
+  border-top: 1px solid rgba(var(--border-rgb), 0.2);
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.popup-footer p {
+    margin: 0;
+} 

@@ -1,0 +1,18 @@
+{
+  "name": "careerate-chrome-extension",
+  "version": "1.0.0",
+  "description": "Careerate AI-Powered Career Acceleration Platform Extension",
+  "private": true,
+  "scripts": {
+    "dev": "vite build --watch --mode development",
+    "build": "vite build --mode production"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/chrome": "^0.0.268",
+    "@types/fs-extra": "^11.0.4",
+    "fs-extra": "^11.2.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.11"
+  }
+} 

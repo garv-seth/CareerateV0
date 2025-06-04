@@ -37,8 +37,10 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/state/userStore';
+import usePageTitle from '@/hooks/usePageTitle';
 
 const LandingPage: React.FC = () => {
+  usePageTitle('Home - Careerate');
   const navigate = useNavigate();
   const { isAuthenticated } = useUserStore();
   const [isVisible, setIsVisible] = useState(false);
@@ -61,18 +63,18 @@ const LandingPage: React.FC = () => {
   // Background grid configurations
   const GRID_CONFIG = {
     background: {
-      gridColor: "#5E81AC",
-      maxOpacity: 0.15,
-      flickerChance: 0.12,
-      squareSize: 4,
-      gridGap: 4,
+      gridColor: "hsl(var(--primary))",
+      maxOpacity: 0.3,
+      flickerChance: 0.1,
+      squareSize: 3,
+      gridGap: 3,
     },
     logo: {
-      gridColor: "#A3BE8C",
-      maxOpacity: 0.65,
-      flickerChance: 0.18,
-      squareSize: 3,
-      gridGap: 6,
+      gridColor: "hsl(var(--accent))",
+      maxOpacity: 0.75,
+      flickerChance: 0.15,
+      squareSize: 2,
+      gridGap: 4,
     },
   };
 
@@ -248,87 +250,57 @@ const LandingPage: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      {/* Floating Navigation */}
+    <div className="flex flex-col min-h-screen bg-background text-foreground overflow-x-hidden w-full">
       <FloatingNavbar />
 
-      {/* Hero Section with Flickering Grid */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Flickering Grid Background */}
-        <div className="absolute inset-0">
-          <FlickeringGrid
-            className="absolute inset-0 z-0 [mask-image:radial-gradient(1200px_circle_at_center,white,transparent)]"
-            gridColor="#3b82f6" // blue-600
-            maxOpacity={0.18}
-            flickerChance={0.14}
-            squareSize={4}
-            gridGap={4}
-          />
-        </div>
-        {/* Hero Content */}
-        <motion.div
-          className="relative z-10 flex flex-col items-center justify-center text-center w-full"
+      {/* Hero Section */}
+      <section className="relative w-full min-h-screen flex flex-col items-center justify-center text-center overflow-hidden cyber-grid-bg">
+        {/* FlickeringGrid will be a direct child to cover the full section */}
+        <FlickeringGrid
+          {...GRID_CONFIG.background}
+          className="absolute inset-0 z-0"
+        />
+        <motion.div 
+          className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
         >
-          <span className="inline-block px-6 py-2 mb-6 rounded-full bg-blue-700/80 text-blue-100 font-semibold text-base shadow-lg">
+          <Badge variant="default" className="mb-6 bg-primary/10 text-primary border-primary/30 hover:bg-primary/20 px-4 py-1.5 text-sm font-medium">
             AI-Powered Career Acceleration Platform
-          </span>
-          <h1 className="text-5xl md:text-7xl font-extrabold mb-6 text-gradient drop-shadow-lg">
-            Master AI Tools.<br />
-            <span className="block mt-2">Accelerate Your Career.</span>
+          </Badge>
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tighter mb-8">
+            <span className="block">Master AI Tools.</span>
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-secondary">
+              Accelerate Your Career.
+            </span>
           </h1>
-          <motion.p
-            className="text-xl lg:text-2xl text-blue-200 mb-12 leading-relaxed max-w-4xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
+          <p className="max-w-3xl mx-auto text-lg sm:text-xl text-muted-foreground mb-10">
+            Discover, learn, and master the perfect AI tools for your workflow. Get personalized
+            recommendations, track your productivity gains, and join <strong className="text-foreground font-semibold">25,000+ professionals</strong>
+            transforming their careers.
+          </p>
+          <Button 
+            size="lg" 
+            className="px-10 py-7 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-lg shadow-primary/30 transition-all duration-300 transform hover:scale-105 neon-glow"
+            onClick={handleGetStarted}
           >
-            Discover, learn, and master the perfect AI tools for your workflow. Get personalized recommendations, track your productivity gains, and join <span className="text-blue-400 font-semibold">25,000+ professionals</span> transforming their careers.
-          </motion.p>
-          {/* CTA Button */}
-          <motion.div
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          >
-            <Button
-              size="lg"
-              onClick={handleGetStarted}
-              className="px-8 py-4 text-lg font-semibold pixel-btn bg-blue-700 hover:bg-blue-800 group"
-            >
-              Start Your AI Journey
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </motion.div>
+            Start Your AI Journey <ArrowRight className="ml-3 h-5 w-5" />
+          </Button>
         </motion.div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 relative">
-        <div className="cyber-grid-bg absolute inset-0 opacity-30" />
-        <div className="container mx-auto px-4 relative z-10">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <Badge variant="outline" className="mb-4 border-primary/30">
-              <Cpu className="h-4 w-4 mr-2" />
-              AI-Powered Features
-            </Badge>
-            <h2 className="text-4xl lg:text-6xl font-bold mb-6 text-gradient">
-              Supercharge Your Workflow
+      <section id="features" className="w-full py-20 md:py-32 bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
+              Unlock Your Potential with Careerate
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Our advanced AI system learns your work patterns and recommends 
-              the perfect tools to maximize your productivity and career growth.
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              Careerate provides a comprehensive suite of AI-powered tools to help you navigate the complexities of the modern tech landscape.
             </p>
-          </motion.div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
@@ -405,26 +377,16 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <Badge variant="outline" className="mb-4 border-secondary/30">
-              <Users className="h-4 w-4 mr-2" />
-              Customer Stories
-            </Badge>
-            <h2 className="text-4xl lg:text-6xl font-bold mb-6 text-gradient">
-              Loved by Professionals
+      <section id="testimonials" className="w-full py-20 md:py-32 bg-card">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
+              Loved by Professionals Worldwide
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              See how Careerate is transforming careers across the globe
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              Hear what leading tech professionals are saying about their Careerate journey.
             </p>
-          </motion.div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
@@ -473,26 +435,16 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-muted/5">
-        <div className="container mx-auto px-4">
-          <motion.div
-            className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <Badge variant="outline" className="mb-4 border-accent/30">
-              <Zap className="h-4 w-4 mr-2" />
-              Simple Pricing
-            </Badge>
-            <h2 className="text-4xl lg:text-6xl font-bold mb-6 text-gradient">
-              Choose Your Plan
+      <section id="pricing" className="w-full py-20 md:py-32 bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
+              Flexible Pricing for Every Ambition
             </h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Start free and scale as you grow. No hidden fees, cancel anytime.
+            <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
+              Choose the plan that aligns with your career goals and unlock your full potential.
             </p>
-          </motion.div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {pricingPlans.map((plan, index) => (
@@ -558,50 +510,36 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <FlickeringGrid
-            className="absolute inset-0 z-0"
-            {...GRID_CONFIG.logo}
-          />
-        </div>
-        
-        <div className="container mx-auto px-4 text-center relative z-10">
+      {/* Call to Action Section */}
+      <section className="w-full py-20 md:py-32 cyber-grid-bg">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.6, ease: "easeInOut" }}
             viewport={{ once: true }}
-            className="max-w-4xl mx-auto"
           >
-            <h2 className="text-4xl lg:text-6xl font-bold mb-6 text-gradient">
-              Ready to Transform Your Career?
+            <Sparkles className="mx-auto h-12 w-12 text-primary mb-4" />
+            <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter mb-6">
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-secondary">
+                Ready to Transform Your Career?
+              </span>
             </h2>
-            <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
-              Join thousands of professionals who are already leveraging AI to 
-              accelerate their careers and boost their productivity.
+            <p className="max-w-2xl mx-auto text-lg sm:text-xl text-muted-foreground mb-10">
+              Join thousands of professionals who are already leveraging AI to accelerate
+              their progress and achieve their career ambitions.
             </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button
-                size="lg"
-                onClick={handleGetStarted}
-                className="px-8 py-4 text-lg font-semibold pixel-btn bg-primary hover:bg-primary/90 neon-glow group"
-              >
-                Start Your Free Trial
-                <Rocket className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-              
-              <p className="text-sm text-muted-foreground">
-                No credit card required • 14-day free trial
-              </p>
-            </div>
+            <Button
+              size="lg"
+              className="px-10 py-7 text-lg font-semibold bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground rounded-full shadow-xl shadow-primary/40 transition-all duration-300 transform hover:scale-105 focus:ring-4 ring-primary/50"
+              onClick={() => navigate('/auth/login')}
+            >
+              Start Your Free Trial <Zap className="ml-3 h-5 w-5" />
+            </Button>
           </motion.div>
         </div>
       </section>
 
-      {/* Floating Footer */}
       <FloatingFooter />
     </div>
   );

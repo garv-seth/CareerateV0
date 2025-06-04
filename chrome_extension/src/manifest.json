@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Careerate",
+  "version": "1.0.1", 
+  "description": "AI-powered career acceleration platform - Extension by Careerate Inc.",
+  "permissions": [
+    "storage",
+    "tabs", 
+    "activeTab",
+    "scripting",
+    "alarms" 
+  ],
+  "host_permissions": [
+    "<all_urls>" 
+  ],
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "assets/icons/icon16.png",
+      "48": "assets/icons/icon48.png",
+      "128": "assets/icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background/index.ts", 
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/index.ts"],
+      "css": [] 
+    }
+  ],
+  "options_page": "options/index.html",
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/icons/*", "assets/some_other_resource_if_needed/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+} 

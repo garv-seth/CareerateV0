@@ -1,149 +1,113 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { 
-  Github, 
-  Twitter, 
-  Linkedin, 
-  Mail,
-  Heart,
-  ExternalLink,
-  ArrowUp
+import ThemeToggle from './ThemeToggle';
+import {
+  ArrowUp,
+  Github,
+  Twitter,
+  Linkedin
 } from 'lucide-react';
 
 const FloatingFooter: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const [isAtBottom, setIsAtBottom] = useState(false);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
     const handleScroll = () => {
       const scrollTop = window.pageYOffset;
       const windowHeight = window.innerHeight;
       const documentHeight = document.documentElement.scrollHeight;
       
-      // Show footer when user has scrolled past 80% of the page
-      const scrollPercentage = (scrollTop + windowHeight) / documentHeight;
-      const shouldShow = scrollPercentage > 0.8;
+      // Show footer when user has scrolled down a bit, or is near the bottom
+      const scrollThreshold = windowHeight * 0.3; // Show after 30% of viewport scrolled
+      const nearBottomThreshold = documentHeight - windowHeight * 1.5; // Show when 1.5x viewport height from bottom
+
+      const shouldShow = scrollTop > scrollThreshold || (scrollTop > 0 && scrollTop > nearBottomThreshold) || (documentHeight <= windowHeight) ;
       
-      // Check if user is at the bottom of the page
-      const atBottom = windowHeight + scrollTop >= documentHeight - 10;
-      
-      setIsVisible(shouldShow);
-      setIsAtBottom(atBottom);
+      if (shouldShow) {
+        setIsVisible(true);
+        clearTimeout(timeoutId); // Clear any pending timeout to hide
+      } else if (isVisible && scrollTop < scrollThreshold / 2) { // Hide only if scrolled back up significantly
+        // Debounce hiding to prevent flickering when scrolling near threshold
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          setIsVisible(false);
+        }, 300);
+      }
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    // Initial check in case page is very short or already scrolled
+    handleScroll(); 
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeoutId);
+    };
+  }, [isVisible]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const socialLinks = [
-    { name: 'GitHub', icon: <Github size={16} />, url: 'https://github.com/careerate' },
-    { name: 'Twitter', icon: <Twitter size={16} />, url: 'https://twitter.com/careerate' },
-    { name: 'LinkedIn', icon: <Linkedin size={16} />, url: 'https://linkedin.com/company/careerate' },
-    { name: 'Email', icon: <Mail size={16} />, url: 'mailto:hello@careerate.com' }
-  ];
-
-  const quickLinks = [
-    { name: 'Privacy Policy', url: '/privacy' },
-    { name: 'Terms of Service', url: '/terms' },
-    { name: 'Help Center', url: '/help' },
-    { name: 'Contact Us', url: '/contact' }
+    { name: 'GitHub', icon: <Github size={18} />, url: 'https://github.com/careerate' },
+    { name: 'Twitter', icon: <Twitter size={18} />, url: 'https://twitter.com/careerate' },
+    { name: 'LinkedIn', icon: <Linkedin size={18} />, url: 'https://linkedin.com/company/careerate' },
   ];
 
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.footer
-          initial={{ y: 100, opacity: 0 }}
+          initial={{ y: '100%', opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className={`floating-footer visible glass-nav ${isAtBottom ? 'mb-4' : ''}`}
+          exit={{ y: '100%', opacity: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className='floating-footer glass-nav px-4 py-3 md:px-6' // Centered by default due to .floating-footer class
         >
-          <div className="flex flex-col lg:flex-row items-center justify-center gap-8 px-8 py-4 w-full">
+          <div className="w-full mx-auto flex items-center justify-between">
             {/* Left Section - Logo & Copyright */}
-            <div className="flex flex-col lg:flex-row items-center gap-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-purple-800 rounded-lg flex items-center justify-center">
-                  <span className="text-primary-foreground font-bold text-xs">C</span>
-                </div>
-                <span className="font-semibold text-sm text-gradient">Careerate</span>
-              </div>
-              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-                <span>© 2025 Careerate</span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  Made with <Heart size={12} className="text-accent" fill="currentColor" /> for your career
-                </span>
-              </div>
+            <div className="flex items-center gap-3">
+              <img src="/CareerateICON.png" alt="Careerate Logo" className="h-7 w-7" />
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                &copy; {new Date().getFullYear()} Careerate
+              </p>
             </div>
-            {/* Center Section - Quick Links */}
-            <div className="flex flex-wrap justify-center gap-4">
-              {quickLinks.map((link) => (
+
+            {/* Center Section - Social Links */}
+            <div className="flex items-center gap-1">
+              {socialLinks.map((social) => (
                 <motion.a
-                  key={link.name}
-                  href={link.url}
-                  className="px-3 py-1.5 text-xs text-blue-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-blue-900/30"
-                  whileHover={{ scale: 1.05 }}
+                  key={social.name}
+                  href={social.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 text-muted-foreground hover:text-primary transition-colors duration-200 rounded-full hover:bg-primary/10"
+                  whileHover={{ scale: 1.1, y: -2 }}
                   whileTap={{ scale: 0.95 }}
+                  title={social.name}
                 >
-                  {link.name}
+                  {social.icon}
                 </motion.a>
               ))}
             </div>
-            {/* Right Section - Social Links & Back to Top */}
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1">
-                {socialLinks.map((social) => (
-                  <motion.a
-                    key={social.name}
-                    href={social.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 text-blue-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-blue-900/30"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    title={social.name}
-                  >
-                    {social.icon}
-                  </motion.a>
-                ))}
-              </div>
-              <div className="w-px h-6 bg-border mx-2" />
+
+            {/* Right Section - Theme Toggle & Back to Top */}
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
               <motion.button
                 onClick={scrollToTop}
-                className="p-2 text-blue-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-blue-900/30 flex items-center space-x-1"
-                whileHover={{ scale: 1.05 }}
+                className="p-2 text-muted-foreground hover:text-primary transition-colors duration-200 rounded-full hover:bg-primary/10 flex items-center space-x-1"
+                whileHover={{ scale: 1.1, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 title="Back to top"
+                aria-label="Scroll to top"
               >
-                <ArrowUp size={16} />
-                <span className="text-xs hidden sm:inline">Top</span>
+                <ArrowUp size={18} />
               </motion.button>
             </div>
           </div>
-          {/* Mobile Quick Links */}
-          <div className="lg:hidden border-t border-border/50 px-6 py-3">
-            <div className="flex flex-wrap justify-center gap-2">
-              {quickLinks.map((link) => (
-                <motion.a
-                  key={link.name}
-                  href={link.url}
-                  className="px-3 py-1.5 text-xs text-blue-300 hover:text-white transition-colors duration-200 rounded-lg hover:bg-blue-900/30 flex items-center gap-1"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {link.name}
-                  <ExternalLink size={10} />
-                </motion.a>
-              ))}
-            </div>
-          </div>
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-700/5 via-purple-800/5 to-blue-900/5 pointer-events-none" />
         </motion.footer>
       )}
     </AnimatePresence>

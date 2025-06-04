@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Careerate Extension Settings</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="../assets/icons/icon48.png" alt="Careerate Logo" class="logo">
+      <h1>Careerate Extension Settings</h1>
+    </header>
+
+    <main>
+      <section class="settings-section">
+        <h2>Activity Tracking</h2>
+        <div class="setting-item">
+          <label for="masterToggle">Enable Activity Tracking</label>
+          <div class="toggle-switch">
+            <input type="checkbox" id="masterToggle" class="toggle-input">
+            <label for="masterToggle" class="toggle-label"></label>
+          </div>
+        </div>
+        <p class="description">
+          Allow Careerate to analyze your professional activity to provide personalized insights and recommendations. 
+          Disabling this will turn off all monitoring features.
+        </p>
+      </section>
+
+      <section class="settings-section" id="monitoringOptionsSection" style="display: none;">
+        <h2>Monitoring Preferences</h2>
+        <div class="setting-item">
+          <p>Choose your preferred monitoring level:</p>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="standardMonitoring" name="monitoringLevel" value="standard" checked>
+              <label for="standardMonitoring">Standard Monitoring</label>
+              <p class="description small">
+                Monitors active tab domain, page titles, and estimated time spent to infer general activity and tools used. 
+                <strong>Does not capture screenshots or detailed page content.</strong>
+              </p>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="enhancedMonitoring" name="monitoringLevel" value="enhanced">
+              <label for="enhancedMonitoring">Enhanced Monitoring (Requires Consent)</label>
+              <div class="consent-section" id="screenshotConsentSection" style="display: none;">
+                <div class="setting-item">
+                  <div class="toggle-switch mini">
+                    <input type="checkbox" id="screenshotConsent">
+                    <label for="screenshotConsent" class="toggle-label"></label>
+                  </div>
+                  <label for="screenshotConsent">I consent to periodic, anonymous screenshots of my active browser window.</label>
+                </div>
+                <p class="description small">
+                  Screenshots help Careerate understand your workflow in more detail to provide highly accurate tool and skill recommendations. 
+                  They are processed anonymously and focused on professional tools and websites. 
+                  You can revoke this consent at any time.
+                </p>
+              </div>
+               <p class="description small" id="enhancedDescriptionNoConsent">
+                  Enables more detailed analysis, potentially including screenshots if you provide consent below. 
+                  Without screenshot consent, enhanced mode may use other advanced (but non-intrusive) signals if developed in the future.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Careerate - Your AI Career Co-pilot</p>
+      <p id="statusMessage" class="status-message"></p>
+    </footer>
+  </div>
+  <script type="module" src="index.ts"></script>
+</body>
+</html> 

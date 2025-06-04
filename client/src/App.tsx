@@ -11,6 +11,7 @@ import LandingPage from "@/pages/LandingPage";
 import DashboardPage from "@/pages/DashboardPage";
 import SettingsPage from "@/pages/SettingsPage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import AuthPage from "@/pages/AuthPage"; // Import the new AuthPage
 // Basic MSAL setup will go here or in a dedicated auth file
 // For now, assume a simple layout without enforced auth for all routes
 
@@ -24,6 +25,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/auth/login" element={<AuthPage />} /> {/* Add AuthPage route */}
       <Route path="/dashboard" element={<MainLayout><DashboardPage /></MainLayout>} />
       <Route path="/settings" element={<MainLayout><SettingsPage /></MainLayout>} />
       <Route path="*" element={<NotFoundPage />} />

@@ -33,6 +33,7 @@ import { RecommendationCard } from '@/components/dashboard/RecommendationCard';
 import { ProgressTracker } from '@/components/dashboard/ProgressTracker';
 import { useUserStore } from '@/state/userStore';
 import { toast } from '@/components/ui/use-toast';
+import usePageTitle from '@/hooks/usePageTitle';
 
 // Define DashboardTab type
 type DashboardTab = "overview" | "recommendations" | "paths" | "insights";
@@ -83,6 +84,8 @@ const DashboardPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<DashboardTab>("overview");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
+
+  usePageTitle('Dashboard - Careerate');
 
   // Fetch AI Recommendations
   const { 

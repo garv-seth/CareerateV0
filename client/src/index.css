@@ -6,59 +6,62 @@
 @tailwind utilities;
 
 :root {
-  /* Core Brand Colors - Futuristic Professional Palette */
-  --background: 9 11 17; /* #090B11 - Deep Space */
-  --foreground: 236 239 244; /* #ECEFF4 - Frost White */
+  /* Core Brand Colors - New Palette */
+  --background: 9 11 17; /* #090B11 - Deep Space (Dark Mode Default) */
+  --foreground: 236 239 244; /* #ECEFF4 - Frost White (Dark Mode Default) */
+  
   --muted: 46 52 64; /* #2E3440 - Dark Grey */
-  --muted-foreground: 129 161 193; /* #81A1C1 - Steel Blue */
+  --muted-foreground: 160 170 190; /* Adjusted for new palette */
+  
   --popover: 16 20 28; /* #10141C - Card Dark */
   --popover-foreground: 236 239 244; /* #ECEFF4 - Frost White */
-  --card: 16 20 28; /* #10141C - Card Dark */
+  --card: 20 24 32; /* Slightly lighter than popover for depth */
   --card-foreground: 236 239 244; /* #ECEFF4 - Frost White */
-  --border: 46 52 64; /* #2E3440 - Border Dark */
-  --input: 46 52 64; /* #2E3440 - Input Dark */
   
-  /* Primary Brand Colors */
-  --primary: 94 129 172; /* #5E81AC - Nordic Blue */
-  --primary-foreground: 236 239 244; /* #ECEFF4 - Frost White */
-  --secondary: 163 190 140; /* #A3BE8C - Aurora Green */
-  --secondary-foreground: 16 20 28; /* #10141C - Dark Text */
-  --accent: 208 135 112; /* #D08770 - Aurora Orange */
-  --accent-foreground: 16 20 28; /* #10141C - Dark Text */
+  --border: 50 60 75; /* Adjusted for new palette */
+  --input: 50 60 75; /* Adjusted for new palette */
+  
+  /* Primary Brand Colors - Violet/Blue Dominant */
+  --primary: 120 80 220; /* #7850DC - Vivid Violet */
+  --primary-foreground: 240 240 255; /* Light lavender white */
+  --secondary: 70 180 200; /* #46B4C8 - Greenish Blue (Tealish) */
+  --secondary-foreground: 9 11 17; /* #090B11 - Deep Space */
+  --accent: 80 120 250; /* #5078FA - Bright Blue */
+  --accent-foreground: 240 240 255; /* Light lavender white */
   
   /* Semantic Colors */
-  --destructive: 191 97 106; /* #BF616A - Aurora Red */
-  --destructive-foreground: 236 239 244; /* #ECEFF4 - Frost White */
-  --success: 163 190 140; /* #A3BE8C - Aurora Green */
-  --success-foreground: 16 20 28; /* #10141C - Dark Text */
-  --warning: 235 203 139; /* #EBCB8B - Aurora Yellow */
-  --warning-foreground: 16 20 28; /* #10141C - Dark Text */
+  --destructive: 220 50 80; /* #DC3250 - Strong Red */
+  --destructive-foreground: 240 240 255; /* Light lavender white */
+  --success: 70 200 150; /* #46C896 - Bright Green */
+  --success-foreground: 9 11 17; /* #090B11 - Deep Space */
+  --warning: 255 190 0; /* #FFBE00 - Amber Yellow */
+  --warning-foreground: 9 11 17; /* #090B11 - Deep Space */
   
   /* Additional Brand Colors */
-  --pixel-cyan: 136 192 208; /* #88C0D0 - Frost Cyan */
-  --pixel-purple: 180 142 173; /* #B48EAD - Aurora Purple */
-  --neon-green: 163 190 140; /* #A3BE8C - Aurora Green Bright */
-  --cyber-blue: 94 129 172; /* #5E81AC - Electric Blue */
+  --pixel-cyan: var(--secondary); /* Use secondary for cyan */
+  --pixel-purple: var(--primary); /* Use primary for purple */
+  --neon-green: var(--success); 
+  --cyber-blue: var(--accent);
   
-  --ring: 94 129 172; /* #5E81AC - Nordic Blue */
+  --ring: var(--accent); /* Use accent for rings/focus */
   --radius: 0.5rem;
   
-  /* Sidebar Colors */
-  --sidebar-background: 16 20 28;
+  /* Sidebar Colors (example, might not be used on landing) */
+  --sidebar-background: 12 15 22; /* Slightly different dark */
   --sidebar-foreground: 236 239 244;
-  --sidebar-primary: 94 129 172;
-  --sidebar-primary-foreground: 236 239 244;
-  --sidebar-accent: 46 52 64;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: 50 60 75;
   --sidebar-accent-foreground: 236 239 244;
-  --sidebar-border: 46 52 64;
-  --sidebar-ring: 94 129 172;
+  --sidebar-border: 50 60 75;
+  --sidebar-ring: var(--ring);
   
   /* Chart Colors */
-  --chart-1: 94 129 172; /* Nordic Blue */
-  --chart-2: 163 190 140; /* Aurora Green */
-  --chart-3: 208 135 112; /* Aurora Orange */
-  --chart-4: 235 203 139; /* Aurora Yellow */
-  --chart-5: 191 97 106; /* Aurora Red */
+  --chart-1: var(--primary);
+  --chart-2: var(--secondary);
+  --chart-3: var(--accent);
+  --chart-4: 255 120 80; /* A contrasting orange if needed */
+  --chart-5: var(--destructive);
   
   /* Fonts */
   --font-sfpro: 'SF Pro Display', 'Segoe UI', 'Arial', sans-serif;
@@ -74,65 +77,71 @@
 }
 
 .dark {
-  /* Dark mode uses same colors as our base is already dark */
+  /* Dark mode uses same colors as our base is already dark, but ensure they are all defined */
   --background: 9 11 17;
   --foreground: 236 239 244;
   --muted: 46 52 64;
-  --muted-foreground: 129 161 193;
+  --muted-foreground: 160 170 190;
   --popover: 16 20 28;
   --popover-foreground: 236 239 244;
-  --card: 16 20 28;
+  --card: 20 24 32;
   --card-foreground: 236 239 244;
-  --border: 46 52 64;
-  --input: 46 52 64;
-  --primary: 94 129 172;
-  --primary-foreground: 236 239 244;
-  --secondary: 163 190 140;
-  --secondary-foreground: 16 20 28;
-  --accent: 208 135 112;
-  --accent-foreground: 16 20 28;
-  --destructive: 191 97 106;
-  --destructive-foreground: 236 239 244;
-  --ring: 94 129 172;
-  --sidebar-background: 16 20 28;
+  --border: 50 60 75;
+  --input: 50 60 75;
+  --primary: 120 80 220;
+  --primary-foreground: 240 240 255;
+  --secondary: 70 180 200;
+  --secondary-foreground: 9 11 17;
+  --accent: 80 120 250;
+  --accent-foreground: 240 240 255;
+  --destructive: 220 50 80;
+  --destructive-foreground: 240 240 255;
+  --ring: var(--accent);
+  --sidebar-background: 12 15 22;
   --sidebar-foreground: 236 239 244;
-  --sidebar-primary: 94 129 172;
-  --sidebar-primary-foreground: 236 239 244;
-  --sidebar-accent: 46 52 64;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: 50 60 75;
   --sidebar-accent-foreground: 236 239 244;
-  --sidebar-border: 46 52 64;
-  --sidebar-ring: 94 129 172;
+  --sidebar-border: 50 60 75;
+  --sidebar-ring: var(--ring);
 }
 
 /* Light mode - for accessibility and user preference */
 .light {
-  --background: 236 239 244; /* #ECEFF4 - Frost White */
-  --foreground: 16 20 28; /* #10141C - Dark Text */
-  --muted: 229 233 240; /* #E5E9F0 - Light Grey */
-  --muted-foreground: 94 129 172; /* #5E81AC - Muted Blue */
+  --background: 245 247 250; /* #F5F7FA - Light Cool Grey */
+  --foreground: 12 15 22;    /* #0C0F16 - Deep Blue Text */
+  
+  --muted: 220 225 235; /* #DCE1EB - Lighter Grey */
+  --muted-foreground: 80 90 110; /* #505A6E - Muted Blue-Grey */
+  
   --popover: 255 255 255; /* #FFFFFF - Pure White */
-  --popover-foreground: 16 20 28; /* #10141C - Dark Text */
+  --popover-foreground: 12 15 22; /* #0C0F16 - Deep Blue Text */
   --card: 255 255 255; /* #FFFFFF - Pure White */
-  --card-foreground: 16 20 28; /* #10141C - Dark Text */
-  --border: 229 233 240; /* #E5E9F0 - Light Border */
-  --input: 229 233 240; /* #E5E9F0 - Light Input */
-  --primary: 94 129 172; /* #5E81AC - Nordic Blue */
-  --primary-foreground: 236 239 244; /* #ECEFF4 - Frost White */
-  --secondary: 163 190 140; /* #A3BE8C - Aurora Green */
-  --secondary-foreground: 16 20 28; /* #10141C - Dark Text */
-  --accent: 208 135 112; /* #D08770 - Aurora Orange */
-  --accent-foreground: 16 20 28; /* #10141C - Dark Text */
-  --destructive: 191 97 106; /* #BF616A - Aurora Red */
-  --destructive-foreground: 236 239 244; /* #ECEFF4 - Frost White */
-  --ring: 94 129 172; /* #5E81AC - Nordic Blue */
-  --sidebar-background: 255 255 255;
-  --sidebar-foreground: 16 20 28;
-  --sidebar-primary: 94 129 172;
-  --sidebar-primary-foreground: 236 239 244;
-  --sidebar-accent: 229 233 240;
-  --sidebar-accent-foreground: 16 20 28;
-  --sidebar-border: 229 233 240;
-  --sidebar-ring: 94 129 172;
+  --card-foreground: 12 15 22; /* #0C0F16 - Deep Blue Text */
+  
+  --border: 200 205 215; /* #C8CDD7 - Light Border */
+  --input: 200 205 215; /* #C8CDD7 - Light Input */
+  
+  --primary: 100 60 200; /* #643CCC - Slightly softer Violet for light mode */
+  --primary-foreground: 255 255 255; /* White */
+  --secondary: 60 160 180; /* #3CA0B4 - Softer Teal */
+  --secondary-foreground: 255 255 255; /* White */
+  --accent: 70 100 230; /* #4664E6 - Softer Bright Blue */
+  --accent-foreground: 255 255 255; /* White */
+  
+  --destructive: 200 40 70; /* #C82846 - Softer Red */
+  --destructive-foreground: 255 255 255; /* White */
+  --ring: var(--accent);
+
+  --sidebar-background: 250 250 255; /* Very light grey */
+  --sidebar-foreground: 12 15 22;
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: 255 255 255;
+  --sidebar-accent: 220 225 235;
+  --sidebar-accent-foreground: 12 15 22;
+  --sidebar-border: 200 205 215;
+  --sidebar-ring: var(--ring);
 }
 
 @layer base {
@@ -159,9 +168,9 @@
   /* Futuristic background effects */
   .cyber-grid-bg {
     background-image: 
-      linear-gradient(rgba(94, 129, 172, 0.1) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(94, 129, 172, 0.1) 1px, transparent 1px);
-    background-size: 50px 50px;
+      linear-gradient(hsla(var(--primary), 0.15) 1px, transparent 1px),
+      linear-gradient(90deg, hsla(var(--primary), 0.15) 1px, transparent 1px);
+    background-size: 60px 60px; /* Slightly larger grid */
     position: relative;
   }
 
@@ -172,31 +181,30 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(ellipse at center, transparent 0%, rgba(9, 11, 17, 0.8) 100%);
+    background: radial-gradient(ellipse at center, transparent 20%, hsla(var(--background), 0.9) 100%); /* Made gradient softer */
     pointer-events: none;
   }
 
   .neon-glow {
     box-shadow: 
-      0 0 5px hsl(var(--primary)),
-      0 0 10px hsl(var(--primary)),
+      0 0 7px hsl(var(--primary)),
       0 0 15px hsl(var(--primary)),
-      0 0 20px hsl(var(--primary));
+      0 0 25px hsl(var(--primary)); /* Enhanced glow */
   }
 
   .glass-nav {
-    background: rgba(16, 20, 28, 0.8);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(94, 129, 172, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    background: hsla(var(--background), 0.7); /* Use CSS var for background */
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid hsla(var(--border), 0.3); /* Use CSS var for border */
+    box-shadow: 0 8px 32px hsla(var(--background), 0.37);
   }
 
   .glass-card {
-    background: rgba(16, 20, 28, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(94, 129, 172, 0.15);
+    background: hsla(var(--card), 0.75); /* Use CSS var for card background */
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid hsla(var(--border), 0.2); /* Use CSS var for border */
   }
 
   .floating-navbar {
@@ -237,8 +245,8 @@
   .card-hover:hover {
     transform: translateY(-8px) scale(1.02);
     box-shadow: 
-      0 20px 40px rgba(0, 0, 0, 0.3),
-      0 0 20px rgba(94, 129, 172, 0.2);
+      0 20px 40px hsla(var(--background), 0.4), /* Adjusted shadow color */
+      0 0 20px hsla(var(--primary), 0.3); /* Adjusted glow color */
   }
 
   .progress-bar {

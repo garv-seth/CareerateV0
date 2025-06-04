@@ -14,7 +14,9 @@ import {
   Menu,
   X,
   Sparkles,
-  Zap
+  Zap,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 interface NavItem {
@@ -92,15 +94,15 @@ const FloatingNavbar: React.FC = () => {
       >
         {/* Logo */}
         <motion.div
-          className="flex items-center space-x-2 cursor-pointer"
+          className="flex items-center space-x-3 cursor-pointer group"
           onClick={() => navigate('/')}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-800 rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">C</span>
-          </div>
-          <span className="font-bold text-xl text-gradient">Careerate</span>
+          <img src="/CareerateICON.png" alt="Careerate Logo" className="h-8 w-8 group-hover:opacity-90 transition-opacity" />
+          <span className="font-bold text-xl text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent group-hover:opacity-90 transition-opacity">
+            Careerate
+          </span>
         </motion.div>
 
         {/* Navigation Items */}
@@ -109,9 +111,10 @@ const FloatingNavbar: React.FC = () => {
             <motion.button
               key={item.path}
               onClick={() => handleNavigation(item.path)}
-              className={`px-4 py-2 rounded-full flex items-center space-x-2 transition-all duration-200 ${isActivePath(item.path)
-                ? 'bg-blue-700/20 text-blue-400 border border-blue-700/30'
-                : 'hover:bg-purple-900/50 text-blue-300 hover:text-white'}`}
+              className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full flex items-center space-x-2 transition-all duration-200 text-sm font-medium
+                ${isActivePath(item.path)
+                  ? 'bg-primary/20 text-primary' 
+                  : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'}`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -135,10 +138,10 @@ const FloatingNavbar: React.FC = () => {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-800 rounded-full flex items-center justify-center">
-                <User size={16} className="text-accent-foreground" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-primary-foreground font-medium text-sm">
+                {user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || <User size={16}/>}
               </div>
-              <span className="text-sm font-medium text-foreground">
+              <span className="text-sm font-medium text-foreground hidden lg:block">
                 {user.displayName || user.email?.split('@')[0] || 'User'}
               </span>
             </motion.div>
@@ -147,7 +150,10 @@ const FloatingNavbar: React.FC = () => {
             variant={isAuthenticated ? "outline" : "default"}
             size="sm"
             onClick={handleAuth}
-            className={`pixel-btn ${isAuthenticated ? '' : 'bg-blue-700 hover:bg-blue-800'}`}
+            className={`${isAuthenticated 
+                ? 'border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground' 
+                : 'bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90'}
+                 rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 transform hover:scale-105`}
           >
             {isAuthenticated ? (
               <>
@@ -176,15 +182,15 @@ const FloatingNavbar: React.FC = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <motion.div
-            className="flex items-center space-x-2 cursor-pointer"
+            className="flex items-center space-x-2 cursor-pointer group"
             onClick={() => navigate('/')}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <div className="w-7 h-7 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xs">C</span>
-            </div>
-            <span className="font-bold text-lg text-gradient">Careerate</span>
+            <img src="/CareerateICON.png" alt="Careerate Logo" className="h-7 w-7 group-hover:opacity-90 transition-opacity" />
+            <span className="font-bold text-lg text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent group-hover:opacity-90 transition-opacity">
+              Careerate
+            </span>
           </motion.div>
 
           {/* Menu Button */}
@@ -236,10 +242,10 @@ const FloatingNavbar: React.FC = () => {
                 <motion.button
                   key={item.path}
                   onClick={() => handleNavigation(item.path)}
-                  className={`w-full px-4 py-3 rounded-xl flex items-center space-x-3 transition-all duration-200 ${
+                  className={`w-full px-4 py-3 rounded-xl flex items-center space-x-3 transition-all duration-200 text-base font-medium ${
                     isActivePath(item.path)
-                      ? 'bg-primary/20 text-primary border border-primary/30'
-                      : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground'
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:bg-primary/10 hover:text-primary'
                   }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -257,8 +263,8 @@ const FloatingNavbar: React.FC = () => {
               <div className="border-t border-border pt-3 mt-3">
                 {isAuthenticated && user && (
                   <div className="flex items-center space-x-3 px-4 py-2 mb-3 rounded-xl bg-muted/30">
-                    <div className="w-8 h-8 bg-gradient-to-br from-accent to-secondary rounded-full flex items-center justify-center">
-                      <User size={16} className="text-accent-foreground" />
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-primary-foreground font-medium text-sm">
+                      {user?.displayName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || <User size={16}/>}
                     </div>
                     <span className="font-medium text-foreground">
                       {user.displayName || user.email?.split('@')[0] || 'User'}
