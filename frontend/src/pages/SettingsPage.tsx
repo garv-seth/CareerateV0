@@ -7,7 +7,7 @@ import { Settings as SettingsIcon, UserCircle, ShieldQuestion, LogOut } from 'lu
 
 const SettingsPage: React.FC = () => {
   usePageTitle("Settings - Careerate");
-  const { instance, accounts } = useMsal();
+  const { instance } = useMsal();
 
   const handleEditProfile = () => {
     if (b2cPolicies.names.profileEdit && b2cPolicies.authorities.profileEdit) {

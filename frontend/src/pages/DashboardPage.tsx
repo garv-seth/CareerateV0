@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,14 +23,11 @@ import {
   Play,
   CheckCircle,
   AlertCircle,
-  Users,
-  Calendar,
   Activity,
   Lightbulb
 } from 'lucide-react';
 import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 import { RecommendationCard } from '@/components/dashboard/RecommendationCard';
-import { ProgressTracker } from '@/components/dashboard/ProgressTracker';
 import { useUserStore } from '@/state/userStore';
 import { toast } from '@/components/ui/use-toast';
 import usePageTitle from '@/hooks/usePageTitle';
@@ -116,7 +113,6 @@ const DashboardPage: React.FC = () => {
   const { 
     data: insightsData, 
     isLoading: isLoadingInsights,
-    refetch: refetchInsights
   } = useQuery<WorkflowInsight[], Error>({
     queryKey: ['workflowInsights', user?.id],
     queryFn: async () => {
@@ -142,7 +138,6 @@ const DashboardPage: React.FC = () => {
   const { 
     data: learningPathsData, 
     isLoading: isLoadingPaths,
-    refetch: refetchPaths
   } = useQuery<LearningPath[], Error>({
     queryKey: ['learningPaths', user?.id],
     queryFn: async () => {
@@ -169,8 +164,6 @@ const DashboardPage: React.FC = () => {
   // Fetch Activity Stats (placeholder)
   const { 
     data: activityStatsData, 
-    isLoading: isLoadingActivityStats,
-    refetch: refetchActivityStats 
   } = useQuery<any, Error>({
     queryKey: ['activityStats', user?.id],
     queryFn: async () => {
@@ -193,7 +186,7 @@ const DashboardPage: React.FC = () => {
   });
 
   // Refresh all data
-  const refreshMutation = useMutation({
+  useMutation({
     mutationFn: async () => {
       setIsRefreshing(true);
       await Promise.all([

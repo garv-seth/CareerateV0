@@ -18,42 +18,28 @@ import {
   Star,
   Sparkles,
   BarChart3,
-  Clock,
-  Globe,
-  ChevronRight,
-  Play,
-  Award,
   Lightbulb,
-  Rocket,
   Code,
   Database,
-  Cpu,
-  Bot,
   Palette,
   Monitor,
-  Headphones,
   Briefcase,
   Megaphone,
-  MessageSquare,
   ShieldCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/state/userStore';
 import usePageTitle from '@/hooks/usePageTitle';
-import { useIsAuthenticated, useAccount } from "@azure/msal-react"; // MSAL Hooks
+import { useAccount } from "@azure/msal-react"; // MSAL Hooks
 
 const LandingPage: React.FC = () => {
   usePageTitle('Home - Careerate');
   const navigate = useNavigate();
   const { isAuthenticated } = useUserStore();
-  const [isVisible, setIsVisible] = useState(false);
   const { scrollYProgress } = useScroll();
-  const opacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
-  const isAuthenticatedMSAL = useIsAuthenticated();
   const activeAccount = useAccount(); // Get account info if needed for display name
 
   useEffect(() => {
-    setIsVisible(true);
   }, []);
 
   const handleGetStarted = () => {
@@ -103,7 +89,6 @@ const LandingPage: React.FC = () => {
       title: "Real-time Performance Tracking",
       description: "Monitor productivity gains with comprehensive analytics, trend analysis, and predictive insights.",
       color: "accent",
-      stats: "45% avg. boost"
     },
     {
       icon: <Lightbulb className="h-8 w-8 text-yellow-400" />,
@@ -124,7 +109,6 @@ const LandingPage: React.FC = () => {
       title: "Instant AI Integration",
       description: "Chrome extension provides real-time recommendations as you work across 1000+ platforms.",
       color: "cyan",
-      stats: "1ms latency"
     },
     { title: 'Personalized AI Insights', description: 'Tailored career advice based on your unique profile and goals.', icon: <Lightbulb size={28} className="text-primary" />, comingSoon: false },
     { title: 'Skill Gap Analysis', description: 'Identify and bridge the skill gaps for your desired career path.', icon: <TrendingUp size={28} className="text-accent" />, comingSoon: false },
@@ -545,7 +529,7 @@ const LandingPage: React.FC = () => {
               className="px-10 py-7 text-lg font-semibold bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90 text-primary-foreground rounded-full shadow-xl shadow-primary/40 transition-all duration-300 transform hover:scale-105 focus:ring-4 ring-primary/50"
               onClick={handleGetStarted}
             >
-              {isAuthenticated ? "Go to Dashboard" : "Start Your Free Trial"} <Zap className="ml-3 h-5 w-5" />
+              {isAuthenticated ? "Go to Dashboard" : "Start Your Free Trial"}
             </Button>
           </motion.div>
         </div>
