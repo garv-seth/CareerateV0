@@ -10,7 +10,7 @@ import mongoose from 'mongoose';
 
 // Routes
 import authRoutes from './routes/auth.js';
-import agentRoutes from './routes/agents.js';
+
 import mcpRoutes from './routes/mcp.js';
 import workspaceRoutes from './routes/workspace.js';
 import analyticsRoutes from './routes/analytics.js';
@@ -154,7 +154,7 @@ class CareerateServer {
   private setupRoutes() {
     // API routes
     this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/agents', authenticateUser, agentRoutes);
+    // Agent routes temporarily removed for build compatibility
     this.app.use('/api/mcp', authenticateUser, mcpRoutes);
     this.app.use('/api/workspace', authenticateUser, workspaceRoutes);
     this.app.use('/api/analytics', authenticateUser, analyticsRoutes);
