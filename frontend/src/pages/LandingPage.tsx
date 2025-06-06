@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import React, { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,14 +30,13 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/state/userStore';
 import usePageTitle from '@/hooks/usePageTitle';
-import { useAccount } from "@azure/msal-react"; // MSAL Hooks
+
 
 const LandingPage: React.FC = () => {
   usePageTitle('Home - Careerate');
   const navigate = useNavigate();
   const { isAuthenticated } = useUserStore();
-  const { scrollYProgress } = useScroll();
-  const activeAccount = useAccount(); // Get account info if needed for display name
+
 
   useEffect(() => {
   }, []);
@@ -118,32 +117,7 @@ const LandingPage: React.FC = () => {
     { title: 'Privacy First Design', description: 'You control your data. We ensure it is anonymized and protected.', icon: <ShieldCheck size={28} className="text-secondary" />, comingSoon: false },
   ];
 
-  const stats = [
-    { 
-      value: "50%", 
-      label: "Productivity Increase", 
-      icon: <TrendingUp className="h-6 w-6" />,
-      description: "Average productivity boost"
-    },
-    { 
-      value: "500+", 
-      label: "AI Tools Tracked", 
-      icon: <Brain className="h-6 w-6" />,
-      description: "Comprehensive tool database"
-    },
-    { 
-      value: "25K+", 
-      label: "Active Users", 
-      icon: <Users className="h-6 w-6" />,
-      description: "Growing community"
-    },
-    { 
-      value: "99.2%", 
-      label: "User Satisfaction", 
-      icon: <Star className="h-6 w-6" />,
-      description: "Verified reviews"
-    }
-  ];
+
 
   const testimonials = [
     {
@@ -245,7 +219,7 @@ const LandingPage: React.FC = () => {
   ];
 
   // Personalized welcome if authenticated
-  const welcomeMessage = isAuthenticated && activeAccount?.name ? `Welcome back, ${activeAccount.name.split(' ')[0]}!` : "AI-Powered Career Acceleration Platform";
+  const welcomeMessage = "AI-Powered Career Acceleration Platform";
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground overflow-x-hidden w-full">

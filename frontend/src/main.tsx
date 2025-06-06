@@ -2,10 +2,10 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThemeProvider } from "./contexts/ThemeContext.tsx";
 import { PublicClientApplication, EventType, EventMessage, AuthenticationResult } from "@azure/msal-browser";
 import { MsalProvider } from "@azure/msal-react";
-import { msalConfig, MSAL_CONFIG_PLACEHOLDERS } from "./authConfig"; // Import the MSAL config and placeholders
+import { msalConfig } from "./lib/msalConfig"; // Import the MSAL config
 
 /**
  * MSAL should be instantiated outside of the component tree to prevent it from being re-instantiated on re-renders.
@@ -29,7 +29,7 @@ msalInstance.addEventCallback((event: EventMessage) => {
     console.error("MSAL Login Failure:", event.error);
     // Check if the error is due to password reset, and if so, initiate the password reset flow.
     // This logic depends on how your B2C policy is configured and the error codes it returns.
-    if (event.error && (event.error.errorMessage?.includes("AADB2C90118") || event.error.errorCode?.includes("AADB2C90118"))) {
+    if (event.error && (event.error.message?.includes("AADB2C90118") || event.error.name?.includes("AADB2C90118"))) {
       // Error AADB2C90118: The user has forgotten their password.
       // It's generally better to handle this by providing a "Forgot password?" link on your sign-in page
       // that directly initiates the password reset policy, rather than trying to catch it here.
@@ -43,15 +43,11 @@ msalInstance.addEventCallback((event: EventMessage) => {
   }
 });
 
-// Check if placeholders are still default, and if so, show a warning
-if (
-  MSAL_CONFIG_PLACEHOLDERS.AZURE_AD_B2C_CLIENT_ID === "YOUR_CLIENT_ID" ||
-  MSAL_CONFIG_PLACEHOLDERS.AZURE_AD_B2C_TENANT_NAME === "YOUR_TENANT_NAME" ||
-  MSAL_CONFIG_PLACEHOLDERS.AZURE_AD_B2C_SIGNUP_SIGNIN_POLICY === "YOUR_SIGNUP_SIGNIN_POLICY_NAME"
-) {
+// Check if environment variables are configured
+if (!import.meta.env.VITE_B2C_CLIENT_ID || !import.meta.env.VITE_B2C_TENANT_NAME) {
   console.warn(
-    "MSAL Configuration Warning: Azure AD B2C placeholders in src/authConfig.ts have not been updated. " +
-    "Authentication will not work correctly until these are replaced with your actual application details."
+    "MSAL Configuration Warning: Azure AD B2C environment variables are not set. " +
+    "Authentication will not work correctly until these are configured."
   );
 }
 

@@ -5,23 +5,30 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   TrendingUp, 
-  Clock, 
   CheckCircle2, 
   PlayCircle,
-  PauseCircle,
   Target
 } from "lucide-react";
 import { motion } from "framer-motion";
-import type { UserProgress } from "@shared/schema";
+
+// Define UserProgress type locally since @shared/schema doesn't exist
+interface UserProgress {
+  id: string;
+  status: 'completed' | 'in_progress' | 'not_started';
+  hoursSpent?: number;
+  progressType: 'tool_completion' | 'skill_acquisition' | 'learning_path';
+  skillName?: string;
+  progressPercentage?: number;
+  completedAt?: string;
+  achievements?: string[];
+}
 
 export function ProgressTracker() {
   const { data: progress, isLoading } = useQuery({
     queryKey: ["/api/progress"],
   });
 
-  const { data: weeklyStats } = useQuery({
-    queryKey: ["/api/progress/weekly-stats"],
-  });
+
 
   if (isLoading) {
     return (
@@ -183,7 +190,7 @@ export function ProgressTracker() {
                   </div>
                   {item.achievements && item.achievements.length > 0 && (
                     <div className="flex gap-1">
-                      {item.achievements.slice(0, 2).map((achievement, index) => (
+                      {item.achievements.slice(0, 2).map((achievement: string, index: number) => (
                         <Badge key={index} variant="secondary" className="text-xs">
                           {achievement}
                         </Badge>

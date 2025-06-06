@@ -2,7 +2,7 @@ import React from 'react';
 import usePageTitle from '@/hooks/usePageTitle';
 import { Button } from '@/components/ui/button';
 import { useMsal } from '@azure/msal-react';
-import { b2cPolicies } from '@/authConfig'; // For profile edit if needed
+// import { b2cPolicies } from '@/authConfig'; // For profile edit if needed
 import { Settings as SettingsIcon, UserCircle, ShieldQuestion, LogOut } from 'lucide-react';
 
 const SettingsPage: React.FC = () => {
@@ -10,12 +10,7 @@ const SettingsPage: React.FC = () => {
   const { instance } = useMsal();
 
   const handleEditProfile = () => {
-    if (b2cPolicies.names.profileEdit && b2cPolicies.authorities.profileEdit) {
-      instance.loginRedirect({ ...b2cPolicies.authorities.profileEdit, scopes: [] }) // Scopes might be needed if API calls are made from profile edit page
-        .catch(e => console.error("Profile edit redirect error: ", e));
-    } else {
-      alert("Profile edit policy is not configured in authConfig.ts");
-    }
+    alert("Profile edit feature coming soon!");
   };
 
   const handleLogout = () => {
@@ -58,13 +53,9 @@ const SettingsPage: React.FC = () => {
               <p className="text-sm text-muted-foreground mb-3">
                 Update your personal information using your identity provider.
               </p>
-              {b2cPolicies.names.profileEdit ? (
-                <Button onClick={handleEditProfile} variant="outline">
-                  Edit Profile via Azure AD B2C
-                </Button>
-              ) : (
-                <p className="text-sm text-amber-500">Profile edit policy not configured.</p>
-              )}
+              <Button onClick={handleEditProfile} variant="outline">
+                Edit Profile
+              </Button>
             </div>
 
             <div className="border-t border-border pt-6">

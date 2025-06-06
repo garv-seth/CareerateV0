@@ -4,21 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMsal, useIsAuthenticated, useAccount } from '@azure/msal-react';
-import { msalInstance } from '@/main';
-import { loginRequest } from '@/authConfig';
 import { 
   Home, 
   BarChart3, 
-  Settings, 
   User, 
   LogIn, 
   LogOut,
   Menu,
   X,
   Sparkles,
-  Zap,
-  Sun,
-  Moon,
   Briefcase,
   MessageSquare
 } from 'lucide-react';

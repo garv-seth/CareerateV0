@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
-import { loginRequest } from "../authConfig"; // Import loginRequest
+import { loginRequest } from "../lib/msalConfig"; // Import loginRequest
 import { Button } from "@/components/ui/button";
 import { LogIn, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -10,7 +10,7 @@ import usePageTitle from '@/hooks/usePageTitle';
 const AuthPage: React.FC = () => {
   usePageTitle("Sign In - Careerate");
   const navigate = useNavigate();
-  const { instance, accounts } = useMsal();
+  const { instance } = useMsal();
   const isAuthenticated = useIsAuthenticated();
 
   useEffect(() => {

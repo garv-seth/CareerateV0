@@ -1,16 +1,16 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useUserStore } from "@/state/userStore"; // Assuming userStore is set up
 import { authHelpers, activityHelpers } from '@/state/userStore'; // Assuming these are exported
-import { useIsAuthenticated } from "@azure/msal-react"; // To potentially redirect from root if authenticated
+
 
 // Layouts & Common Components
 import MainLayout from "./components/layout/MainLayout";
-import AuthenticatedRoute from "./components/router/AuthenticatedRoute"; // Import AuthenticatedRoute
+import AuthenticatedLayout from "./components/layout/AuthenticatedLayout";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -56,7 +56,7 @@ function App() {
     })
   );
 
-  const isAuthenticatedFromMSAL = useIsAuthenticated();
+
 
   useEffect(() => {
     initializeSession();
@@ -82,59 +82,21 @@ function App() {
                 {/* Public Routes with MainLayout (Navbar & Footer) */}
                 <Route element={<MainLayout />}>
                   <Route path="/" element={<LandingPage />} />
-                  {/* AuthPage might eventually have its own minimal layout or no layout */}
-                  {/* For now, keeping it outside MainLayout if it shouldn't have Navbar/Footer */}
-                  {/* Or include it if it should have them. Current AuthPage is full screen. */}
                 </Route>
 
                 {/* AuthPage - typically doesn't use MainLayout if it's a full-screen focused page */}
                 <Route path="/auth/login" element={<AuthPage />} />
 
-                {/* Authenticated Routes with MainLayout */}
-                <Route 
-                  path="/dashboard" 
-                  element={
-                    <AuthenticatedRoute>
-                      <MainLayout>
-                        <DashboardPage />
-                      </MainLayout>
-                    </AuthenticatedRoute>
-                  }
-                />
-                <Route 
-                  path="/settings" 
-                  element={
-                    <AuthenticatedRoute>
-                      <MainLayout>
-                        <SettingsPage />
-                      </MainLayout>
-                    </AuthenticatedRoute>
-                  }
-                />
-                
-                {/* Example: Authenticated Admin Route (requires additional role check typically) */}
-                {/* 
-                <Route 
-                  path="/admin" 
-                  element={
-                    <AuthenticatedRoute>
-                      <AdminLayout> // Or MainLayout if admin uses the same
-                        <AdminPage />
-                      </AdminLayout>
-                    </AuthenticatedRoute>
-                  }
-                /> 
-                */}
+                {/* Authenticated Routes */}
+                <Route element={<AuthenticatedLayout />}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                </Route>
 
                 {/* Catch-all 404 Not Found Page - within MainLayout */}
-                <Route 
-                  path="*" 
-                  element={
-                    <MainLayout>
-                      <NotFoundPage />
-                    </MainLayout>
-                  }
-                />
+                <Route element={<MainLayout />}>
+                  <Route path="*" element={<NotFoundPage />} />
+                </Route>
               </Routes>
               <Toaster />
             </Router>
@@ -155,59 +117,21 @@ function App() {
               {/* Public Routes with MainLayout (Navbar & Footer) */}
               <Route element={<MainLayout />}>
                 <Route path="/" element={<LandingPage />} />
-                {/* AuthPage might eventually have its own minimal layout or no layout */}
-                {/* For now, keeping it outside MainLayout if it shouldn't have Navbar/Footer */}
-                {/* Or include it if it should have them. Current AuthPage is full screen. */}
               </Route>
 
               {/* AuthPage - typically doesn't use MainLayout if it's a full-screen focused page */}
               <Route path="/auth/login" element={<AuthPage />} />
 
-              {/* Authenticated Routes with MainLayout */}
-              <Route 
-                path="/dashboard" 
-                element={
-                  <AuthenticatedRoute>
-                    <MainLayout>
-                      <DashboardPage />
-                    </MainLayout>
-                  </AuthenticatedRoute>
-                }
-              />
-              <Route 
-                path="/settings" 
-                element={
-                  <AuthenticatedRoute>
-                    <MainLayout>
-                      <SettingsPage />
-                    </MainLayout>
-                  </AuthenticatedRoute>
-                }
-              />
-              
-              {/* Example: Authenticated Admin Route (requires additional role check typically) */}
-              {/* 
-              <Route 
-                path="/admin" 
-                element={
-                  <AuthenticatedRoute>
-                    <AdminLayout> // Or MainLayout if admin uses the same
-                      <AdminPage />
-                    </AdminLayout>
-                  </AuthenticatedRoute>
-                }
-              /> 
-              */}
+              {/* Authenticated Routes */}
+              <Route element={<AuthenticatedLayout />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+              </Route>
 
               {/* Catch-all 404 Not Found Page - within MainLayout */}
-              <Route 
-                path="*" 
-                element={
-                  <MainLayout>
-                    <NotFoundPage />
-                  </MainLayout>
-                }
-              />
+              <Route element={<MainLayout />}>
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
             </Routes>
             <Toaster />
           </Router>

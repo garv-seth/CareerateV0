@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useMsal, useIsAuthenticated } from '@azure/msal-react';
-import { loginRequest } from '../authConfig';
+import { loginRequest } from '../../lib/msalConfig';
 
 const ChatInterface = () => {
   const { instance, accounts } = useMsal();

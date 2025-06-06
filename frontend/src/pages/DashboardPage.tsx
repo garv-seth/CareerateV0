@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,19 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { 
   Brain, 
-  TrendingUp, 
   Clock, 
   Target, 
-  Award,
   Book,
   Zap,
   BarChart3,
-  Settings,
   RefreshCw,
   Sparkles,
   ChevronRight,
   Play,
-  CheckCircle,
   AlertCircle,
   Activity,
   Lightbulb
@@ -112,7 +108,7 @@ const DashboardPage: React.FC = () => {
   // Fetch Workflow Insights (placeholder)
   const { 
     data: insightsData, 
-    isLoading: isLoadingInsights,
+    isLoading: isLoadingInsights
   } = useQuery<WorkflowInsight[], Error>({
     queryKey: ['workflowInsights', user?.id],
     queryFn: async () => {
@@ -137,7 +133,7 @@ const DashboardPage: React.FC = () => {
   // Fetch Learning Paths (placeholder)
   const { 
     data: learningPathsData, 
-    isLoading: isLoadingPaths,
+    isLoading: isLoadingPaths
   } = useQuery<LearningPath[], Error>({
     queryKey: ['learningPaths', user?.id],
     queryFn: async () => {
@@ -163,7 +159,7 @@ const DashboardPage: React.FC = () => {
 
   // Fetch Activity Stats (placeholder)
   const { 
-    data: activityStatsData, 
+    data: activityStatsData
   } = useQuery<any, Error>({
     queryKey: ['activityStats', user?.id],
     queryFn: async () => {

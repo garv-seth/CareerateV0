@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import ThemeToggle from './ThemeToggle';
-import {
-  ArrowUp,
-  Github,
-  Twitter,
-  Linkedin
-} from 'lucide-react';
+
 import { useNavigate } from 'react-router-dom';
 
 const FloatingFooter: React.FC = () => {
@@ -48,15 +43,7 @@ const FloatingFooter: React.FC = () => {
     };
   }, [isVisible]);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
 
-  const socialLinks = [
-    { name: 'GitHub', icon: <Github size={18} />, url: 'https://github.com/careerate' },
-    { name: 'Twitter', icon: <Twitter size={18} />, url: 'https://twitter.com/careerate' },
-    { name: 'LinkedIn', icon: <Linkedin size={18} />, url: 'https://linkedin.com/company/careerate' },
-  ];
 
   return (
     <motion.footer
