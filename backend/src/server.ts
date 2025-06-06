@@ -4,6 +4,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import LlmService from '../services/llm-service.js';
 import AgentRouter from '../agents/agent-router.js';
+import passport from '../services/passport-setup.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -11,16 +15,19 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 3001;
 
-app.use(cors());
+app.use(cors({ origin: process.env.CORS_ORIGIN }));
 app.use(express.json());
+app.use(passport.initialize());
 
 // Serve static files from the React app
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, '..', '..', 'frontend', 'dist')));
 
 const llmService = new LlmService(process.env.LLM_API_KEY);
 const agentRouter = new AgentRouter(llmService);
 
-app.post('/api/chat', async (req, res) => {
+const isAuthenticated = passport.authenticate('oauth-bearer', { session: false });
+
+app.post('/api/chat', isAuthenticated, async (req, res) => {
   const { query, context } = req.body;
   
   if (!query) {
@@ -36,10 +43,14 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+app.get('/api/user', isAuthenticated, (req, res) => {
+    res.json(req.authInfo);
+});
+
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'dist', 'index.html'));
 });
 
 app.listen(port, () => {
