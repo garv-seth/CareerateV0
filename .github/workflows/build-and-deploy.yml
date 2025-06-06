@@ -50,6 +50,7 @@ jobs:
           # For monorepo deployment, we need to install dependencies specifically for the backend package
           cd deployment_package
           npm install --only=production --no-package-lock
+          cd ..
           
           echo "--- Contents of deployment_package before zipping ---"
           ls -R deployment_package
