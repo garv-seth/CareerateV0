@@ -1,20 +1,16 @@
 {
-  "name": "careerate",
+  "name": "backend",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.ts",
   "scripts": {
-    "dev": "concurrently \"npm:frontend:dev\" \"npm:backend:dev\"",
-    "frontend:dev": "npm run dev --workspace=frontend",
-    "backend:dev": "ts-node-dev --respawn --transpile-only backend/src/server.ts",
-    "build": "npm run build --workspace=frontend && npm run build --workspace=backend",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "npm run preview --workspace=frontend"
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch --passWithNoTests"
   },
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
   "dependencies": {
     "axios": "^1.9.0",
     "bcryptjs": "^2.4.3",
@@ -40,7 +36,6 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/cors": "^2.8.18",
@@ -53,9 +48,6 @@
     "@types/node": "^20.11.19",
     "@types/pg": "^8.15.2",
     "@types/uuid": "^9.0.8",
-    "@typescript-eslint/eslint-plugin": "^7.10.0",
-    "@typescript-eslint/parser": "^7.10.0",
-    "eslint": "^8.57.0",
     "jest": "^29.7.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.3.3"

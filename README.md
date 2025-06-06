@@ -1,53 +1,87 @@
-# Careerate V0 – Azure Cloud Deployment
+# Careerate: AI Pair Programming Platform for DevOps & SRE
 
-## Overview
-Production-ready, full-stack Careerate V0 deployed on Azure Web Apps with Cosmos DB, Blob Storage, Redis, and Azure AD. CI/CD via GitHub Actions. Custom domain: gocareerate.com (GoDaddy).
+Careerate is an AI pair programming platform specifically designed for DevOps and SRE engineers. The platform provides real-time AI assistance for infrastructure work, making engineers more productive rather than replacing them.
 
----
+## Core Architecture
 
-## 1. Infrastructure Setup (Terraform)
+### Chrome Extension (Context Collection)
+`/chrome-extension`
+- `/manifest.json`: Extension configuration
+- `/background`: Background context collection and data sync
+- `/content-scripts`: Scripts to detect context from various web pages
+- `/popup`: UI for quick AI access
+- `/privacy`: Components for privacy controls and data filtering
+- `/options`: Configuration page for the extension
 
-- Install [Terraform](https://www.terraform.io/downloads.html)
-- `cd infra`
-- `terraform init`
-- `terraform apply` (follow prompts, set up Azure credentials)
-- Outputs will include:
-  - Web App URL
-  - Cosmos DB connection string
-  - Storage account name
-  - Redis hostname
-  - Key Vault URI
-  - Azure AD App ID
+### Backend (Node.js/Python)
+`/backend`
+- `/agents`: Specialized AI agents for different DevOps tools
+- `/api`: API routes for chat, workspace, auth, etc.
+- `/services`: Core backend services like LLM integration and context analysis
+- `/database`: Database models and migrations
 
-## 2. GoDaddy DNS Setup
-- In GoDaddy, add a CNAME record for `www` pointing to the Azure Web App URL output by Terraform.
-- For root domain, use forwarding or an A record as per Azure docs.
-- Enable SSL in Azure Portal (App Service > TLS/SSL).
+### Frontend (React/Next.js)
+`/frontend`
+- `/components`: UI components for chat, workspace, dashboard, etc.
+- `/pages`: Application pages
+- `/hooks`: React hooks for managing state and side effects
 
-## 3. GitHub Actions CI/CD
-- On push to `main`, GitHub Actions will:
-  - Build & test frontend and backend
-  - Deploy to Azure Web App
-- Store all secrets (Cosmos DB, Storage, Redis, Key Vault, Azure AD) in GitHub Secrets.
-- Use OIDC for secure secret injection.
+## Key Features to Implement
 
-## 4. Local Development
-- Copy `.env.example` to `.env` in both `client/` and `api/`.
-- Fill in values from Terraform outputs or Azure Portal.
-- Run backend: `cd api && npm install && npm run dev`
-- Run frontend: `cd client && npm install && npm run dev`
+### 1. Intelligent Context Awareness
+- **File Analysis**: Automatically detect infrastructure files (Terraform, K8s YAML, Docker, CI/CD configs).
+- **Git Integration**: Understand current branch, recent changes, and project structure.
+- **Tool Detection**: Identify what tools/platforms the team uses (AWS, GCP, Azure, etc.).
+- **Error Context**: Parse error messages and logs to provide targeted help.
 
-## 5. Environment Variables
-- All config is via env vars (see `.env.example`).
-- Never commit secrets to the repo.
+### 2. Specialized AI Agents
+- **Terraform Agent**: Generate, debug, and suggest improvements for Terraform code.
+- **Kubernetes Agent**: Generate manifests, debug cluster issues, and explain concepts.
+- **Monitoring Agent**: Create queries, dashboards, and alerting rules.
+- **Incident Response Agent**: Guide through incident response and generate postmortems.
 
-## 6. Azure Resource Management
-- All resources are managed via Terraform in `infra/`.
-- To destroy: `terraform destroy`
+### 3. Privacy-First Context Collection (Chrome Extension)
+- **Smart Context Awareness**: Use URL patterns and selective content extraction.
+- **Privacy-by-Design Features**: Explicit consent, data minimization, local processing, and immediate data purging.
+- **Transparency Dashboard**: Show exactly what data was collected and when.
 
-## 7. Support
-- For issues, open a GitHub issue or contact the maintainer.
+### 4. Real-time Collaboration Features
+- **Shared Workspace**: Allow team members to learn from each other's AI interactions.
+- **Knowledge Sharing**: Save and share successful AI-generated solutions.
+- **Mentorship Mode**: Senior engineers can review AI suggestions for junior members.
 
----
+### 5. Integration Capabilities
+- **IDE Plugins**: VS Code, IntelliJ extensions.
+- **Slack/Teams Bot**: Quick help in communication tools.
+- **Terminal Integration**: CLI tool for command-line assistance.
+- **CI/CD Hooks**: Automated code review in pipelines.
 
-**You are now ready to launch Careerate V0 on Azure!** 
+### 6. Learning & Growth Tracking
+- **Skill Assessment**: Evaluate DevOps capabilities.
+- **Progress Tracking**: Show improvement over time.
+- **Certification Prep**: Help prepare for industry certifications.
+- **Custom Learning Paths**: Personalized skill development.
+
+## Technical Requirements
+- **Security & Privacy**: Zero-trust architecture, minimal data collection, optional on-premise deployment.
+- **Performance**: Sub-second AI response times and a scalable architecture.
+- **Reliability**: 99.9% uptime with multi-LLM support for high availability.
+
+## Monetization Strategy
+- **Individual Plan**: $50/month
+- **Team Plan**: $100/month per user (5+ users)
+- **Enterprise Plan**: Custom pricing
+- **Freemium Tier**: Limited daily interactions
+
+## Implementation Priorities
+- **Phase 1 (Weeks 1-4)**: Core Platform (Chrome Extension MVP, AI Chat, Context Integration, Privacy Dashboard)
+- **Phase 2 (Weeks 5-8)**: Advanced Features (Multi-Agent Orchestration, Team Collaboration, Learning Integration)
+- **Phase 3 (Weeks 9-12)**: Scale & Expansion (IDE Integrations, API Platform, Advanced Analytics)
+
+## Code Quality Requirements
+- **TypeScript**: Use TypeScript for all new code.
+- **Testing**: 80%+ test coverage.
+- **Documentation**: Comprehensive API docs and user guides.
+- **Code Review**: All code must be reviewed before merging.
+- **CI/CD**: Automated testing and deployment pipelines.
+- **Monitoring**: Application performance monitoring and error tracking.
