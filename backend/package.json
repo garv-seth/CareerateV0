@@ -2,12 +2,13 @@
   "name": "backend",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "src/server.ts",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch --passWithNoTests"
   },
