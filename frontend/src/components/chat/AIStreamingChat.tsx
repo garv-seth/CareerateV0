@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+import io from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -64,15 +64,15 @@ const agentColors = {
 };
 
 export const AIStreamingChat: React.FC = () => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [socket, setSocket] = useState<any>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string>('');
   const [selectedAgent, setSelectedAgent] = useState<string>('auto');
-  const [context, setContext] = useState<Partial<ChatContext>>({});
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [context] = useState<Partial<ChatContext>>({});
+  const [teamMembers, _setTeamMembers] = useState<TeamMember[]>([]);
   const [showTeamPanel, setShowTeamPanel] = useState(false);
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   
@@ -118,12 +118,12 @@ export const AIStreamingChat: React.FC = () => {
       setIsConnected(false);
     });
 
-    newSocket.on('chat-joined', (data) => {
+    newSocket.on('chat-joined', (data: { sessionId: string }) => {
       console.log('✅ Chat session joined:', data.sessionId);
       addSystemMessage('Connected to Careerate AI. How can I help you with your DevOps tasks today?');
     });
 
-    newSocket.on('message-chunk', (data) => {
+    newSocket.on('message-chunk', (data: { chunk: string }) => {
       const { chunk } = data;
       streamingMessageRef.current += chunk;
       
@@ -139,7 +139,7 @@ export const AIStreamingChat: React.FC = () => {
       });
     });
 
-    newSocket.on('message-complete', (data) => {
+    newSocket.on('message-complete', (data: { agentUsed?: string }) => {
       setIsStreaming(false);
       streamingMessageRef.current = '';
       
@@ -159,21 +159,21 @@ export const AIStreamingChat: React.FC = () => {
       });
     });
 
-    newSocket.on('team-message-chunk', (data) => {
+    newSocket.on('team-message-chunk', (data: any) => {
       // Handle team member messages
       console.log('Team member message:', data);
     });
 
-    newSocket.on('team-chat-started', (data) => {
+    newSocket.on('team-chat-started', (data: any) => {
       console.log('Team member started chat:', data);
       // Update team member status
     });
 
-    newSocket.on('context-shared', (data) => {
+    newSocket.on('context-shared', (data: { data: { description: string } }) => {
       addSystemMessage(`Context shared by team member: ${data.data.description}`);
     });
 
-    newSocket.on('chat-error', (data) => {
+    newSocket.on('chat-error', (data: { error: string }) => {
       console.error('Chat error:', data.error);
       addSystemMessage(`Error: ${data.error}`, 'error');
     });
@@ -185,7 +185,7 @@ export const AIStreamingChat: React.FC = () => {
     };
   }, [context]);
 
-  const addSystemMessage = (content: string, type: 'info' | 'error' = 'info') => {
+  const addSystemMessage = (content: string, _type: 'info' | 'error' = 'info') => {
     const message: Message = {
       id: uuidv4(),
       role: 'system',

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  PieChart, Pie, Cell, ResponsiveContainer,
   AreaChart, Area
 } from 'recharts';
 import {
@@ -146,6 +146,7 @@ export const AnalyticsDashboard: React.FC<Props> = ({ teamId }) => {
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as 'week' | 'month' | 'quarter')}
             className="border border-gray-300 rounded-lg px-3 py-2 bg-white"
+            aria-label="Select time range for analytics"
           >
             <option value="week">Last Week</option>
             <option value="month">Last Month</option>
@@ -238,7 +239,7 @@ export const AnalyticsDashboard: React.FC<Props> = ({ teamId }) => {
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
-                data={metrics.topTools.map((tool, index) => ({
+                data={metrics.topTools.map((tool, _index) => ({
                   name: tool,
                   value: Math.floor(Math.random() * 50) + 10
                 }))}
@@ -270,7 +271,7 @@ export const AnalyticsDashboard: React.FC<Props> = ({ teamId }) => {
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Error Categories</h3>
           <div className="space-y-4">
-            {metrics.errorTrends.map((error, index) => (
+            {metrics.errorTrends.map((error, _index) => (
               <div key={error.category} className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className={`w-3 h-3 rounded-full ${
@@ -303,7 +304,7 @@ export const AnalyticsDashboard: React.FC<Props> = ({ teamId }) => {
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Identified Skill Gaps</h3>
           <div className="space-y-3">
-            {metrics.skillGaps.map((skill, index) => (
+            {metrics.skillGaps.map((skill, _index) => (
               <div key={skill} className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
                 <span className="font-medium text-gray-900">{skill}</span>
                 <button className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors">
