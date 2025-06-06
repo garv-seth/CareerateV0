@@ -20,7 +20,11 @@ app.use(express.json());
 app.use(passport.initialize());
 
 // Serve static files from the React app
-app.use(express.static(path.join(__dirname, '..', '..', 'frontend', 'dist')));
+// In development: frontend/dist, in deployment: public/
+const staticPath = process.env.NODE_ENV === 'production' 
+  ? path.join(__dirname, '..', 'public')
+  : path.join(__dirname, '..', '..', 'frontend', 'dist');
+app.use(express.static(staticPath));
 
 const llmService = new LlmService(process.env.LLM_API_KEY);
 const agentRouter = new AgentRouter(llmService);
@@ -50,7 +54,10 @@ app.get('/api/user', isAuthenticated, (req, res) => {
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', '..', 'frontend', 'dist', 'index.html'));
+  const indexPath = process.env.NODE_ENV === 'production'
+    ? path.join(__dirname, '..', 'public', 'index.html')
+    : path.join(__dirname, '..', '..', 'frontend', 'dist', 'index.html');
+  res.sendFile(indexPath);
 });
 
 app.listen(port, () => {

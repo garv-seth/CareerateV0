@@ -43,6 +43,9 @@ jobs:
           cp -r backend/agents deployment_package/agents
           cp backend/package.json deployment_package/package.json
           
+          # Create .env file for production
+          echo "NODE_ENV=production" > deployment_package/.env
+          
           # Copy frontend build output (backend serves static files)
           mkdir -p deployment_package/public
           cp -r frontend/dist/* deployment_package/public/
