@@ -16,11 +16,9 @@ interface ScrapedContent {
 
 export class ExternalIntegrations {
   private braveApiKey?: string;
-  private firecrawlApiKey?: string;
 
   constructor() {
     this.braveApiKey = process.env.BRAVESEARCH_API_KEY;
-    this.firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
   }
 
   async initialize() {
@@ -29,12 +27,8 @@ export class ExternalIntegrations {
     } else {
       console.warn('⚠️  Brave Search API key not found');
     }
-
-    if (this.firecrawlApiKey) {
-      console.log('✅ Firecrawl initialized');
-    } else {
-      console.warn('⚠️  Firecrawl API key not found');
-    }
+    
+    console.log('✅ Basic web scraping initialized');
   }
 
   // Brave Search - for getting latest information
@@ -98,43 +92,39 @@ export class ExternalIntegrations {
     return uniqueResults;
   }
 
-  // Firecrawl - for scraping documentation and web content
+  // Simple web content scraping - for basic text extraction
   async scrapeWebPage(url: string): Promise<ScrapedContent> {
-    if (!this.firecrawlApiKey) {
-      console.warn('Firecrawl API key not configured, returning basic content');
-      return {
-        title: 'Content not available',
-        content: 'Firecrawl not configured',
-        markdown: 'Firecrawl not configured'
-      };
-    }
-
     try {
-      const response = await axios.post('https://api.firecrawl.dev/v0/scrape', {
-        url,
-        formats: ['markdown', 'html'],
-        waitFor: 2000,
-        includeTags: ['article', 'main', 'content'],
-        excludeTags: ['nav', 'footer', 'aside']
-      }, {
+      const response = await axios.get(url, {
         headers: {
-          'Authorization': `Bearer ${this.firecrawlApiKey}`,
-          'Content-Type': 'application/json'
-        }
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        },
+        timeout: 10000
       });
 
-      if (!response.data.success) {
-        throw new Error('Failed to scrape page');
-      }
+      // Basic HTML parsing to extract text content
+      const html = response.data;
+      
+      // Extract title
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+      const title = titleMatch ? titleMatch[1].trim() : 'Untitled';
+
+      // Simple text extraction (removing HTML tags)
+      const textContent = html
+        .replace(/<script[^>]*>.*?<\/script>/gis, '')
+        .replace(/<style[^>]*>.*?<\/style>/gis, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
       return {
-        title: response.data.data?.metadata?.title || 'Untitled',
-        content: response.data.data?.text || '',
-        markdown: response.data.data?.markdown || '',
-        metadata: response.data.data?.metadata
+        title,
+        content: textContent.substring(0, 5000), // Limit content length
+        markdown: `# ${title}\n\n${textContent.substring(0, 3000)}`,
+        metadata: { url }
       };
     } catch (error) {
-      console.error('Firecrawl error:', error);
+      console.error('Web scraping error:', error);
       return {
         title: 'Error',
         content: 'Failed to scrape content',
