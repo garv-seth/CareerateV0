@@ -1,45 +1,68 @@
 {
   "manifest_version": 3,
-  "name": "Careerate",
+  "name": "Careerate - AI DevOps Assistant",
   "version": "1.0.0",
-  "description": "AI-powered career acceleration platform",
+  "description": "AI-powered assistance for DevOps and SRE engineers with privacy-first context collection",
   "permissions": [
-    "storage",
-    "tabs",
     "activeTab",
+    "storage",
+    "contextMenus",
     "scripting"
   ],
   "host_permissions": [
-    "https://careerate.com/*"
+    "https://github.com/*",
+    "https://console.aws.amazon.com/*",
+    "https://portal.azure.com/*",
+    "https://console.cloud.google.com/*",
+    "https://grafana.com/*",
+    "https://app.datadoghq.com/*",
+    "https://stackoverflow.com/*"
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup/popup.html",
+    "default_title": "Careerate AI Assistant",
     "default_icon": {
-      "16": "icons/icon16.png",
-      "48": "icons/icon48.png",
-      "128": "icons/icon128.png"
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
     }
   },
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
   },
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "background/service-worker.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content-script.js"],
-      "css": ["styles.css"]
+      "matches": ["https://github.com/*"],
+      "js": ["content/github-detector.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://console.aws.amazon.com/*",
+        "https://portal.azure.com/*",
+        "https://console.cloud.google.com/*"
+      ],
+      "js": ["content/cloud-console-detector.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://grafana.com/*", "https://app.datadoghq.com/*"],
+      "js": ["content/monitoring-detector.js"],
+      "run_at": "document_idle"
     }
   ],
-  "options_page": "options.html",
+  "options_page": "options/settings.html",
   "web_accessible_resources": [
     {
-      "resources": ["icons/*"],
+      "resources": ["content/injected-scripts/*.js"],
       "matches": ["<all_urls>"]
     }
   ]

@@ -7,12 +7,16 @@
     "dev": "vite build --watch --mode development",
     "build": "vite build --mode production"
   },
-  "dependencies": {},
   "devDependencies": {
     "@types/chrome": "^0.0.268",
     "@types/fs-extra": "^11.0.4",
-    "fs-extra": "^11.2.0",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.11"
-  }
-} 
+    "fs-extra": "^11.3.0",
+    "typescript": "^5.8.3",
+    "vite": "^5.4.19"
+  },
+  "main": "background.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
