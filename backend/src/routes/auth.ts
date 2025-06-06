@@ -61,7 +61,7 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
       success: true,
       data: {
         accessToken: jwtToken,
-        refreshToken: response.refreshToken,
+        refreshToken: (response as any).refreshToken || null,
         user: {
           id: response.account?.localAccountId,
           email: response.account?.username,
@@ -131,6 +131,10 @@ router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
 
     const response = await msalInstance.acquireTokenByRefreshToken(refreshRequest);
 
+    if (!response) {
+      throw new Error('Failed to refresh token');
+    }
+
     // Generate new JWT token
     const jwtToken = jwt.sign(
       {
@@ -147,7 +151,7 @@ router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
       success: true,
       data: {
         accessToken: jwtToken,
-        refreshToken: response.refreshToken
+        refreshToken: (response as any).refreshToken || null
       }
     });
   } catch (error) {

@@ -161,6 +161,32 @@ export interface MCPServerInfo {
   responseTime?: number;
 }
 
+export interface MCPServerConfig {
+  id: string;
+  name: string;
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  capabilities: string[];
+  enabled: boolean;
+}
+
+export interface WorkspaceConfig {
+  id: string;
+  name: string;
+  description?: string;
+  settings: {
+    isPublic: boolean;
+    allowGuestAccess: boolean;
+    maxParticipants: number;
+  };
+  integrations: {
+    mcp: boolean;
+    vscode: boolean;
+    chrome: boolean;
+  };
+}
+
 export interface AuthTokenPayload {
   sub: string; // user ID
   email: string;

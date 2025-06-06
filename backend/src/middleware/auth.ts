@@ -121,7 +121,7 @@ export const optionalAuth = async (
         };
       } catch (error) {
         // Invalid token, but continue without authentication
-        console.warn('Invalid token in optional auth:', error.message);
+        console.warn('Invalid token in optional auth:', (error as Error)?.message || 'Unknown error');
       }
     }
 

@@ -50,7 +50,8 @@ router.get('/agents',
   async (req, res) => {
     try {
       const userId = (req as any).user.id;
-      const { timeframe = 'week', agentType } = req.query;
+      const timeframe = (req.query?.timeframe as string) || 'week';
+      const agentType = req.query?.agentType as string;
       
       // Mock agent metrics
       const metrics = {
@@ -86,7 +87,7 @@ router.get('/collaboration',
   async (req, res) => {
     try {
       const userId = (req as any).user.id;
-      const { timeframe = 'week' } = req.query;
+      const timeframe = (req.query?.timeframe as string) || 'week';
       
       // Mock collaboration metrics
       const metrics = {
@@ -125,7 +126,7 @@ router.get('/performance',
   async (req, res) => {
     try {
       const userId = (req as any).user.id;
-      const { timeframe = 'week' } = req.query;
+      const timeframe = (req.query?.timeframe as string) || 'week';
       
       // Mock performance metrics
       const metrics = {
@@ -165,7 +166,7 @@ router.get('/team/:workspaceId',
   async (req, res) => {
     try {
       const { workspaceId } = req.params;
-      const { timeframe = 'week' } = req.query;
+      const timeframe = (req.query?.timeframe as string) || 'week';
       const userId = (req as any).user.id;
       
       // Mock team analytics
@@ -211,7 +212,8 @@ router.get('/trends',
   async (req, res) => {
     try {
       const userId = (req as any).user.id;
-      const { metric = 'sessions', timeframe = 'week' } = req.query;
+      const metric = (req.query?.metric as string) || 'sessions';
+      const timeframe = (req.query?.timeframe as string) || 'week';
       
       // Mock trend data
       const trends = {
