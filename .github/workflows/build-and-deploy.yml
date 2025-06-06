@@ -30,22 +30,26 @@ jobs:
       - name: Build backend
         run: npm run build --workspace=backend
       
-      - name: Prune backend dev dependencies
-        working-directory: ./backend
+      - name: Prune dev dependencies (monorepo)
         run: npm prune --omit=dev
 
       - name: Create deployment package
         run: |
           mkdir -p deployment_package
           
-          # Copy backend files
+          # Copy all backend files needed for deployment
           cp -r backend/dist deployment_package/dist
-          cp -r backend/node_modules deployment_package/node_modules
+          cp -r backend/services deployment_package/services
+          cp -r backend/agents deployment_package/agents
           cp backend/package.json deployment_package/package.json
           
-          # Copy frontend build output into a public folder in the backend package
+          # Copy frontend build output (backend serves static files)
           mkdir -p deployment_package/public
           cp -r frontend/dist/* deployment_package/public/
+          
+          # For monorepo deployment, we need to install dependencies specifically for the backend package
+          cd deployment_package
+          npm install --only=production --no-package-lock
           
           echo "--- Contents of deployment_package before zipping ---"
           ls -R deployment_package
