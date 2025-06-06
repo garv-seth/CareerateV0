@@ -1,4 +1,3 @@
-import { AzureSecretsManager } from './AzureSecretsManager.js';
 import axios from 'axios';
 
 interface WebSearchResult {
@@ -16,45 +15,33 @@ interface ScrapedContent {
 }
 
 export class ExternalIntegrations {
-  private secretsManager: AzureSecretsManager;
-  private firecrawlApp?: any;
   private braveApiKey?: string;
+  private firecrawlApiKey?: string;
 
-  constructor(secretsManager: AzureSecretsManager) {
-    this.secretsManager = secretsManager;
+  constructor() {
+    this.braveApiKey = process.env.BRAVESEARCH_API_KEY;
+    this.firecrawlApiKey = process.env.FIRECRAWL_API_KEY;
   }
 
   async initialize() {
-    try {
-      // Initialize Firecrawl dynamically (optional dependency)
-      const firecrawlApiKey = await this.secretsManager.getSecret('FIRECRAWL_API_KEY');
-      if (firecrawlApiKey) {
-        try {
-          // Use require for optional dependency
-          const FirecrawlModule = await eval("import('@firecrawl/api')").catch(() => null);
-          if (FirecrawlModule) {
-            this.firecrawlApp = new FirecrawlModule.default({ apiKey: firecrawlApiKey });
-            console.log('✅ Firecrawl initialized');
-          }
-        } catch (error) {
-          console.warn('⚠️  Firecrawl module not available, continuing without it');
-        }
-      }
+    if (this.braveApiKey) {
+      console.log('✅ Brave Search initialized');
+    } else {
+      console.warn('⚠️  Brave Search API key not found');
+    }
 
-      // Initialize Brave Search
-      this.braveApiKey = await this.secretsManager.getSecret('BRAVESEARCH_API_KEY');
-      if (this.braveApiKey) {
-        console.log('✅ Brave Search initialized');
-      }
-    } catch (error) {
-      console.warn('⚠️  Some external integrations failed to initialize:', error);
+    if (this.firecrawlApiKey) {
+      console.log('✅ Firecrawl initialized');
+    } else {
+      console.warn('⚠️  Firecrawl API key not found');
     }
   }
 
   // Brave Search - for getting latest information
   async searchWeb(query: string, count: number = 10): Promise<WebSearchResult[]> {
     if (!this.braveApiKey) {
-      throw new Error('Brave Search API key not configured');
+      console.warn('Brave Search API key not configured, returning empty results');
+      return [];
     }
 
     try {
@@ -79,7 +66,7 @@ export class ExternalIntegrations {
       })) || [];
     } catch (error) {
       console.error('Brave Search error:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -113,74 +100,46 @@ export class ExternalIntegrations {
 
   // Firecrawl - for scraping documentation and web content
   async scrapeWebPage(url: string): Promise<ScrapedContent> {
-    if (!this.firecrawlApp) {
-      throw new Error('Firecrawl not initialized');
+    if (!this.firecrawlApiKey) {
+      console.warn('Firecrawl API key not configured, returning basic content');
+      return {
+        title: 'Content not available',
+        content: 'Firecrawl not configured',
+        markdown: 'Firecrawl not configured'
+      };
     }
 
     try {
-      const response = await this.firecrawlApp.scrapeUrl(url, {
+      const response = await axios.post('https://api.firecrawl.dev/v0/scrape', {
+        url,
         formats: ['markdown', 'html'],
         waitFor: 2000,
         includeTags: ['article', 'main', 'content'],
         excludeTags: ['nav', 'footer', 'aside']
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.firecrawlApiKey}`,
+          'Content-Type': 'application/json'
+        }
       });
 
-      if (!response.success) {
+      if (!response.data.success) {
         throw new Error('Failed to scrape page');
       }
 
       return {
-        title: response.metadata?.title || 'Untitled',
-        content: response.text || '',
-        markdown: response.markdown || '',
-        metadata: response.metadata
+        title: response.data.data?.metadata?.title || 'Untitled',
+        content: response.data.data?.text || '',
+        markdown: response.data.data?.markdown || '',
+        metadata: response.data.data?.metadata
       };
     } catch (error) {
       console.error('Firecrawl error:', error);
-      throw error;
-    }
-  }
-
-  // Crawl entire documentation sites
-  async crawlDocumentation(baseUrl: string, maxPages: number = 10): Promise<ScrapedContent[]> {
-    if (!this.firecrawlApp) {
-      throw new Error('Firecrawl not initialized');
-    }
-
-    try {
-      const crawlResult = await this.firecrawlApp.crawlUrl(baseUrl, {
-        maxCrawlPages: maxPages,
-        allowBackwardLinks: false,
-        formats: ['markdown'],
-        includePaths: ['/docs', '/api', '/reference'],
-        excludePaths: ['/blog', '/community']
-      });
-
-      if (!crawlResult.success) {
-        throw new Error('Failed to crawl documentation');
-      }
-
-      // Poll for completion
-      let status = await this.firecrawlApp.checkCrawlStatus(crawlResult.id);
-      
-      while (status.status === 'crawling') {
-        await new Promise(resolve => setTimeout(resolve, 5000));
-        status = await this.firecrawlApp.checkCrawlStatus(crawlResult.id);
-      }
-
-      if (status.status === 'completed' && status.data) {
-        return status.data.map((page: any) => ({
-          title: page.metadata?.title || 'Untitled',
-          content: page.text || '',
-          markdown: page.markdown || '',
-          metadata: page.metadata
-        }));
-      }
-
-      return [];
-    } catch (error) {
-      console.error('Documentation crawl error:', error);
-      throw error;
+      return {
+        title: 'Error',
+        content: 'Failed to scrape content',
+        markdown: 'Failed to scrape content'
+      };
     }
   }
 
@@ -196,12 +155,11 @@ export class ExternalIntegrations {
     };
 
     // Extract information from search results
-    for (const result of searches.slice(0, 5)) {
+    for (const result of searches.slice(0, 3)) {
       try {
-        const content = await this.scrapeWebPage(result.url);
-        const text = content.markdown.toLowerCase();
+        const text = result.snippet.toLowerCase();
 
-        // Extract model information
+        // Extract model information from snippets
         if (text.includes('gpt-4.1')) {
           const priceMatch = text.match(/gpt-4\.1[^$]*\$(\d+\.?\d*)/);
           if (priceMatch) {
@@ -227,7 +185,7 @@ export class ExternalIntegrations {
           modelInfo.protocols.push('A2A (Agent-to-Agent)');
         }
       } catch (error) {
-        console.warn(`Failed to scrape ${result.url}`);
+        console.warn(`Failed to process result: ${result.url}`);
       }
     }
 
@@ -235,19 +193,7 @@ export class ExternalIntegrations {
   }
 
   // Search for specific integration documentation
-  async searchIntegrationDocs(integration: string): Promise<ScrapedContent[]> {
-    const searchResults = await this.searchWeb(`${integration} API documentation 2025`, 5);
-    const docs: ScrapedContent[] = [];
-
-    for (const result of searchResults) {
-      try {
-        const content = await this.scrapeWebPage(result.url);
-        docs.push(content);
-      } catch (error) {
-        console.warn(`Failed to scrape ${result.url}`);
-      }
-    }
-
-    return docs;
+  async searchIntegrationDocs(integration: string): Promise<WebSearchResult[]> {
+    return await this.searchWeb(`${integration} API documentation 2025`, 5);
   }
 } 
