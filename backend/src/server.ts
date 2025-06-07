@@ -51,10 +51,7 @@ class CareerateServer {
       await this.initializeDatabases();
 
       // Initialize Enhanced AI Agent Orchestrator with task execution capabilities
-      this.agentOrchestrator = new EnhancedAgentOrchestrator({
-        useOpenAI: true, // Default to GPT-4.1 Mini for cost efficiency
-        apiKey: process.env.OPENAI_API_KEY
-      });
+      this.agentOrchestrator = new EnhancedAgentOrchestrator();
       await this.agentOrchestrator.initialize();
 
       // Store services in app locals for routes to access
@@ -173,7 +170,7 @@ class CareerateServer {
         });
 
         if (this.agentOrchestrator) {
-          const stream = await this.agentOrchestrator.processRequest({
+          const stream = this.agentOrchestrator.streamResponse({
             message,
             agentType,
             userId,
@@ -226,27 +223,25 @@ class CareerateServer {
             return;
           }
 
-          const stream = await this.agentOrchestrator.processRequest({
+          const stream = this.agentOrchestrator.streamResponse({
             message,
             agentType: selectedAgent,
             userId: socket.id,
             sessionId
           });
 
-          for await (const update of stream) {
-            // Handle different update types
-            if (update.messages && update.messages.length > 0) {
-              const lastMessage = update.messages[update.messages.length - 1];
-              socket.emit('message-chunk', { chunk: lastMessage.content });
-            }
-            
-            if (update.executionHistory && update.executionHistory.length > 0) {
-              const lastExecution = update.executionHistory[update.executionHistory.length - 1];
-              socket.emit('execution-update', { execution: lastExecution });
-            }
-            
-            if (update.currentStep === 'end') {
-              socket.emit('message-complete', { agentUsed: update.context.agentType });
+          for await (const chunk of stream) {
+            // Handle different chunk types
+            if (chunk.type === 'message') {
+              socket.emit('message-chunk', { chunk: chunk.content });
+            } else if (chunk.type === 'thinking') {
+              socket.emit('thinking', { content: chunk.content });
+            } else if (chunk.type === 'planning') {
+              socket.emit('planning', { content: chunk.content });
+            } else if (chunk.type === 'complete') {
+              socket.emit('message-complete', { agentUsed: chunk.agentUsed });
+            } else if (chunk.type === 'error') {
+              socket.emit('chat-error', { error: chunk.content });
             }
           }
 

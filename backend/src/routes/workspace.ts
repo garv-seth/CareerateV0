@@ -78,10 +78,10 @@ router.get('/:workspaceId',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
       
-      const workspace = await realTimeCollab.getWorkspace(workspaceId, userId);
+      const workspace = await realTimeCollab.getWorkspace(workspaceId);
       
       res.json({
         success: true,
@@ -108,11 +108,11 @@ router.put('/:workspaceId',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
       const updates = req.body;
       
-      const workspace = await realTimeCollab.updateWorkspace(workspaceId, userId, updates);
+      const workspace = await realTimeCollab.updateWorkspace(workspaceId, updates);
       
       res.json({
         success: true,
@@ -136,10 +136,10 @@ router.delete('/:workspaceId',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
       
-      await realTimeCollab.deleteWorkspace(workspaceId, userId);
+      await realTimeCollab.deleteWorkspace(workspaceId);
       
       res.json({
         success: true,
@@ -163,10 +163,10 @@ router.get('/:workspaceId/members',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
       
-      const members = await realTimeCollab.getWorkspaceMembers(workspaceId, userId);
+      const members = await realTimeCollab.getWorkspaceMembers(workspaceId);
       
       res.json({
         success: true,
@@ -192,16 +192,11 @@ router.post('/:workspaceId/invite',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
       const { email, role = 'editor' } = req.body;
       const userId = (req as any).user.id;
       
-      const invitation = await realTimeCollab.inviteToWorkspace({
-        workspaceId,
-        email,
-        role,
-        invitedBy: userId
-      });
+      const invitation = await realTimeCollab.inviteToWorkspace(workspaceId, email);
       
       res.json({
         success: true,
@@ -226,10 +221,11 @@ router.delete('/:workspaceId/members/:memberId',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId, memberId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
+      const memberId = req.params?.memberId as string;
       const userId = (req as any).user.id;
       
-      await realTimeCollab.removeMember(workspaceId, memberId, userId);
+      await realTimeCollab.removeMember(workspaceId, memberId);
       
       res.json({
         success: true,
@@ -253,10 +249,10 @@ router.get('/:workspaceId/sessions',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
       
-      const sessions = await realTimeCollab.getWorkspaceSessions(workspaceId, userId);
+      const sessions = await realTimeCollab.getWorkspaceSessions(workspaceId);
       
       res.json({
         success: true,
@@ -281,15 +277,11 @@ router.post('/:workspaceId/join',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
       const { sessionId } = req.body;
       const userId = (req as any).user.id;
       
-      const session = await realTimeCollab.joinWorkspaceSession({
-        workspaceId,
-        userId,
-        sessionId
-      });
+      const session = await realTimeCollab.joinWorkspaceSession(workspaceId, userId);
       
       res.json({
         success: true,
@@ -315,16 +307,11 @@ router.post('/:workspaceId/context',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
       const { context, sessionId } = req.body;
       const userId = (req as any).user.id;
       
-      await realTimeCollab.shareContext({
-        workspaceId,
-        userId,
-        context,
-        sessionId
-      });
+      await realTimeCollab.shareContext(workspaceId, context);
       
       res.json({
         success: true,

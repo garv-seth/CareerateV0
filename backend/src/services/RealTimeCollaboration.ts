@@ -408,4 +408,203 @@ export class RealTimeCollaboration {
       averageParticipantsPerWorkspace: Math.round(avgParticipants * 100) / 100
     };
   }
+
+  // Methods required by workspace routes
+  async getUserWorkspaces(userId: string): Promise<any[]> {
+    const userSession = this.userSessions.get(userId);
+    if (!userSession) {
+      return [];
+    }
+    
+    return Array.from(userSession.workspaces).map(workspaceId => {
+      const workspace = this.workspaces.get(workspaceId);
+      return {
+        id: workspaceId,
+        name: `Workspace ${workspaceId}`,
+        participants: workspace ? Array.from(workspace.participants) : [],
+        lastActivity: workspace?.lastActivity || Date.now()
+      };
+    });
+  }
+
+  async createWorkspace(config: any): Promise<any> {
+    const workspaceId = this.generateMessageId();
+    const workspace: WorkspaceState = {
+      id: workspaceId,
+      participants: new Set(),
+      sharedContext: {},
+      messageHistory: [],
+      lastActivity: Date.now()
+    };
+    
+    this.workspaces.set(workspaceId, workspace);
+    
+    return {
+      id: workspaceId,
+      name: config.name || `Workspace ${workspaceId}`,
+      ...config,
+      createdAt: new Date()
+    };
+  }
+
+  async getWorkspace(workspaceId: string): Promise<any> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+    
+    return {
+      id: workspace.id,
+      participants: Array.from(workspace.participants),
+      sharedContext: workspace.sharedContext,
+      messageCount: workspace.messageHistory.length,
+      lastActivity: workspace.lastActivity
+    };
+  }
+
+  async updateWorkspace(workspaceId: string, updates: any): Promise<any> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+    
+    // Update shared context if provided
+    if (updates.sharedContext) {
+      workspace.sharedContext = { ...workspace.sharedContext, ...updates.sharedContext };
+    }
+    
+    workspace.lastActivity = Date.now();
+    
+    return {
+      id: workspace.id,
+      ...updates,
+      updatedAt: new Date()
+    };
+  }
+
+  async deleteWorkspace(workspaceId: string): Promise<void> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+    
+    // Notify all participants
+    this.io.to(workspaceId).emit('workspace-deleted', { workspaceId });
+    
+    // Remove from user sessions
+    for (const userSession of this.userSessions.values()) {
+      userSession.workspaces.delete(workspaceId);
+    }
+    
+    this.workspaces.delete(workspaceId);
+  }
+
+  async getWorkspaceMembers(workspaceId: string): Promise<any[]> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+    
+    return Array.from(workspace.participants).map(userId => ({
+      userId,
+      joinedAt: new Date(), // Mock data
+      role: 'member'
+    }));
+  }
+
+  async inviteToWorkspace(workspaceId: string, userId: string): Promise<any> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+    
+    workspace.participants.add(userId);
+    workspace.lastActivity = Date.now();
+    
+    // Notify user if they're online
+    this.notifyUser(userId, 'workspace-invitation', { workspaceId });
+    
+    return {
+      workspaceId,
+      userId,
+      invitedAt: new Date()
+    };
+  }
+
+  async removeMember(workspaceId: string, userId: string): Promise<void> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+    
+    workspace.participants.delete(userId);
+    workspace.lastActivity = Date.now();
+    
+    // Remove from user session
+    const userSession = this.userSessions.get(userId);
+    if (userSession) {
+      userSession.workspaces.delete(workspaceId);
+    }
+    
+    // Notify user
+    this.notifyUser(userId, 'removed-from-workspace', { workspaceId });
+  }
+
+  async getWorkspaceSessions(workspaceId: string): Promise<any[]> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+    
+    return [{
+      id: `session-${workspaceId}`,
+      workspaceId,
+      participants: Array.from(workspace.participants),
+      startedAt: new Date(workspace.lastActivity),
+      status: 'active'
+    }];
+  }
+
+  async joinWorkspaceSession(workspaceId: string, userId: string): Promise<any> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+    
+    workspace.participants.add(userId);
+    workspace.lastActivity = Date.now();
+    
+    // Update user session
+    let userSession = this.userSessions.get(userId);
+    if (!userSession) {
+      userSession = {
+        userId,
+        socketId: '',
+        workspaces: new Set(),
+        isActive: true,
+        lastSeen: Date.now()
+      };
+      this.userSessions.set(userId, userSession);
+    }
+    userSession.workspaces.add(workspaceId);
+    
+    return {
+      sessionId: `session-${workspaceId}`,
+      workspaceId,
+      joinedAt: new Date()
+    };
+  }
+
+  async shareContext(workspaceId: string, context: any): Promise<void> {
+    const workspace = this.workspaces.get(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+    
+    workspace.sharedContext = { ...workspace.sharedContext, ...context };
+    workspace.lastActivity = Date.now();
+    
+    // Broadcast to all participants
+    this.io.to(workspaceId).emit('context-shared', { context });
+  }
 }

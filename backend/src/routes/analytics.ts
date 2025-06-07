@@ -165,7 +165,7 @@ router.get('/team/:workspaceId',
   validateRequest,
   async (req, res) => {
     try {
-      const { workspaceId } = req.params;
+      const workspaceId = req.params?.workspaceId as string;
       const timeframe = (req.query?.timeframe as string) || 'week';
       const userId = (req as any).user.id;
       

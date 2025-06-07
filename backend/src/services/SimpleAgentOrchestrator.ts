@@ -73,7 +73,7 @@ export class SimpleAgentOrchestrator {
     }
   }
 
-  async streamResponse(params: AgentMessage): Promise<AsyncIterable<StreamChunk>> {
+  async *streamResponse(params: AgentMessage): AsyncIterable<StreamChunk> {
     const { message, agentType = 'general', context, userId } = params;
     
     // Determine which agent to use based on message content and agentType
@@ -89,15 +89,15 @@ export class SimpleAgentOrchestrator {
     try {
       // Try OpenAI first, then Anthropic, then fallback to mock
       if (this.openai) {
-        return this.streamOpenAI(contextualMessage, systemPrompt, selectedAgent);
+        yield* this.streamOpenAI(contextualMessage, systemPrompt, selectedAgent);
       } else if (this.anthropic) {
-        return this.streamAnthropic(contextualMessage, systemPrompt, selectedAgent);
+        yield* this.streamAnthropic(contextualMessage, systemPrompt, selectedAgent);
       } else {
-        return this.streamMock(contextualMessage, selectedAgent);
+        yield* this.streamMock(contextualMessage, selectedAgent);
       }
     } catch (error) {
       console.error('AI streaming error:', error);
-      return this.streamError(error as Error);
+      yield* this.streamError(error as Error);
     }
   }
 
@@ -192,16 +192,14 @@ export class SimpleAgentOrchestrator {
 
   private async *streamAnthropic(message: string, systemPrompt: string, agentUsed: string): AsyncIterable<StreamChunk> {
     try {
-      const stream = await this.anthropic!.stream([
-        { role: 'system', content: systemPrompt },
-        { role: 'human', content: message }
-      ]);
+      const stream = await this.anthropic!.stream(`${systemPrompt}\n\n${message}`);
 
       for await (const chunk of stream) {
-        if (chunk.content) {
+        const content = typeof chunk.content === 'string' ? chunk.content : '';
+        if (content) {
           yield {
             type: 'message',
-            content: chunk.content,
+            content,
             timestamp: new Date(),
             agentUsed
           };

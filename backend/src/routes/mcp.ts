@@ -42,7 +42,7 @@ router.get('/servers/:serverId/status',
   validateRequest,
   async (req, res) => {
     try {
-      const { serverId } = req.params;
+      const serverId = req.params?.serverId as string;
       const status = await mcpManager.getServerStatus(serverId);
       
       res.json({
@@ -68,7 +68,7 @@ router.post('/servers/:serverId/start',
   validateRequest,
   async (req, res) => {
     try {
-      const { serverId } = req.params;
+      const serverId = req.params?.serverId as string;
       await mcpManager.startServer(serverId);
       
       res.json({
@@ -93,7 +93,7 @@ router.post('/servers/:serverId/stop',
   validateRequest,
   async (req, res) => {
     try {
-      const { serverId } = req.params;
+      const serverId = req.params?.serverId as string;
       await mcpManager.stopServer(serverId);
       
       res.json({
@@ -120,7 +120,7 @@ router.post('/servers/:serverId/invoke',
   validateRequest,
   async (req, res) => {
     try {
-      const { serverId } = req.params;
+      const serverId = req.params?.serverId as string;
       const { method, params = {} } = req.body;
       
       const result = await mcpManager.invokeServer(serverId, method, params);
@@ -147,7 +147,7 @@ router.get('/servers/:serverId/tools',
   validateRequest,
   async (req, res) => {
     try {
-      const { serverId } = req.params;
+      const serverId = req.params?.serverId as string;
       const tools = await mcpManager.getServerTools(serverId);
       
       res.json({
@@ -173,7 +173,7 @@ router.get('/servers/:serverId/resources',
   validateRequest,
   async (req, res) => {
     try {
-      const { serverId } = req.params;
+      const serverId = req.params?.serverId as string;
       const resources = await mcpManager.getServerResources(serverId);
       
       res.json({
@@ -227,7 +227,7 @@ router.delete('/servers/:serverId',
   validateRequest,
   async (req, res) => {
     try {
-      const { serverId } = req.params;
+      const serverId = req.params?.serverId as string;
       await mcpManager.unregisterServer(serverId);
       
       res.json({
@@ -254,14 +254,11 @@ router.get('/servers/:serverId/logs',
   validateRequest,
   async (req, res) => {
     try {
-      const { serverId } = req.params;
-      const { limit = 100, level } = req.query;
+      const serverId = req.params?.serverId as string;
+      const limit = parseInt(req.query?.limit as string) || 100;
+      const level = (req.query?.level as string) || 'info';
       
-      const logs = await mcpManager.getServerLogs({
-        serverId,
-        limit: parseInt(limit as string),
-        level: level as string
-      });
+      const logs = await mcpManager.getServerLogs(serverId, limit, level);
       
       res.json({
         success: true,
