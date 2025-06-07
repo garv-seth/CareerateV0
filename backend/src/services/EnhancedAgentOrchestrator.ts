@@ -1,4 +1,4 @@
-import { SimpleAgentOrchestrator } from './SimpleAgentOrchestrator.js';
+import { SimpleAgentOrchestrator } from './SimpleAgentOrchestrator';
 
 interface AgentState {
   messages: any[];

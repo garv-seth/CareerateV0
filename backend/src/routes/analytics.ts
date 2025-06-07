@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, param, query } from 'express-validator';
-import { validateRequest } from '../middleware/validation.js';
+import { validateRequest } from '../middleware/validation';
 
 const router = express.Router();
 

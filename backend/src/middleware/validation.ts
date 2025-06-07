@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ValidationError } from '../types/index.js';
+import { ValidationError } from '../types/index';
 
 export const validateRequest = (schema: any) => {
   return (req: Request, res: Response, next: NextFunction): void => {

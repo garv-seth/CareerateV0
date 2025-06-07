@@ -1,8 +1,8 @@
 import express from 'express';
 import { body, param, query } from 'express-validator';
-import { validateRequest } from '../middleware/validation.js';
-import { RealTimeCollaboration } from '../services/RealTimeCollaboration.js';
-import type { WorkspaceConfig } from '../types/index.js';
+import { validateRequest } from '../middleware/validation';
+import { RealTimeCollaboration } from '../services/RealTimeCollaboration';
+import type { WorkspaceConfig } from '../types/index';
 
 const router = express.Router();
 

@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { ConfidentialClientApplication } from '@azure/msal-node';
 import jwt from 'jsonwebtoken';
-import { asyncHandler } from '../middleware/errorHandler.js';
-import { validateRequest, commonSchemas } from '../middleware/validation.js';
+import { asyncHandler } from '../middleware/errorHandler';
+import { validateRequest, commonSchemas } from '../middleware/validation';
 
 const router = Router();
 

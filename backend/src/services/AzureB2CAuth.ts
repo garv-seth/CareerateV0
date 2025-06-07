@@ -1,5 +1,5 @@
 import { ConfidentialClientApplication, Configuration, AuthenticationResult } from '@azure/msal-node';
-import { AzureSecretsManager } from './AzureSecretsManager.js';
+import { AzureSecretsManager } from './AzureSecretsManager';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
 

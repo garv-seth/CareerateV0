@@ -4,31 +4,28 @@ import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import session from 'express-session';
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
+import winston from 'winston';
 
-// Routes
-import authRoutes from './routes/auth.js';
-
-import mcpRoutes from './routes/mcp.js';
-import workspaceRoutes from './routes/workspace.js';
-import analyticsRoutes from './routes/analytics.js';
-
-// Services
-import { EnhancedAgentOrchestrator } from './services/EnhancedAgentOrchestrator.js';
-
-// Middleware
-import { authenticateUser } from './middleware/auth.js';
-import { errorHandler } from './middleware/errorHandler.js';
-
-dotenv.config();
+// Logger setup
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
+  ]
+});
 
 class CareerateServer {
   private app: express.Application;
   private server: any;
   private io: SocketIOServer;
-  private agentOrchestrator?: EnhancedAgentOrchestrator;
 
   constructor() {
     this.app = express();
@@ -40,293 +37,163 @@ class CareerateServer {
       }
     });
 
-    this.initializeServices();
-  }
-
-  private async initializeServices() {
-    try {
-      console.log('🚀 Starting Careerate Server...');
-
-      // Initialize Database connections
-      await this.initializeDatabases();
-
-      // Initialize Enhanced AI Agent Orchestrator with task execution capabilities
-      this.agentOrchestrator = new EnhancedAgentOrchestrator();
-      await this.agentOrchestrator.initialize();
-
-      // Store services in app locals for routes to access
-      this.app.locals.agentOrchestrator = this.agentOrchestrator;
-
-      // Setup middleware and routes
-      this.setupMiddleware();
-      this.setupRoutes();
-      this.setupWebSocketHandlers();
-
-      // Error handling
-      this.app.use(errorHandler);
-
-      console.log('✅ All services initialized successfully');
-    } catch (error) {
-      console.error('❌ Failed to initialize services:', error);
-      process.exit(1);
-    }
-  }
-
-  private async initializeDatabases() {
-    try {
-      // MongoDB for user data and sessions
-      const mongoUri = process.env.MONGODB_CONNECTION_STRING || 'mongodb://localhost:27017/careerate';
-      await mongoose.connect(mongoUri);
-      console.log('✅ MongoDB connected');
-    } catch (error) {
-      console.error('❌ Database connection failed:', error);
-      // Don't exit on database failure in development
-      console.warn('⚠️  Continuing without database...');
-    }
+    this.setupMiddleware();
+    this.setupRoutes();
+    this.setupWebSocket();
   }
 
   private setupMiddleware() {
     // Security
-    this.app.use(helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "https://apis.google.com"],
-          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-          imgSrc: ["'self'", "data:", "https:"],
-          connectSrc: ["'self'", "wss:", "https:"],
-          fontSrc: ["'self'", "https://fonts.gstatic.com"],
-          objectSrc: ["'none'"],
-          mediaSrc: ["'self'"],
-          frameSrc: ["'none'"],
-        },
-      },
-    }));
-
+    this.app.use(helmet());
+    
     // CORS
     this.app.use(cors({
       origin: process.env.CORS_ORIGIN?.split(',') || ["http://localhost:3000"],
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+      credentials: true
     }));
 
     // Rate limiting
     const limiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: process.env.NODE_ENV === 'production' ? 100 : 1000,
-      message: 'Too many requests from this IP, please try again later.',
-      standardHeaders: true,
-      legacyHeaders: false,
+      max: 100,
+      message: 'Too many requests from this IP'
     });
     this.app.use(limiter);
 
     // Body parsing
     this.app.use(express.json({ limit: '10mb' }));
-    this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-    // Session management
-    this.app.use(session({
-      secret: process.env.SESSION_SECRET || 'careerate-secret',
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-      }
-    }));
-
-    // Health check
-    this.app.get('/health', (req, res) => {
-      res.status(200).json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        version: process.env.npm_package_version || '1.0.0',
-        environment: process.env.NODE_ENV || 'development'
-      });
-    });
+    this.app.use(express.urlencoded({ extended: true }));
   }
 
   private setupRoutes() {
-    // API routes
-    this.app.use('/api/auth', authRoutes);
-    // Agent routes temporarily removed for build compatibility
-    this.app.use('/api/mcp', authenticateUser, mcpRoutes);
-    this.app.use('/api/workspace', authenticateUser, workspaceRoutes);
-    this.app.use('/api/analytics', authenticateUser, analyticsRoutes);
+    // Health check
+    this.app.get('/health', (req, res) => {
+      res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+        environment: process.env.NODE_ENV || 'development',
+        corsOrigin: process.env.CORS_ORIGIN ? 'configured' : 'default',
+        hasSessionSecret: !!process.env.SESSION_SECRET,
+        hasJwtSecret: !!process.env.JWT_SECRET
+      });
+    });
 
-    // Agent streaming endpoint
-    this.app.post('/api/agents/stream', async (req, res) => {
+    // Simple AI chat endpoint
+    this.app.post('/api/chat', async (req, res) => {
       try {
-        const { message, agentType, context } = req.body;
-        const userId = 'user-123'; // Mock user ID for now
-
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
-        });
-
-        if (this.agentOrchestrator) {
-          const stream = this.agentOrchestrator.streamResponse({
-            message,
-            agentType,
-            userId,
-            sessionId: 'stream-session',
-            context
-          });
-
-          for await (const update of stream) {
-            res.write(`data: ${JSON.stringify(update)}\n\n`);
-          }
+        const { message, agentType = 'general' } = req.body;
+        
+        if (!message) {
+          return res.status(400).json({ error: 'Message is required' });
         }
 
-        res.write('data: [DONE]\n\n');
-        res.end();
+        // Mock AI response for now
+        const mockResponse = this.generateMockResponse(message, agentType);
+        
+        res.json({
+          id: uuidv4(),
+          message: mockResponse,
+          agentType,
+          timestamp: new Date().toISOString()
+        });
+        
       } catch (error) {
-        console.error('Streaming error:', error);
+        logger.error('Chat error:', error);
         res.status(500).json({ error: 'Internal server error' });
       }
     });
 
-    // Catch-all for undefined routes
+    // Agent types endpoint
+    this.app.get('/api/agents', (req, res) => {
+      res.json([
+        { id: 'terraform', name: 'Terraform Expert', description: 'Infrastructure as Code specialist' },
+        { id: 'kubernetes', name: 'Kubernetes Expert', description: 'Container orchestration specialist' },
+        { id: 'aws', name: 'AWS Expert', description: 'Cloud services specialist' },
+        { id: 'monitoring', name: 'Monitoring Expert', description: 'Observability specialist' },
+        { id: 'incident', name: 'Incident Response', description: 'Emergency response specialist' },
+        { id: 'general', name: 'DevOps General', description: 'General DevOps assistant' }
+      ]);
+    });
+
+    // Catch all
     this.app.use('*', (req, res) => {
-      res.status(404).json({ 
-        error: 'Route not found',
-        path: req.originalUrl 
-      });
+      res.status(404).json({ error: 'Route not found' });
     });
   }
 
-  private setupWebSocketHandlers() {
+  private setupWebSocket() {
     this.io.on('connection', (socket) => {
-      console.log(`🔌 User connected: ${socket.id}`);
+      logger.info(`Client connected: ${socket.id}`);
 
-      // Join chat session
-      socket.on('join-chat', async (data) => {
-        const { sessionId, userId } = data;
-        await socket.join(sessionId);
-        
-        socket.emit('chat-joined', { sessionId });
-        console.log(`👤 User ${userId} joined chat session ${sessionId}`);
+      socket.on('join-workspace', (workspaceId) => {
+        socket.join(workspaceId);
+        logger.info(`Client ${socket.id} joined workspace: ${workspaceId}`);
       });
 
-      // Handle AI chat messages
       socket.on('send-message', async (data) => {
         try {
-          const { sessionId, message, selectedAgent } = data;
+          const { message, agentType, workspaceId } = data;
           
-          if (!this.agentOrchestrator) {
-            socket.emit('chat-error', { error: 'AI service not available' });
-            return;
+          const response = this.generateMockResponse(message, agentType);
+          
+          // Simulate streaming response
+          const words = response.split(' ');
+          for (let i = 0; i < words.length; i++) {
+            setTimeout(() => {
+              socket.emit('message-chunk', {
+                chunk: words[i] + ' ',
+                isComplete: i === words.length - 1,
+                timestamp: new Date().toISOString()
+              });
+            }, i * 100);
           }
-
-          const stream = this.agentOrchestrator.streamResponse({
-            message,
-            agentType: selectedAgent,
-            userId: socket.id,
-            sessionId
-          });
-
-          for await (const chunk of stream) {
-            // Handle different chunk types
-            if (chunk.type === 'message') {
-              socket.emit('message-chunk', { chunk: chunk.content });
-            } else if (chunk.type === 'thinking') {
-              socket.emit('thinking', { content: chunk.content });
-            } else if (chunk.type === 'planning') {
-              socket.emit('planning', { content: chunk.content });
-            } else if (chunk.type === 'complete') {
-              socket.emit('message-complete', { agentUsed: chunk.agentUsed });
-            } else if (chunk.type === 'error') {
-              socket.emit('chat-error', { error: chunk.content });
-            }
-          }
-
+          
         } catch (error) {
-          console.error('Socket message error:', error);
-          socket.emit('chat-error', { error: 'Failed to process message' });
-        }
-      });
-
-      // Handle workspace joining
-      socket.on('join-workspace', async (workspaceId: string) => {
-        try {
-          await socket.join(workspaceId);
-          console.log(`👥 User joined workspace: ${workspaceId}`);
-        } catch (error) {
-          console.error('Failed to join workspace:', error);
-        }
-      });
-
-      // Handle context sharing
-      socket.on('share-context', async (data: any) => {
-        try {
-          socket.broadcast.emit('context-shared', data);
-          console.log('📤 Context shared to team');
-        } catch (error) {
-          console.error('Failed to share context:', error);
+          logger.error('WebSocket message error:', error);
+          socket.emit('error', { message: 'Failed to process message' });
         }
       });
 
       socket.on('disconnect', () => {
-        console.log(`🔌 User disconnected: ${socket.id}`);
+        logger.info(`Client disconnected: ${socket.id}`);
       });
     });
   }
 
-  public async start() {
+  private generateMockResponse(message: string, agentType: string): string {
+    const responses = {
+      terraform: `As a Terraform expert, I can help you with infrastructure as code. For your query about "${message}", I recommend creating a terraform configuration that defines your infrastructure declaratively.`,
+      kubernetes: `As a Kubernetes specialist, I can assist with container orchestration. Regarding "${message}", consider using deployment manifests and services to manage your containerized applications.`,
+      aws: `As an AWS expert, I can guide you through cloud services. For "${message}", I suggest leveraging AWS services like EC2, S3, and Lambda for scalable solutions.`,
+      monitoring: `As a monitoring specialist, I can help set up observability. For "${message}", implement proper logging, metrics, and alerting using tools like Prometheus and Grafana.`,
+      incident: `As an incident response expert, I can guide you through emergency procedures. For "${message}", follow the incident response playbook and ensure proper communication channels.`,
+      general: `As a DevOps assistant, I can help with various tasks. Regarding "${message}", I recommend following DevOps best practices including automation, monitoring, and continuous improvement.`
+    };
+
+    return responses[agentType as keyof typeof responses] || responses.general;
+  }
+
+  public start(): void {
     const port = process.env.PORT || 5000;
     
     this.server.listen(port, () => {
-      console.log(`
-🚀 Careerate Server Started Successfully!
-┌─────────────────────────────────────┐
-│  Environment: ${process.env.NODE_ENV || 'development'}
-│  Port: ${port}
-│  Agent Orchestration: ✅ Active
-│  Real-time Chat: ✅ Ready
-│  WebSocket: ✅ Connected
-│  MongoDB: ${mongoose.connection.readyState === 1 ? '✅ Connected' : '⚠️  Disconnected'}
-└─────────────────────────────────────┘
-
-🤖 AI Configuration:
-${process.env.OPENAI_API_KEY ? '✅ OpenAI API Key configured' : '⚠️  OpenAI API Key missing'}
-${process.env.ANTHROPIC_API_KEY ? '✅ Anthropic API Key configured' : '⚠️  Anthropic API Key missing'}
-
-${!process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY ? 
-  '💡 Set OPENAI_API_KEY or ANTHROPIC_API_KEY for real AI responses' : ''}
-      `);
+      logger.info(`🚀 Careerate Server running on port ${port}`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`✅ Server ready to handle requests`);
     });
 
     // Graceful shutdown
-    process.on('SIGTERM', this.shutdown.bind(this));
-    process.on('SIGINT', this.shutdown.bind(this));
-  }
-
-  private async shutdown() {
-    console.log('🛑 Shutting down Careerate Server...');
-    
-    this.server.close(() => {
-      console.log('📡 HTTP server closed');
+    process.on('SIGTERM', () => {
+      logger.info('SIGTERM received, shutting down gracefully');
+      this.server.close(() => {
+        logger.info('Server closed');
+        process.exit(0);
+      });
     });
-
-    if (mongoose.connection.readyState === 1) {
-      await mongoose.disconnect();
-    }
-    
-    console.log('✅ Careerate Server shut down gracefully');
-    process.exit(0);
   }
 }
 
 // Start the server
 const server = new CareerateServer();
-server.start().catch((error) => {
-  console.error('❌ Failed to start server:', error);
-  process.exit(1);
-});
-
-export default CareerateServer; 
+server.start(); 

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { CareerateError } from '../types/index.js';
+import { CareerateError } from '../types/index';
 
 export const errorHandler = (
   error: Error,

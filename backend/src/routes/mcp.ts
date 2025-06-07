@@ -1,8 +1,8 @@
 import express from 'express';
 import { body, param, query } from 'express-validator';
-import { validateRequest } from '../middleware/validation.js';
-import { MCPManager } from '../services/MCPManager.js';
-import type { MCPServerConfig } from '../types/index.js';
+import { validateRequest } from '../middleware/validation';
+import { MCPManager } from '../services/MCPManager';
+import type { MCPServerConfig } from '../types/index';
 
 const router = express.Router();
 
