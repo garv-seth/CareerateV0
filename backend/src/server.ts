@@ -66,6 +66,20 @@ class CareerateServer {
   }
 
   private setupRoutes() {
+    // Root route - what you're probably hitting
+    this.app.get('/', (req, res) => {
+      res.json({
+        message: '🚀 Careerate API is running!',
+        version: '1.0.0',
+        endpoints: {
+          health: '/health',
+          chat: 'POST /api/chat',
+          agents: 'GET /api/agents'
+        },
+        timestamp: new Date().toISOString()
+      });
+    });
+
     // Health check
     this.app.get('/health', (req, res) => {
       res.json({
@@ -116,9 +130,20 @@ class CareerateServer {
       ]);
     });
 
-    // Catch all
+    // Catch all with better debugging
     this.app.use('*', (req, res) => {
-      res.status(404).json({ error: 'Route not found' });
+      logger.warn(`404 - Route not found: ${req.method} ${req.originalUrl}`);
+      res.status(404).json({ 
+        error: 'Route not found',
+        method: req.method,
+        url: req.originalUrl,
+        availableRoutes: [
+          'GET /',
+          'GET /health', 
+          'GET /api/agents',
+          'POST /api/chat'
+        ]
+      });
     });
   }
 
@@ -180,6 +205,12 @@ class CareerateServer {
     this.server.listen(port, () => {
       logger.info(`🚀 Careerate Server running on port ${port}`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
+      logger.info(`📍 Available routes:`);
+      logger.info(`  GET  /           - API info`);
+      logger.info(`  GET  /health     - Health check`);
+      logger.info(`  GET  /api/agents - List agents`);
+      logger.info(`  POST /api/chat   - Chat with AI`);
       logger.info(`✅ Server ready to handle requests`);
     });
 
