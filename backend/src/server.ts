@@ -61,7 +61,7 @@ class CareerateServer {
     this.secretsManager = new AzureSecretsManager();
     this.agentOrchestrator = new MultiAgentOrchestrator();
 
-    this.frontendBuildPath = path.join(process.cwd(), 'frontend', 'dist');
+    this.frontendBuildPath = path.join(__dirname, '..', 'frontend', 'dist');
 
     this.initialize();
   }
@@ -163,7 +163,6 @@ class CareerateServer {
       this.app.use('/api/mcp', mcpRoutes);
 
       this.setupCoreRoutes();
-      this.setupFallbackRoutes();
       
       // All other GET requests not handled before will return our React app
       this.app.get('*', (req, res) => {
@@ -302,39 +301,6 @@ class CareerateServer {
       res.json({
         status: 'emergency',
         timestamp: new Date().toISOString()
-      });
-    });
-  }
-
-  private setupFallbackRoutes() {
-    // Catch-all route to serve frontend
-    this.app.get('*', (req, res) => {
-      const indexPath = path.join(__dirname, '..', 'public', 'index.html');
-      res.sendFile(indexPath, (err) => {
-        if (err) {
-          logger.error('Error serving index.html:', err);
-          res.status(200).send(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Careerate - AI DevOps Platform</title>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <style>
-                    body { font-family: system-ui, sans-serif; margin: 0; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; text-align: center; }
-                    h1 { font-size: 3rem; margin-bottom: 20px; }
-                    .status { background: rgba(16, 185, 129, 0.2); border: 2px solid #10b981; color: #10b981; padding: 15px 30px; border-radius: 25px; display: inline-block; margin: 20px 0; }
-                </style>
-            </head>
-            <body>
-                <h1>🚀 Careerate</h1>
-                <div class="status">✅ API Server Running</div>
-                <p>AI DevOps Platform Backend is operational</p>
-                <p>API Endpoints: <a href="/api" style="color: white;">/api</a> | <a href="/health" style="color: white;">/health</a></p>
-            </body>
-            </html>
-          `);
-        }
       });
     });
   }
