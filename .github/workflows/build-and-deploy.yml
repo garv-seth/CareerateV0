@@ -42,7 +42,7 @@ jobs:
           cp -r backend/services deployment_package/services || mkdir -p deployment_package/services
           cp -r backend/agents deployment_package/agents || mkdir -p deployment_package/agents
           cp backend/package.json deployment_package/package.json
-          cp backend/package-lock.json deployment_package/package-lock.json
+          cp backend/package-lock.json deployment_package/package-lock.json || echo "No package-lock.json found, proceeding without it"
           cp backend/startup.sh deployment_package/startup.sh
           cp backend/web.config deployment_package/web.config
           
