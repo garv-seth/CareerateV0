@@ -12,6 +12,7 @@ cd "$(dirname "$0")"
 # Set essential environment variables
 export NODE_ENV=production
 export PORT=${PORT:-8080}
+export AZURE_KEY_VAULT_URL="https://careeeratesecretsvault.vault.azure.net/"
 
 echo "📁 Directory: $(pwd)"
 echo "🌍 Environment: $NODE_ENV"

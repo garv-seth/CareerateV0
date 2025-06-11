@@ -61,7 +61,7 @@ class CareerateServer {
     this.secretsManager = new AzureSecretsManager();
     this.agentOrchestrator = new MultiAgentOrchestrator();
 
-    this.frontendBuildPath = path.resolve(__dirname, '..', '..', '..', 'frontend', 'dist');
+    this.frontendBuildPath = path.join(process.cwd(), 'frontend', 'dist');
 
     this.initialize();
   }
