@@ -7,6 +7,10 @@ import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import path from 'path';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 // Import actual services
 import { AzureSecretsManager } from './services/AzureSecretsManager';
