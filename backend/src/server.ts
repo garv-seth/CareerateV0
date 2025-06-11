@@ -130,6 +130,16 @@ class CareerateServer {
       ]);
     });
 
+    // Handle common bot requests
+    this.app.get('/robots.txt', (req, res) => {
+      res.type('text/plain');
+      res.send('User-agent: *\nDisallow: /api/\nAllow: /');
+    });
+
+    this.app.get('/favicon.ico', (req, res) => {
+      res.status(204).end();
+    });
+
     // Catch all with better debugging
     this.app.use('*', (req, res) => {
       logger.warn(`404 - Route not found: ${req.method} ${req.originalUrl}`);
