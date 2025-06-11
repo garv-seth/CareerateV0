@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import fs from 'fs-extra';
+import react from '@vitejs/plugin-react';
 
 const outDir = resolve(__dirname, 'dist');
 
@@ -44,66 +45,46 @@ function prepareManifest(mode: string) {
   console.log('Manifest prepared for mode:', mode);
 }
 
-export default defineConfig(({ mode }) => {
-  return {
-    root: resolve(__dirname, 'src'), // Set project root to src/
-    publicDir: resolve(__dirname, 'src/public'), // Static assets like icons are in src/public/
-    build: {
-      outDir,
-      emptyOutDir: true, // Clears the dist directory before each build
-      rollupOptions: {
-        input: {
-          // HTML entry points (Vite will find JS/TS linked in them)
-          popup: resolve(__dirname, 'src/popup/index.html'),
-          options: resolve(__dirname, 'src/options/index.html'),
-          // JS/TS entry points for background and content scripts
-          background: resolve(__dirname, 'src/background/index.ts'),
-          content: resolve(__dirname, 'src/content/index.ts'),
-        },
-        output: {
-          entryFileNames: (chunkInfo) => {
-            if (chunkInfo.name === 'background' || chunkInfo.name === 'content') {
-              return `${chunkInfo.name}/index.js`;
-            }
-            // HTML pages will reference JS from here
-            return 'js/[name]-[hash].js'; 
-          },
-          chunkFileNames: 'js/[name]-[hash].js',
-          assetFileNames: (assetInfo) => {
-            // Output HTML files to their respective folders inside dist (e.g., dist/popup/index.html)
-            if (assetInfo.name?.endsWith('.html')) {
-              const parentDir = assetInfo.name.substring(0, assetInfo.name.lastIndexOf('/') + 1);
-              return `${parentDir}[name][extname]`;
-            }
-            // Other assets like CSS go into an assets folder
-            return 'css/[name]-[hash][extname]';
-          },
-        },
+export default defineConfig({
+  plugins: [react(),
+    {
+      name: 'prepare-manifest',
+      buildStart() {
+        prepareManifest('production');
       },
-      minify: mode === 'production', // Minify only in production
-      sourcemap: mode === 'development' ? 'inline' : false, // Sourcemaps for dev
-    },
-    plugins: [
-      {
-        name: 'prepare-manifest',
-        buildStart() {
-          prepareManifest(mode);
-        },
-        watchChange(id, change) {
-          // Watch the source manifest for changes
-          if (id.endsWith('src/manifest.json')) {
-            prepareManifest(mode);
-          }
+      watchChange(id, change) {
+        // Watch the source manifest for changes
+        if (id.endsWith('src/manifest.json')) {
+          prepareManifest('production');
         }
-      },
-    ],
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(mode),
+      }
     },
-    resolve: {
-      alias: {
-        '@': resolve(__dirname, 'src'),
+  ],
+  root: resolve(__dirname, 'src'), // Set project root to src/
+  publicDir: resolve(__dirname, 'src/public'), // Static assets like icons are in src/public/
+  build: {
+    outDir,
+    emptyOutDir: true, // Clears the dist directory before each build
+    rollupOptions: {
+      input: {
+        popup: resolve(__dirname, 'src/popup/index.html'),
+        options: resolve(__dirname, 'src/options/index.html'),
+      },
+      output: {
+        entryFileNames: `src/[name]/index.js`,
+        chunkFileNames: `src/[name]/[name].js`,
+        assetFileNames: `src/[name]/[name].[ext]`,
       },
     },
-  };
+    minify: true, // Minify only in production
+    sourcemap: false, // Sourcemaps for dev
+  },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  },
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, 'src'),
+    },
+  },
 }); 

@@ -1,19 +1,17 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { MsalProvider, AuthenticatedTemplate, UnauthenticatedTemplate, useIsAuthenticated } from '@azure/msal-react';
+import { MsalProvider, useIsAuthenticated } from '@azure/msal-react';
 import { PublicClientApplication } from '@azure/msal-browser';
 
 import DashboardPage from './pages/DashboardPage';
-import LoginPage from './pages/LoginPage';
-import CallbackPage from './pages/CallbackPage';
-import { msalConfig } from './config/authConfig'; // Assuming you have this config file
+import LandingPage from './pages/LandingPage';
+import { msalConfig } from './config/authConfig';
 
 const msalInstance = new PublicClientApplication(msalConfig);
 
-// A wrapper for protected routes
 const PrivateRoute = ({ children }) => {
   const isAuthenticated = useIsAuthenticated();
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  return isAuthenticated ? children : <Navigate to="/" />;
 };
 
 function App() {
@@ -22,17 +20,15 @@ function App() {
       <Router>
         <div className="bg-gray-900 min-h-screen">
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/callback" element={<CallbackPage />} />
-            <Route 
-              path="/dashboard" 
+            <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/dashboard"
               element={
                 <PrivateRoute>
                   <DashboardPage />
                 </PrivateRoute>
-              } 
+              }
             />
-            <Route path="/" element={<Navigate to="/dashboard" />} />
           </Routes>
         </div>
       </Router>
