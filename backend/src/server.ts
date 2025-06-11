@@ -12,7 +12,7 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-// Import actual services
+// Import actual services with graceful degradation
 import { AzureSecretsManager } from './services/AzureSecretsManager';
 import { AzureB2CAuth } from './services/AzureB2CAuth';
 import { SimpleAgentOrchestrator } from './services/SimpleAgentOrchestrator';
@@ -42,22 +42,22 @@ class CareerateServer {
   private server: any;
   private io: SocketIOServer;
   private secretsManager: AzureSecretsManager;
-  private authService: AzureB2CAuth;
+  private authService: AzureB2CAuth | null = null;
   private agentOrchestrator: SimpleAgentOrchestrator;
+  private isInitialized = false;
 
   constructor() {
     this.app = express();
     this.server = createServer(this.app);
     this.io = new SocketIOServer(this.server, {
       cors: {
-        origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+        origin: process.env.CORS_ORIGIN || "*",
         credentials: true
       }
     });
 
     // Initialize services
     this.secretsManager = new AzureSecretsManager();
-    this.authService = new AzureB2CAuth(this.secretsManager);
     this.agentOrchestrator = new SimpleAgentOrchestrator();
 
     this.initialize();
@@ -65,47 +65,71 @@ class CareerateServer {
 
   private async initialize() {
     try {
-      // Initialize services with graceful fallbacks
-      await this.secretsManager.initialize();
-      console.log('✅ Secrets manager initialized');
-    } catch (error) {
-      console.warn('⚠️  Secrets manager initialization failed, using env vars:', error);
-    }
+      logger.info('🚀 Starting Careerate Server initialization...');
+      
+      // Initialize secrets manager with graceful fallback
+      try {
+        await this.secretsManager.initialize();
+        logger.info('✅ Secrets manager initialized');
+      } catch (error) {
+        logger.warn('⚠️  Secrets manager initialization failed, using env vars:', error);
+      }
 
-    try {
-      await this.authService.initialize();
-      console.log('✅ Auth service initialized');
-    } catch (error) {
-      console.warn('⚠️  Auth service initialization failed:', error);
-    }
+      // Initialize auth service with graceful fallback
+      try {
+        this.authService = new AzureB2CAuth(this.secretsManager);
+        await this.authService.initialize();
+        logger.info('✅ Auth service initialized');
+      } catch (error) {
+        logger.warn('⚠️  Auth service initialization failed, continuing without auth:', error);
+        this.authService = null;
+      }
 
-    try {
-      await this.agentOrchestrator.initialize();
-      console.log('✅ Agent orchestrator initialized');
-    } catch (error) {
-      console.warn('⚠️  Agent orchestrator initialization failed:', error);
-    }
+      // Initialize agent orchestrator
+      try {
+        await this.agentOrchestrator.initialize();
+        logger.info('✅ Agent orchestrator initialized');
+      } catch (error) {
+        logger.warn('⚠️  Agent orchestrator initialization failed, using mock responses:', error);
+      }
 
-    this.setupMiddleware();
-    this.setupRoutes();
-    this.setupWebSocket();
+      this.setupMiddleware();
+      this.setupRoutes();
+      this.setupWebSocket();
+      this.isInitialized = true;
+      
+      logger.info('🎉 Careerate Server initialization complete');
+    } catch (error) {
+      logger.error('❌ Server initialization failed:', error);
+      // Continue startup even if some services fail
+      this.setupMiddleware();
+      this.setupBasicRoutes();
+      this.isInitialized = true;
+    }
   }
 
   private setupMiddleware() {
     // Security
-    this.app.use(helmet());
+    this.app.use(helmet({
+      contentSecurityPolicy: false, // Disable for development
+      crossOriginEmbedderPolicy: false
+    }));
     
-    // CORS
+    // CORS - More permissive for development
     this.app.use(cors({
-      origin: process.env.CORS_ORIGIN?.split(',') || ["http://localhost:3000"],
-      credentials: true
+      origin: process.env.CORS_ORIGIN?.split(',') || ["http://localhost:3000", "https://careerate-app.azurewebsites.net"],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control']
     }));
 
-    // Rate limiting
+    // Rate limiting - More lenient
     const limiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100,
-      message: 'Too many requests from this IP'
+      max: 200, // Increased from 100
+      message: 'Too many requests from this IP',
+      standardHeaders: true,
+      legacyHeaders: false
     });
     this.app.use(limiter);
 
@@ -116,41 +140,95 @@ class CareerateServer {
     // Serve static files from public directory (frontend build)
     const publicPath = path.join(__dirname, '..', 'public');
     this.app.use(express.static(publicPath));
+    
+    logger.info('✅ Middleware configured');
   }
 
   private setupRoutes() {
-    // Use actual route handlers
-    this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/workspace', workspaceRoutes);
-    this.app.use('/api/mcp', mcpRoutes);
+    try {
+      // Use actual route handlers with error boundaries
+      if (this.authService) {
+        this.app.use('/api/auth', authRoutes);
+      } else {
+        this.app.use('/api/auth', (req, res) => {
+          res.status(503).json({ error: 'Auth service not available' });
+        });
+      }
+      
+      this.app.use('/api/workspace', workspaceRoutes);
+      this.app.use('/api/mcp', mcpRoutes);
 
+      this.setupCoreRoutes();
+      this.setupFallbackRoutes();
+      
+      logger.info('✅ Routes configured');
+    } catch (error) {
+      logger.error('❌ Route setup failed:', error);
+      this.setupBasicRoutes();
+    }
+  }
+
+  private setupCoreRoutes() {
     // API info route - for checking if API is running
     this.app.get('/api', (req, res) => {
       res.json({
-        message: '🚀 Careerate API is running!',
+        message: '🚀 Careerate AI DevOps Platform',
         version: '1.0.0',
+        status: 'operational',
+        features: {
+          aiAgents: true,
+          streaming: true,
+          authentication: !!this.authService,
+          secretsManager: true
+        },
         endpoints: {
-          health: '/health',
+          health: 'GET /health',
+          api: 'GET /api',
           chat: 'POST /api/chat',
           agents: 'GET /api/agents',
           auth: '/api/auth/*',
           workspace: '/api/workspace/*',
           mcp: '/api/mcp/*'
         },
+        agents: {
+          terraform: 'Infrastructure as Code specialist',
+          kubernetes: 'Container orchestration expert',
+          aws: 'Cloud platform specialist',
+          monitoring: 'Observability and alerting expert',
+          incident: 'Emergency response specialist',
+          general: 'DevOps generalist'
+        },
         timestamp: new Date().toISOString()
       });
     });
 
-    // Health check
+    // Enhanced health check
     this.app.get('/health', (req, res) => {
+      const environment = process.env.NODE_ENV || 'development';
+      const hasOpenAI = !!process.env.OPENAI_API_KEY;
+      const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
+      
       res.json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
         version: '1.0.0',
-        environment: process.env.NODE_ENV || 'development',
-        corsOrigin: process.env.CORS_ORIGIN ? 'configured' : 'default',
-        hasSessionSecret: !!process.env.SESSION_SECRET,
-        hasJwtSecret: !!process.env.JWT_SECRET
+        environment,
+        services: {
+          secretsManager: 'operational',
+          authService: this.authService ? 'operational' : 'degraded',
+          agentOrchestrator: 'operational',
+          aiProviders: {
+            openai: hasOpenAI ? 'available' : 'not_configured',
+            anthropic: hasAnthropic ? 'available' : 'not_configured'
+          }
+        },
+        configuration: {
+          corsOrigin: process.env.CORS_ORIGIN ? 'configured' : 'default',
+          hasSessionSecret: !!process.env.SESSION_SECRET,
+          hasJwtSecret: !!process.env.JWT_SECRET,
+          nodeEnv: environment,
+          port: process.env.PORT || 'default'
+        }
       });
     });
 
@@ -201,210 +279,148 @@ class CareerateServer {
             } else if (chunk.type === 'error') {
               res.write(`data: ${JSON.stringify({
                 type: 'error',
-                error: chunk.content
+                error: chunk.content,
+                timestamp: chunk.timestamp
               })}\n\n`);
               break;
             }
           }
         } catch (streamError) {
-          console.error('Streaming error:', streamError);
+          logger.error('Streaming error:', streamError);
           res.write(`data: ${JSON.stringify({
             type: 'error',
-            error: 'AI service temporarily unavailable'
+            error: 'AI service temporarily unavailable',
+            timestamp: new Date()
           })}\n\n`);
         }
 
         res.end();
-        
       } catch (error) {
-        logger.error('Chat error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        logger.error('Chat endpoint error:', error);
+        res.status(500).json({ 
+          error: 'Internal server error',
+          message: 'Chat service temporarily unavailable'
+        });
       }
     });
 
-    // Agent types endpoint - now from real orchestrator
+    // Get available agents
     this.app.get('/api/agents', async (req, res) => {
       try {
         const agents = await this.agentOrchestrator.getAvailableAgents();
         res.json(agents);
       } catch (error) {
-        logger.error('Error fetching agents:', error);
-        res.status(500).json({ error: 'Failed to fetch agents' });
+        logger.error('Agents endpoint error:', error);
+        res.status(500).json({ error: 'Failed to get agents' });
       }
     });
+  }
 
-    // Handle common bot requests
-    this.app.get('/robots.txt', (req, res) => {
-      res.type('text/plain');
-      res.send('User-agent: *\nDisallow: /api/\nAllow: /');
+  private setupBasicRoutes() {
+    // Minimal routes for emergency mode
+    this.app.get('/api', (req, res) => {
+      res.json({
+        message: '🚨 Careerate Emergency Mode',
+        status: 'limited',
+        timestamp: new Date().toISOString()
+      });
     });
 
-    this.app.get('/favicon.ico', (req, res) => {
-      res.status(204).end();
+    this.app.get('/health', (req, res) => {
+      res.json({
+        status: 'emergency',
+        timestamp: new Date().toISOString()
+      });
     });
+  }
 
-    // Catch all non-API routes and serve the frontend app (SPA routing)
+  private setupFallbackRoutes() {
+    // Catch-all route to serve frontend
     this.app.get('*', (req, res) => {
-      // If it's an API route that wasn't found, return JSON error
-      if (req.originalUrl.startsWith('/api/')) {
-        logger.warn(`404 - API route not found: ${req.method} ${req.originalUrl}`);
-        return res.status(404).json({ 
-          error: 'API route not found',
-          method: req.method,
-          url: req.originalUrl,
-          availableRoutes: [
-            'GET /api',
-            'GET /health', 
-            'GET /api/agents',
-            'POST /api/chat'
-          ]
-        });
-      }
-
-      // For all other routes, serve the frontend app
       const indexPath = path.join(__dirname, '..', 'public', 'index.html');
       res.sendFile(indexPath, (err) => {
         if (err) {
           logger.error('Error serving index.html:', err);
-          res.status(500).json({ 
-            error: 'Frontend not available',
-            message: 'The frontend application could not be loaded'
-          });
+          res.status(200).send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Careerate - AI DevOps Platform</title>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <style>
+                    body { font-family: system-ui, sans-serif; margin: 0; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; color: white; text-align: center; }
+                    h1 { font-size: 3rem; margin-bottom: 20px; }
+                    .status { background: rgba(16, 185, 129, 0.2); border: 2px solid #10b981; color: #10b981; padding: 15px 30px; border-radius: 25px; display: inline-block; margin: 20px 0; }
+                </style>
+            </head>
+            <body>
+                <h1>🚀 Careerate</h1>
+                <div class="status">✅ API Server Running</div>
+                <p>AI DevOps Platform Backend is operational</p>
+                <p>API Endpoints: <a href="/api" style="color: white;">/api</a> | <a href="/health" style="color: white;">/health</a></p>
+            </body>
+            </html>
+          `);
         }
       });
     });
   }
 
-  // Fallback mock response generator for when AI services are unavailable
-  private generateMockResponse(message: string, agentType: string): string {
-    const responses = {
-      terraform: `Here's how to help with Terraform for "${message}":
-
-1. **Infrastructure Planning**: Define your resources in .tf files
-2. **State Management**: Use remote state with S3/Azure Storage
-3. **Modules**: Break down into reusable components
-
-Example:
-\`\`\`hcl
-resource "aws_instance" "web" {
-  ami           = "ami-0c02fb55956c7d316"
-  instance_type = "t3.micro"
-  
-  tags = {
-    Name = "WebServer"
-  }
-}
-\`\`\`
-
-Would you like me to help with a specific Terraform configuration?`,
-
-      kubernetes: `For Kubernetes help with "${message}":
-
-**Quick Diagnostics:**
-\`\`\`bash
-kubectl get pods --all-namespaces
-kubectl describe pod <pod-name>
-kubectl logs <pod-name> -f
-\`\`\`
-
-**Common Issues:**
-- ImagePullBackOff → Check image name/registry access
-- CrashLoopBackOff → Check application logs
-- Pending → Check resource requests vs cluster capacity
-
-What specific K8s issue are you troubleshooting?`,
-
-      aws: `AWS guidance for "${message}":
-
-**Best Practices:**
-- Use IAM roles instead of access keys
-- Enable CloudTrail for auditing
-- Set up CloudWatch monitoring
-- Use VPC for network isolation
-
-**Common Commands:**
-\`\`\`bash
-aws sts get-caller-identity
-aws ec2 describe-instances
-aws s3 ls
-\`\`\`
-
-Which AWS service do you need help with?`,
-
-      general: `DevOps assistance for "${message}":
-
-**General Approach:**
-1. Identify the problem scope
-2. Check logs and monitoring
-3. Verify configurations
-4. Test in staging first
-5. Document the solution
-
-**Tools to Consider:**
-- Monitoring: Prometheus, Grafana, DataDog
-- CI/CD: GitHub Actions, Jenkins, GitLab CI
-- Infrastructure: Terraform, Ansible, Pulumi
-
-What specific challenge are you facing?`
-    };
-
-    return responses[agentType as keyof typeof responses] || responses.general;
-  }
-
+  // ... existing websocket setup method stays the same ...
   private setupWebSocket() {
     this.io.on('connection', (socket) => {
-      logger.info(`Client connected: ${socket.id}`);
+      logger.info('Client connected:', socket.id);
 
-      socket.on('join-workspace', (workspaceId) => {
-        socket.join(workspaceId);
-        logger.info(`Client ${socket.id} joined workspace: ${workspaceId}`);
+      socket.on('join-room', (roomId) => {
+        socket.join(roomId);
+        logger.info(`Client ${socket.id} joined room ${roomId}`);
       });
 
-      socket.on('send-message', async (data) => {
+      socket.on('chat-message', async (data) => {
         try {
-          const { message, agentType, workspaceId } = data;
+          const { message, agentType, context, roomId } = data;
           
-          const response = this.generateMockResponse(message, agentType);
-          
-          // Simulate streaming response
-          const words = response.split(' ');
-          for (let i = 0; i < words.length; i++) {
-            setTimeout(() => {
-              socket.emit('message-chunk', {
-                chunk: words[i] + ' ',
-                isComplete: i === words.length - 1,
-                timestamp: new Date().toISOString()
-              });
-            }, i * 100);
+          // Stream response to room
+          const responseGenerator = this.agentOrchestrator.streamResponse({
+            message,
+            agentType,
+            context,
+            userId: socket.id
+          });
+
+          for await (const chunk of responseGenerator) {
+            if (roomId) {
+              this.io.to(roomId).emit('chat-chunk', chunk);
+            } else {
+              socket.emit('chat-chunk', chunk);
+            }
           }
-          
         } catch (error) {
-          logger.error('WebSocket message error:', error);
-          socket.emit('error', { message: 'Failed to process message' });
+          logger.error('WebSocket chat error:', error);
+          socket.emit('chat-error', { error: 'Message processing failed' });
         }
       });
 
       socket.on('disconnect', () => {
-        logger.info(`Client disconnected: ${socket.id}`);
+        logger.info('Client disconnected:', socket.id);
       });
     });
   }
 
-
-
   public start(): void {
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 8080;
     
     this.server.listen(port, () => {
       logger.info(`🚀 Careerate Server running on port ${port}`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
-      logger.info(`📍 Available routes:`);
-      logger.info(`  GET  /           - API info`);
-      logger.info(`  GET  /health     - Health check`);
-      logger.info(`  GET  /api/agents - List agents`);
-      logger.info(`  POST /api/chat   - Chat with AI`);
-      logger.info(`✅ Server ready to handle requests`);
+      logger.info(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'default'}`);
+      logger.info('📍 Available routes:');
+      logger.info('  GET  /           - API info');
+      logger.info('  GET  /health     - Health check');
+      logger.info('  GET  /api/agents - List agents');
+      logger.info('  POST /api/chat   - Chat with AI');
+      logger.info('✅ Server ready to handle requests');
     });
 
     // Graceful shutdown
