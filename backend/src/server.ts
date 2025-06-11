@@ -61,14 +61,25 @@ class CareerateServer {
 
   private async initialize() {
     try {
-      // Initialize services
+      // Initialize services with graceful fallbacks
       await this.secretsManager.initialize();
-      await this.authService.initialize();
-      await this.agentOrchestrator.initialize();
-      
-      console.log('✅ All services initialized');
+      console.log('✅ Secrets manager initialized');
     } catch (error) {
-      console.warn('⚠️  Some services failed to initialize:', error);
+      console.warn('⚠️  Secrets manager initialization failed, using env vars:', error);
+    }
+
+    try {
+      await this.authService.initialize();
+      console.log('✅ Auth service initialized');
+    } catch (error) {
+      console.warn('⚠️  Auth service initialization failed:', error);
+    }
+
+    try {
+      await this.agentOrchestrator.initialize();
+      console.log('✅ Agent orchestrator initialized');
+    } catch (error) {
+      console.warn('⚠️  Agent orchestrator initialization failed:', error);
     }
 
     this.setupMiddleware();
@@ -260,6 +271,82 @@ class CareerateServer {
     });
   }
 
+  // Fallback mock response generator for when AI services are unavailable
+  private generateMockResponse(message: string, agentType: string): string {
+    const responses = {
+      terraform: `Here's how to help with Terraform for "${message}":
+
+1. **Infrastructure Planning**: Define your resources in .tf files
+2. **State Management**: Use remote state with S3/Azure Storage
+3. **Modules**: Break down into reusable components
+
+Example:
+\`\`\`hcl
+resource "aws_instance" "web" {
+  ami           = "ami-0c02fb55956c7d316"
+  instance_type = "t3.micro"
+  
+  tags = {
+    Name = "WebServer"
+  }
+}
+\`\`\`
+
+Would you like me to help with a specific Terraform configuration?`,
+
+      kubernetes: `For Kubernetes help with "${message}":
+
+**Quick Diagnostics:**
+\`\`\`bash
+kubectl get pods --all-namespaces
+kubectl describe pod <pod-name>
+kubectl logs <pod-name> -f
+\`\`\`
+
+**Common Issues:**
+- ImagePullBackOff → Check image name/registry access
+- CrashLoopBackOff → Check application logs
+- Pending → Check resource requests vs cluster capacity
+
+What specific K8s issue are you troubleshooting?`,
+
+      aws: `AWS guidance for "${message}":
+
+**Best Practices:**
+- Use IAM roles instead of access keys
+- Enable CloudTrail for auditing
+- Set up CloudWatch monitoring
+- Use VPC for network isolation
+
+**Common Commands:**
+\`\`\`bash
+aws sts get-caller-identity
+aws ec2 describe-instances
+aws s3 ls
+\`\`\`
+
+Which AWS service do you need help with?`,
+
+      general: `DevOps assistance for "${message}":
+
+**General Approach:**
+1. Identify the problem scope
+2. Check logs and monitoring
+3. Verify configurations
+4. Test in staging first
+5. Document the solution
+
+**Tools to Consider:**
+- Monitoring: Prometheus, Grafana, DataDog
+- CI/CD: GitHub Actions, Jenkins, GitLab CI
+- Infrastructure: Terraform, Ansible, Pulumi
+
+What specific challenge are you facing?`
+    };
+
+    return responses[agentType as keyof typeof responses] || responses.general;
+  }
+
   private setupWebSocket() {
     this.io.on('connection', (socket) => {
       logger.info(`Client connected: ${socket.id}`);
@@ -299,18 +386,7 @@ class CareerateServer {
     });
   }
 
-  private generateMockResponse(message: string, agentType: string): string {
-    const responses = {
-      terraform: `As a Terraform expert, I can help you with infrastructure as code. For your query about "${message}", I recommend creating a terraform configuration that defines your infrastructure declaratively.`,
-      kubernetes: `As a Kubernetes specialist, I can assist with container orchestration. Regarding "${message}", consider using deployment manifests and services to manage your containerized applications.`,
-      aws: `As an AWS expert, I can guide you through cloud services. For "${message}", I suggest leveraging AWS services like EC2, S3, and Lambda for scalable solutions.`,
-      monitoring: `As a monitoring specialist, I can help set up observability. For "${message}", implement proper logging, metrics, and alerting using tools like Prometheus and Grafana.`,
-      incident: `As an incident response expert, I can guide you through emergency procedures. For "${message}", follow the incident response playbook and ensure proper communication channels.`,
-      general: `As a DevOps assistant, I can help with various tasks. Regarding "${message}", I recommend following DevOps best practices including automation, monitoring, and continuous improvement.`
-    };
 
-    return responses[agentType as keyof typeof responses] || responses.general;
-  }
 
   public start(): void {
     const port = process.env.PORT || 5000;
