@@ -3,9 +3,9 @@ import { Configuration, PopupRequest } from '@azure/msal-browser';
 // Please replace the following with your own Azure B2C application configuration
 export const msalConfig: Configuration = {
   auth: {
-    clientId: process.env.REACT_APP_AZURE_AD_B2C_CLIENT_ID || 'YOUR_CLIENT_ID',
-    authority: `https://YOUR_TENANT_NAME.b2clogin.com/YOUR_TENANT_NAME.onmicrosoft.com/YOUR_USER_FLOW`,
-    knownAuthorities: ['YOUR_TENANT_NAME.b2clogin.com'],
+    clientId: 'e8b1c661-2139-4583-a9ca-ce0c1cb948d1',
+    authority: `https://careerate.b2clogin.com/careerate.onmicrosoft.com/B2C_1_signup_signin1`,
+    knownAuthorities: ['careerate.b2clogin.com'],
     redirectUri: '/callback',
     postLogoutRedirectUri: '/',
     navigateToLoginRequestUrl: false,
