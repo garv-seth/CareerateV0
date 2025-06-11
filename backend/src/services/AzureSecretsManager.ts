@@ -20,7 +20,7 @@ export class AzureSecretsManager {
       this.secretClient = new SecretClient(keyVaultUrl, credential);
 
       // Test connection
-      const testSecret = await this.secretClient.getSecret('test-connection');
+      // const testSecret = await this.secretClient.getSecret('test-connection');
       console.log(chalk.green('✅ Azure Key Vault connected successfully'));
     } catch (error) {
       console.warn(chalk.yellow('⚠️  Azure Key Vault connection failed, falling back to env vars:'), (error as Error)?.message || 'Unknown error');

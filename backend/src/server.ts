@@ -118,6 +118,8 @@ class CareerateServer {
       crossOriginEmbedderPolicy: false
     }));
     
+    this.app.set('trust proxy', 1); // Trust the first proxy
+
     // CORS - More permissive for development
     this.app.use(cors({
       origin: process.env.CORS_ORIGIN?.split(',') || ["http://localhost:3000", "https://careerate-app.azurewebsites.net"],

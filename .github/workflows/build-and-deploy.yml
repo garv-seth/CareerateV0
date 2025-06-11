@@ -31,34 +31,22 @@ jobs:
         run: npm run build --workspace=backend
       
       - name: Prune dev dependencies (monorepo)
-        run: npm prune --omit=dev
+        run: npm prune --omit=dev --workspace=backend
 
       - name: Create deployment package
         run: |
-          mkdir -p deployment_package
-          
-          # Copy all backend files needed for deployment
-          cp -r backend/dist deployment_package/dist
-          cp -r backend/services deployment_package/services || mkdir -p deployment_package/services
-          cp -r backend/agents deployment_package/agents || mkdir -p deployment_package/agents
-          cp backend/package.json deployment_package/package.json
-          cp backend/package-lock.json deployment_package/package-lock.json || echo "No package-lock.json found, proceeding without it"
-          cp backend/startup.sh deployment_package/startup.sh
-          cp backend/web.config deployment_package/web.config
-          
-          # Create .env file for production
-          echo "NODE_ENV=production" > deployment_package/.env
-          
-          # Copy frontend build output (backend serves static files)
-          mkdir -p deployment_package/public
-          cp -r frontend/dist/* deployment_package/public/
-          
-          echo "--- Contents of deployment_package before zipping ---"
-          ls -R deployment_package
-          echo "---------------------------------------------------------"
-          
-          # Zip the contents of the deployment_package
-          cd deployment_package
+          mkdir -p release
+          # Copy backend files
+          cp -r backend/dist/ release/dist
+          cp -r backend/node_modules/ release/node_modules
+          cp backend/package.json release/package.json
+          cp backend/startup.sh release/startup.sh
+
+          # Copy frontend build
+          cp -r frontend/dist/ release/frontend/dist
+
+          # Zip the contents for deployment
+          cd release
           zip -r ../release.zip .
 
       - name: Upload artifact for deployment job
