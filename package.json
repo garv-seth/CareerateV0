@@ -32,6 +32,7 @@
     "@langchain/langgraph": "*",
     "@langchain/openai": "*",
     "@modelcontextprotocol/sdk": "*",
+    "@tailwindcss/postcss": "^4.1.9",
     "@types/js-yaml": "*",
     "@types/ws": "*",
     "ai": "*",
