@@ -1,120 +1,181 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
-  --background-rgb: 9 11 17;
-  --foreground-rgb: 236 239 244;
-  --primary-rgb: 120 80 220;
-  --accent-rgb: 80 120 250;
-  --muted-rgb: 46 52 64;
-  --border-rgb: 50 60 75;
-  --card-rgb: 20 24 32;
-
-  --background: rgb(var(--background-rgb));
-  --foreground: rgb(var(--foreground-rgb));
-  --primary: rgb(var(--primary-rgb));
-  --accent: rgb(var(--accent-rgb));
-  --text-light: rgb(200, 210, 220);
-  --text-muted: rgb(129, 161, 193); /* Steel Blue like */
-
-  --font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-main: 'Inter', sans-serif;
+  --accent-blue: #007BFF;
+  --accent-purple: #8A2BE2;
+  --text-primary: #FFFFFF;
+  --text-secondary: #B0B0B0;
+  --bg-dark: #0A0A0A;
+  --glass-bg: rgba(20, 20, 25, 0.5);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: rgba(0, 0, 0, 0.25);
 }
 
 body {
-  font-family: var(--font-sans);
-  background-color: var(--background);
-  color: var(--foreground);
+  font-family: var(--font-main);
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
   margin: 0;
-  font-size: 13px;
-  width: 280px; /* Typical popup width */
+  width: 380px;
+  font-size: 14px;
 }
 
-.popup-container {
+#app-container {
+  padding: 16px;
+  background: linear-gradient(45deg, var(--accent-blue), var(--accent-purple));
+  position: relative;
+  overflow: hidden;
+}
+
+#app-container::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 40%);
+  animation: background-glow 15s infinite ease-in-out;
+}
+
+@keyframes background-glow {
+  0%, 100% { transform: translate(10%, 10%) scale(1); }
+  50% { transform: translate(-10%, -10%) scale(1.2); }
+}
+
+.glass-pane {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  background-color: var(--card-rgb);
-  border: 1px solid rgba(var(--border-rgb), 0.3);
+  gap: 20px;
+  position: relative;
+  z-index: 1;
 }
 
-.popup-header {
+.app-header {
   display: flex;
   align-items: center;
-  padding: 12px 15px;
-  background-color: rgba(var(--primary-rgb), 0.15);
-  border-bottom: 1px solid rgba(var(--primary-rgb), 0.3);
+  gap: 12px;
+  text-align: left;
 }
 
-.popup-header .logo {
-  width: 24px;
-  height: 24px;
-  margin-right: 10px;
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: linear-gradient(45deg, var(--accent-blue), var(--accent-purple));
+  color: white;
 }
 
-.popup-header h2 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--primary);
+.app-header h1 {
   margin: 0;
+  font-size: 22px;
+  font-weight: 600;
 }
 
-.popup-content {
-  padding: 15px;
-  line-height: 1.6;
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.popup-content p {
-  margin: 0 0 10px 0;
-  color: var(--text-light);
-}
-
-.popup-content p strong {
-  color: var(--foreground);
-}
-
-#trackingStatus.enabled {
-  color: rgb(70 200 150); /* Bright Green for enabled */
-  font-weight: bold;
-}
-
-#trackingStatus.disabled {
-  color: rgb(220 50 80); /* Strong Red for disabled */
-  font-weight: bold;
-}
-
-#monitoringMode {
-    font-style: italic;
-    color: var(--accent);
-}
-
-.options-button {
-  background-color: var(--primary);
-  color: rgb(var(--foreground-rgb));
-  border: none;
-  padding: 8px 15px;
-  border-radius: 6px;
-  font-family: var(--font-sans);
-  font-size: 13px;
+label {
   font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding-left: 4px;
+}
+
+select, textarea {
   width: 100%;
-  margin-top: 10px;
+  background-color: rgba(0,0,0,0.2);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 14px;
+  box-sizing: border-box;
+  transition: all 0.2s ease-in-out;
 }
 
-.options-button:hover {
-  background-color: rgba(var(--primary-rgb), 0.85);
+select:focus, textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-blue);
+  background-color: rgba(0,0,0,0.3);
 }
 
-.options-button:active {
-  transform: scale(0.98);
+textarea {
+  resize: none;
+  height: 90px;
 }
 
-.popup-footer {
-  padding: 10px 15px;
-  background-color: rgba(var(--muted-rgb), 0.2);
-  border-top: 1px solid rgba(var(--border-rgb), 0.2);
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.action-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn.primary {
+  background: linear-gradient(45deg, var(--accent-blue), var(--accent-purple));
+  color: white;
+}
+
+.action-btn.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(122, 63, 222, 0.4);
+}
+
+.action-btn.secondary {
+  background: var(--glass-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-border);
+}
+
+.action-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.app-footer {
   text-align: center;
-  font-size: 11px;
-  color: var(--text-muted);
+  margin-top: 8px;
+  border-top: 1px solid var(--glass-border);
+  padding-top: 16px;
 }
 
-.popup-footer p {
-    margin: 0;
+.app-footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 12px;
+  transition: color 0.2s;
+}
+
+.app-footer a:hover {
+  color: var(--accent-blue);
 } 

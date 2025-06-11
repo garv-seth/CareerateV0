@@ -3,77 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Careerate Extension Settings</title>
+  <title>Careerate AI Settings</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <img src="../assets/icons/icon48.png" alt="Careerate Logo" class="logo">
-      <h1>Careerate Extension Settings</h1>
+      <h1>Careerate AI Settings</h1>
+      <p>Control what the AI agent can see and do on your behalf.</p>
     </header>
 
-    <main>
-      <section class="settings-section">
-        <h2>Activity Tracking</h2>
-        <div class="setting-item">
-          <label for="masterToggle">Enable Activity Tracking</label>
-          <div class="toggle-switch">
-            <input type="checkbox" id="masterToggle" class="toggle-input">
-            <label for="masterToggle" class="toggle-label"></label>
-          </div>
-        </div>
-        <p class="description">
-          Allow Careerate to analyze your professional activity to provide personalized insights and recommendations. 
-          Disabling this will turn off all monitoring features.
-        </p>
-      </section>
+    <section class="settings-section">
+      <h2>Permissions</h2>
+      <div class="setting-item">
+        <input type="checkbox" id="allow-page-reading" name="allow-page-reading">
+        <label for="allow-page-reading">
+          <strong>Read Page Content</strong>
+          <span>Allows the agent to read the text and structure of the pages you visit to provide context.</span>
+        </label>
+      </div>
+      <div class="setting-item">
+        <input type="checkbox" id="allow-form-filling" name="allow-form-filling">
+        <label for="allow-form-filling">
+          <strong>Automate Form Filling</strong>
+          <span>Allows the agent to fill in text boxes and select dropdowns based on your commands.</span>
+        </label>
+      </div>
+      <div class="setting-item">
+        <input type="checkbox" id="allow-clicking" name="allow-clicking">
+        <label for="allow-clicking">
+          <strong>Automate Clicks</strong>
+          <span>Allows the agent to click buttons and links to navigate and perform actions.</span>
+        </label>
+      </div>
+    </section>
 
-      <section class="settings-section" id="monitoringOptionsSection" style="display: none;">
-        <h2>Monitoring Preferences</h2>
-        <div class="setting-item">
-          <p>Choose your preferred monitoring level:</p>
-          <div class="radio-group">
-            <div class="radio-option">
-              <input type="radio" id="standardMonitoring" name="monitoringLevel" value="standard" checked>
-              <label for="standardMonitoring">Standard Monitoring</label>
-              <p class="description small">
-                Monitors active tab domain, page titles, and estimated time spent to infer general activity and tools used. 
-                <strong>Does not capture screenshots or detailed page content.</strong>
-              </p>
-            </div>
-            <div class="radio-option">
-              <input type="radio" id="enhancedMonitoring" name="monitoringLevel" value="enhanced">
-              <label for="enhancedMonitoring">Enhanced Monitoring (Requires Consent)</label>
-              <div class="consent-section" id="screenshotConsentSection" style="display: none;">
-                <div class="setting-item">
-                  <div class="toggle-switch mini">
-                    <input type="checkbox" id="screenshotConsent">
-                    <label for="screenshotConsent" class="toggle-label"></label>
-                  </div>
-                  <label for="screenshotConsent">I consent to periodic, anonymous screenshots of my active browser window.</label>
-                </div>
-                <p class="description small">
-                  Screenshots help Careerate understand your workflow in more detail to provide highly accurate tool and skill recommendations. 
-                  They are processed anonymously and focused on professional tools and websites. 
-                  You can revoke this consent at any time.
-                </p>
-              </div>
-               <p class="description small" id="enhancedDescriptionNoConsent">
-                  Enables more detailed analysis, potentially including screenshots if you provide consent below. 
-                  Without screenshot consent, enhanced mode may use other advanced (but non-intrusive) signals if developed in the future.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer>
-      <p>Careerate - Your AI Career Co-pilot</p>
-      <p id="statusMessage" class="status-message"></p>
-    </footer>
+    <button id="save-button" class="save-btn">Save Settings</button>
+    <div id="status-message"></div>
   </div>
-  <script type="module" src="index.ts"></script>
+  <script src="options.js"></script>
 </body>
 </html> 

@@ -3,24 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Careerate Extension</title>
+  <title>Careerate</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="popup-container">
-    <header class="popup-header">
-      <img src="../assets/icons/icon48.png" alt="Careerate Logo" class="logo">
-      <h2>Careerate</h2>
-    </header>
-    <main class="popup-content">
-      <p><strong>Status:</strong> <span id="trackingStatus">Loading...</span></p>
-      <p><strong>Mode:</strong> <span id="monitoringMode">-</span></p>
-      <button id="openOptionsPage" class="options-button">Settings</button>
-    </main>
-    <footer class="popup-footer">
-      <p>AI Career Acceleration</p>
-    </footer>
+  <div id="app-container">
+    <div class="glass-pane">
+      <header class="app-header">
+        <div class="logo">C</div>
+        <h1>Careerate</h1>
+      </header>
+      
+      <main>
+        <div class="input-group">
+          <label for="agent-select">Select Agent</label>
+          <select id="agent-select">
+            <option>Loading Agents...</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="question-input">Your Question</label>
+          <textarea id="question-input" rows="4" placeholder="e.g., How do I secure a Kubernetes cluster?"></textarea>
+        </div>
+        
+        <div class="actions">
+          <button id="analyze-button" class="action-btn secondary">Analyze Page</button>
+          <button id="submit-button" class="action-btn primary">Ask AI</button>
+        </div>
+      </main>
+
+      <footer class="app-footer">
+        <a href="#" id="open-dashboard">Open Full Dashboard</a>
+      </footer>
+    </div>
   </div>
-  <script type="module" src="index.ts"></script>
+  <script src="index.js"></script>
 </body>
 </html> 

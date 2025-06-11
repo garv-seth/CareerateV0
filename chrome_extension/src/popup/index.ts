@@ -1,54 +1,67 @@
 import { CareerateExtensionSettings, defaultSettings } from '@/types';
 
 document.addEventListener('DOMContentLoaded', () => {
-  const trackingStatusEl = document.getElementById('trackingStatus');
-  const monitoringModeEl = document.getElementById('monitoringMode');
-  const openOptionsButton = document.getElementById('openOptionsPage');
+  const agentSelect = document.getElementById('agent-select') as HTMLSelectElement;
+  const questionInput = document.getElementById('question-input') as HTMLTextAreaElement;
+  const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
+  const openDashboardLink = document.getElementById('open-dashboard') as HTMLAnchorElement;
 
-  // Load settings and update UI
-  chrome.storage.local.get(defaultSettings, (data) => {
-    const settings = data as CareerateExtensionSettings;
-    updatePopupUI(settings);
-  });
+  const API_BASE_URL = 'http://localhost:8000/api';
+  const WEB_APP_URL = 'http://localhost:3000';
 
-  // Listen for changes in storage to keep popup updated
-  chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === 'local') {
-      // Check if any of our specific settings changed
-      if (Object.keys(changes).some(key => key in defaultSettings)) {
-        chrome.storage.local.get(defaultSettings, (data) => {
-          const updatedSettings = data as CareerateExtensionSettings;
-          updatePopupUI(updatedSettings);
-        });
+  // Fetch agents and populate dropdown
+  const fetchAgents = async () => {
+    if (!agentSelect) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/mcp/servers`);
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      
+      const data = await response.json();
+      if (!data.servers || !Array.isArray(data.servers)) {
+        throw new Error("Invalid data structure from API.");
+      }
+
+      agentSelect.innerHTML = ''; // Clear "Loading..."
+      data.servers.forEach((agent: { id: string; name: string }) => {
+        const option = document.createElement('option');
+        option.value = agent.id;
+        option.textContent = agent.name;
+        agentSelect.appendChild(option);
+      });
+    } catch (error) {
+      console.error('Failed to fetch agents:', error);
+      if (agentSelect) {
+        agentSelect.innerHTML = '<option>Error loading agents</option>';
       }
     }
-  });
+  };
 
-  if (openOptionsButton) {
-    openOptionsButton.addEventListener('click', () => {
-      chrome.runtime.openOptionsPage();
-    });
+  // Open the full dashboard
+  const openDashboard = (e: MouseEvent) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: `${WEB_APP_URL}/dashboard` });
+  };
+
+  const handleSubmit = () => {
+    const selectedAgent = agentSelect.value;
+    const question = questionInput.value;
+    if (!question.trim()) {
+      questionInput.focus();
+      return;
+    }
+
+    const url = new URL(`${WEB_APP_URL}/dashboard`);
+    url.searchParams.set('agent', selectedAgent);
+    url.searchParams.set('q', question);
+    chrome.tabs.create({ url: url.toString() });
+  };
+
+  // Add event listeners
+  fetchAgents();
+  if (openDashboardLink) {
+    openDashboardLink.addEventListener('click', openDashboard);
   }
-
-  function updatePopupUI(settings: CareerateExtensionSettings) {
-    if (trackingStatusEl) {
-      if (settings.isTrackingEnabled) {
-        trackingStatusEl.textContent = 'Enabled';
-        trackingStatusEl.className = 'enabled';
-      } else {
-        trackingStatusEl.textContent = 'Disabled';
-        trackingStatusEl.className = 'disabled';
-      }
-    }
-    if (monitoringModeEl) {
-      if (settings.isTrackingEnabled) {
-        monitoringModeEl.textContent = settings.monitoringLevel === 'enhanced' ? 'Enhanced' : 'Standard';
-        if (settings.monitoringLevel === 'enhanced' && !settings.screenshotConsentGiven) {
-            monitoringModeEl.textContent += ' (No Screenshots)';
-        }
-      } else {
-        monitoringModeEl.textContent = '-';
-      }
-    }
+  if (submitButton) {
+    submitButton.addEventListener('click', handleSubmit);
   }
 }); 

@@ -1,36 +1,31 @@
 {
   "manifest_version": 3,
-  "name": "Careerate AI DevOps Team",
+  "name": "Careerate AI",
   "version": "1.0.0",
-  "description": "Your AI engineering team for DevOps and SRE. Provides context-aware assistance and automation.",
+  "description": "AI Pair Programmer for DevOps & SRE. Your personal AI engineering team.",
   "permissions": [
     "storage",
     "activeTab",
     "scripting"
   ],
   "host_permissions": [
-    "https://*.github.com/*",
-    "https://*.console.aws.amazon.com/*",
-    "<all_urls>"
+    "http://localhost:8000/*"
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/popup/index.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
-  "background": {
-    "service_worker": "background.js"
-  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content_script.js"],
-      "run_at": "document_idle"
+      "js": ["src/content_script.js"]
     }
   ],
+  "options_page": "src/options/index.html",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
