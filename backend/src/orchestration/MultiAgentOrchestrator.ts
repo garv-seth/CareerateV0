@@ -1,5 +1,5 @@
 import { BaseMessage, HumanMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
-import { IAgent, IAgentTool } from '../agents/BaseAgent';
+import { IAgent } from '../agents/BaseAgent';
 import { TerraAgent } from '../agents/TerraAgent';
 import { KubeAgent } from '../agents/KubeAgent';
 import { MetricAgent } from '../agents/MetricAgent';

@@ -3,14 +3,9 @@ import { ChatAnthropic } from '@langchain/anthropic';
 import { BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import { ITool } from '../tools/BaseTool';
 import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
-// Defines the tools an agent can use (e.g., AWS CLI, kubectl)
-export interface IAgentTool {
-  name: string;
-  description: string;
-  // A function that executes the tool with given arguments
-  execute(args: any): Promise<string>;
-}
+export type { ITool };
 
 // Defines the personality and capabilities of an agent
 export interface IAgentPersonality {
@@ -78,7 +73,7 @@ export abstract class BaseAgent implements IAgent {
           function: {
             name: t.name,
             description: t.description,
-            parameters: t.schema.input.openapi('ToolInput'),
+            parameters: zodToJsonSchema(t.schema.input, "ToolInput"),
           },
         })),
       });

@@ -1,5 +1,4 @@
-import { BaseMessage } from '@langchain/core/messages';
-import { BaseAgent, IAgent, IAgentPersonality, IAgentTool } from './BaseAgent';
+import { BaseAgent, IAgent, IAgentPersonality } from './BaseAgent';
 
 // Define the personality for our Incident Response Intern
 const personality: IAgentPersonality = {
