@@ -29,25 +29,31 @@ jobs:
 
       - name: Build backend
         run: npm run build --workspace=backend
-      
-      - name: Prune dev dependencies (monorepo)
-        run: npm prune --omit=dev --workspace=backend
 
       - name: Create deployment package
         run: |
+          # Create a directory for the deployment package
           mkdir -p release
-          # Copy backend files
-          cp -r backend/dist/ release/dist
-          cp -r backend/node_modules/ release/node_modules
-          cp backend/package.json release/package.json
-          cp backend/startup.sh release/startup.sh
 
-          # Copy frontend build
-          cp -r frontend/dist/ release/frontend/dist
+          # Copy backend build output and necessary files
+          cp -r backend/dist release/
+          cp backend/package.json release/
+          cp backend/package-lock.json release/
+          cp backend/startup.sh release/
+          
+          # Copy frontend build output to the structure the server expects
+          mkdir -p release/frontend
+          cp -r frontend/dist release/frontend/
 
-          # Zip the contents for deployment
+          # Install production dependencies for the backend inside the release directory
+          echo "--- Installing production dependencies in release directory ---"
           cd release
+          npm install --omit=dev
+          
+          # Zip the contents for deployment
+          echo "--- Zipping deployment package ---"
           zip -r ../release.zip .
+          echo "--- Deployment package created ---"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
