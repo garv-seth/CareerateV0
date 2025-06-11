@@ -24,26 +24,28 @@
     </div>
 
     <!-- Main Content -->
-    <div class="popup-content" style="text-align:center;">
-      <div class="welcome-message" id="welcomeMessage">
-        <h2 style="color:#3b82f6;">Welcome to Careerate!</h2>
-        <p style="color:#7c3aed;">Your AI-powered career acceleration platform.</p>
+    <div class="popup-content">
+      <div class="agent-selector-container">
+        <label for="agentSelector" class="agent-label">Select Agent:</label>
+        <select id="agentSelector" class="agent-selector">
+          <option value="Auto" selected>🤖 Auto-Select</option>
+          <!-- Options will be populated by popup.js -->
+        </select>
       </div>
-      <div class="stats">
-        <div class="stat">
-          <span class="stat-value">0</span>
-          <span class="stat-label">AI Tools Found</span>
+      
+      <div class="chat-container">
+        <div id="chatMessages" class="chat-messages">
+          <!-- Chat messages will be appended here -->
         </div>
-        <div class="stat">
-          <span class="stat-value">0</span>
-          <span class="stat-label">Insights</span>
+        <div class="chat-input-container">
+          <textarea id="chatInput" class="chat-input" placeholder="Ask your AI team..."></textarea>
+          <button id="sendMessage" class="send-button">➤</button>
         </div>
       </div>
+      
       <div class="actions">
-        <button id="analyzePage" class="footer-button" style="background:linear-gradient(90deg,#3b82f6,#7c3aed);color:#fff;">Analyze This Page</button>
-        <button id="viewInsights" class="footer-button" style="background:linear-gradient(90deg,#7c3aed,#3b82f6);color:#fff;">View Insights</button>
-        <button id="openDashboard" class="footer-button" style="background:linear-gradient(90deg,#3b82f6,#7c3aed);color:#fff;">Open Dashboard</button>
-        <button id="settings" class="footer-button" style="background:linear-gradient(90deg,#7c3aed,#3b82f6);color:#fff;">Settings</button>
+        <button id="openDashboard" class="footer-button">Dashboard</button>
+        <button id="settings" class="footer-button">Settings</button>
       </div>
     </div>
 

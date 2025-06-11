@@ -318,4 +318,135 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (statValues[1]) statValues[1].textContent = message.insights || '0';
         }
     });
+
+    const agentSelector = document.getElementById('agentSelector');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const sendMessage = document.getElementById('sendMessage');
+    const openDashboard = document.getElementById('openDashboard');
+
+    let conversationHistory = [];
+
+    // Fetch agents and populate selector
+    async function populateAgents() {
+        try {
+            const response = await fetch(`${CAREERATE_API_URL}/agents`);
+            if (!response.ok) throw new Error('Failed to fetch agents');
+            const agents = await response.json();
+            
+            agents.forEach(agent => {
+                const option = document.createElement('option');
+                option.value = agent.name;
+                option.textContent = `${agent.icon} ${agent.name} - ${agent.expertise}`;
+                agentSelector.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error populating agents:', error);
+            addMessage('system', 'Error: Could not load AI agents from the server.');
+        }
+    }
+
+    // Add a message to the chat window
+    function addMessage(sender, text, agentInfo = null) {
+        const messageEl = document.createElement('div');
+        messageEl.classList.add('message', `${sender}-message`);
+
+        if (sender === 'assistant' && agentInfo) {
+            messageEl.innerHTML = `
+                <div class="agent-avatar">${agentInfo.icon}</div>
+                <div class="message-content">
+                    <div class="agent-name">${agentInfo.name}</div>
+                    <div class="text"></div>
+                </div>
+            `;
+            messageEl.querySelector('.text').textContent = text;
+        } else {
+            messageEl.innerHTML = `<div class="message-content"><div class="text"></div></div>`;
+            messageEl.querySelector('.text').textContent = text;
+        }
+        
+        chatMessages.appendChild(messageEl);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return messageEl;
+    }
+
+    // Handle sending a message
+    async function handleSendMessage() {
+        const messageText = chatInput.value.trim();
+        if (!messageText) return;
+
+        addMessage('user', messageText);
+        conversationHistory.push({ role: 'user', content: messageText });
+        chatInput.value = '';
+        
+        const selectedAgent = agentSelector.value;
+        let assistantMessageEl = null;
+        let agentPersonality = null;
+
+        try {
+            const response = await fetch(`${CAREERATE_API_URL}/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: conversationHistory,
+                    agent: selectedAgent,
+                    context: { url: window.location.href }
+                }),
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n\n');
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const eventData = JSON.parse(line.substring(6));
+                        
+                        if (eventData.type === 'agent_selected') {
+                            agentPersonality = eventData.data;
+                            assistantMessageEl = addMessage('assistant', '', agentPersonality);
+                        } else if (eventData.type === 'chunk' && assistantMessageEl) {
+                            const textNode = assistantMessageEl.querySelector('.text');
+                            textNode.textContent += eventData.data;
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        } else if (eventData.type === 'complete') {
+                            // Optionally handle completion
+                        }
+                    }
+                }
+            }
+            // Add final response to history
+            if(assistantMessageEl) {
+                const finalResponse = assistantMessageEl.querySelector('.text').textContent;
+                conversationHistory.push({ role: 'assistant', content: finalResponse });
+            }
+
+        } catch (error) {
+            console.error('Chat error:', error);
+            addMessage('system', 'Error: Could not connect to the AI service.');
+        }
+    }
+
+    // Event Listeners
+    sendMessage.addEventListener('click', handleSendMessage);
+    chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    });
+    
+    openDashboard.addEventListener('click', () => {
+        chrome.tabs.create({ url: CAREERATE_DASHBOARD_URL });
+    });
+
+    // Initialization
+    addMessage('system', 'Welcome to your AI Engineering Team! Select an agent and ask a question.');
+    populateAgents();
 }); 

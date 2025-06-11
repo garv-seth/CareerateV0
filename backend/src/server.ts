@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
@@ -12,12 +12,12 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-// Import actual services with graceful degradation
+// New Orchestrator
+import { MultiAgentOrchestrator } from './orchestration/MultiAgentOrchestrator';
+
+// Import services and routes
 import { AzureSecretsManager } from './services/AzureSecretsManager';
 import { AzureB2CAuth } from './services/AzureB2CAuth';
-import { SimpleAgentOrchestrator } from './services/SimpleAgentOrchestrator';
-
-// Import routes
 import authRoutes from './routes/auth';
 import workspaceRoutes from './routes/workspace';
 import mcpRoutes from './routes/mcp';
@@ -43,7 +43,7 @@ class CareerateServer {
   private io: SocketIOServer;
   private secretsManager: AzureSecretsManager;
   private authService: AzureB2CAuth | null = null;
-  private agentOrchestrator: SimpleAgentOrchestrator;
+  private agentOrchestrator: MultiAgentOrchestrator;
   private isInitialized = false;
 
   constructor() {
@@ -58,7 +58,7 @@ class CareerateServer {
 
     // Initialize services
     this.secretsManager = new AzureSecretsManager();
-    this.agentOrchestrator = new SimpleAgentOrchestrator();
+    this.agentOrchestrator = new MultiAgentOrchestrator();
 
     this.initialize();
   }
@@ -233,68 +233,31 @@ class CareerateServer {
     });
 
     // Real AI chat endpoint with streaming
-    this.app.post('/api/chat', async (req, res) => {
+    this.app.post('/api/chat', async (req: Request, res: Response) => {
       try {
-        const { message, agentType = 'general', context, userId = 'anonymous' } = req.body;
+        const { messages, agent, context } = req.body;
         
-        if (!message) {
-          return res.status(400).json({ error: 'Message is required' });
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+          return res.status(400).json({ error: 'Messages array is required' });
         }
 
-        // Set up SSE headers for streaming
         res.writeHead(200, {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Cache-Control'
         });
 
-        try {
-          // Use real agent orchestrator
-          const responseGenerator = this.agentOrchestrator.streamResponse({
-            message,
-            agentType,
-            context,
-            userId
-          });
+        const responseGenerator = this.agentOrchestrator.invoke({
+          messages,
+          requestedAgent: agent || 'Auto',
+          context,
+        });
 
-          let fullResponse = '';
-          for await (const chunk of responseGenerator) {
-            if (chunk.type === 'message') {
-              fullResponse += chunk.content;
-              res.write(`data: ${JSON.stringify({
-                type: 'chunk',
-                content: chunk.content,
-                timestamp: chunk.timestamp
-              })}\n\n`);
-            } else if (chunk.type === 'complete') {
-              res.write(`data: ${JSON.stringify({
-                type: 'complete',
-                fullResponse,
-                agentUsed: chunk.agentUsed,
-                timestamp: chunk.timestamp
-              })}\n\n`);
-              break;
-            } else if (chunk.type === 'error') {
-              res.write(`data: ${JSON.stringify({
-                type: 'error',
-                error: chunk.content,
-                timestamp: chunk.timestamp
-              })}\n\n`);
-              break;
-            }
-          }
-        } catch (streamError) {
-          logger.error('Streaming error:', streamError);
-          res.write(`data: ${JSON.stringify({
-            type: 'error',
-            error: 'AI service temporarily unavailable',
-            timestamp: new Date()
-          })}\n\n`);
+        for await (const event of responseGenerator) {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
         }
-
         res.end();
+
       } catch (error) {
         logger.error('Chat endpoint error:', error);
         res.status(500).json({ 
@@ -305,9 +268,9 @@ class CareerateServer {
     });
 
     // Get available agents
-    this.app.get('/api/agents', async (req, res) => {
+    this.app.get('/api/agents', (req: Request, res: Response) => {
       try {
-        const agents = await this.agentOrchestrator.getAvailableAgents();
+        const agents = this.agentOrchestrator.getAvailableAgents();
         res.json(agents);
       } catch (error) {
         logger.error('Agents endpoint error:', error);
