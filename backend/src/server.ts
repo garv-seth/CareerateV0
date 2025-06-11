@@ -8,6 +8,16 @@ import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import path from 'path';
 
+// Import actual services
+import { AzureSecretsManager } from './services/AzureSecretsManager';
+import { AzureB2CAuth } from './services/AzureB2CAuth';
+import { SimpleAgentOrchestrator } from './services/SimpleAgentOrchestrator';
+
+// Import routes
+import authRoutes from './routes/auth';
+import workspaceRoutes from './routes/workspace';
+import mcpRoutes from './routes/mcp';
+
 // Logger setup
 const logger = winston.createLogger({
   level: 'info',
@@ -27,6 +37,9 @@ class CareerateServer {
   private app: express.Application;
   private server: any;
   private io: SocketIOServer;
+  private secretsManager: AzureSecretsManager;
+  private authService: AzureB2CAuth;
+  private agentOrchestrator: SimpleAgentOrchestrator;
 
   constructor() {
     this.app = express();
@@ -37,6 +50,26 @@ class CareerateServer {
         credentials: true
       }
     });
+
+    // Initialize services
+    this.secretsManager = new AzureSecretsManager();
+    this.authService = new AzureB2CAuth(this.secretsManager);
+    this.agentOrchestrator = new SimpleAgentOrchestrator();
+
+    this.initialize();
+  }
+
+  private async initialize() {
+    try {
+      // Initialize services
+      await this.secretsManager.initialize();
+      await this.authService.initialize();
+      await this.agentOrchestrator.initialize();
+      
+      console.log('✅ All services initialized');
+    } catch (error) {
+      console.warn('⚠️  Some services failed to initialize:', error);
+    }
 
     this.setupMiddleware();
     this.setupRoutes();
@@ -71,6 +104,11 @@ class CareerateServer {
   }
 
   private setupRoutes() {
+    // Use actual route handlers
+    this.app.use('/api/auth', authRoutes);
+    this.app.use('/api/workspace', workspaceRoutes);
+    this.app.use('/api/mcp', mcpRoutes);
+
     // API info route - for checking if API is running
     this.app.get('/api', (req, res) => {
       res.json({
@@ -79,7 +117,10 @@ class CareerateServer {
         endpoints: {
           health: '/health',
           chat: 'POST /api/chat',
-          agents: 'GET /api/agents'
+          agents: 'GET /api/agents',
+          auth: '/api/auth/*',
+          workspace: '/api/workspace/*',
+          mcp: '/api/mcp/*'
         },
         timestamp: new Date().toISOString()
       });
@@ -98,24 +139,67 @@ class CareerateServer {
       });
     });
 
-    // Simple AI chat endpoint
+    // Real AI chat endpoint with streaming
     this.app.post('/api/chat', async (req, res) => {
       try {
-        const { message, agentType = 'general' } = req.body;
+        const { message, agentType = 'general', context, userId = 'anonymous' } = req.body;
         
         if (!message) {
           return res.status(400).json({ error: 'Message is required' });
         }
 
-        // Mock AI response for now
-        const mockResponse = this.generateMockResponse(message, agentType);
-        
-        res.json({
-          id: uuidv4(),
-          message: mockResponse,
-          agentType,
-          timestamp: new Date().toISOString()
+        // Set up SSE headers for streaming
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Cache-Control'
         });
+
+        try {
+          // Use real agent orchestrator
+          const responseGenerator = this.agentOrchestrator.streamResponse({
+            message,
+            agentType,
+            context,
+            userId
+          });
+
+          let fullResponse = '';
+          for await (const chunk of responseGenerator) {
+            if (chunk.type === 'message') {
+              fullResponse += chunk.content;
+              res.write(`data: ${JSON.stringify({
+                type: 'chunk',
+                content: chunk.content,
+                timestamp: chunk.timestamp
+              })}\n\n`);
+            } else if (chunk.type === 'complete') {
+              res.write(`data: ${JSON.stringify({
+                type: 'complete',
+                fullResponse,
+                agentUsed: chunk.agentUsed,
+                timestamp: chunk.timestamp
+              })}\n\n`);
+              break;
+            } else if (chunk.type === 'error') {
+              res.write(`data: ${JSON.stringify({
+                type: 'error',
+                error: chunk.content
+              })}\n\n`);
+              break;
+            }
+          }
+        } catch (streamError) {
+          console.error('Streaming error:', streamError);
+          res.write(`data: ${JSON.stringify({
+            type: 'error',
+            error: 'AI service temporarily unavailable'
+          })}\n\n`);
+        }
+
+        res.end();
         
       } catch (error) {
         logger.error('Chat error:', error);
@@ -123,16 +207,15 @@ class CareerateServer {
       }
     });
 
-    // Agent types endpoint
-    this.app.get('/api/agents', (req, res) => {
-      res.json([
-        { id: 'terraform', name: 'Terraform Expert', description: 'Infrastructure as Code specialist' },
-        { id: 'kubernetes', name: 'Kubernetes Expert', description: 'Container orchestration specialist' },
-        { id: 'aws', name: 'AWS Expert', description: 'Cloud services specialist' },
-        { id: 'monitoring', name: 'Monitoring Expert', description: 'Observability specialist' },
-        { id: 'incident', name: 'Incident Response', description: 'Emergency response specialist' },
-        { id: 'general', name: 'DevOps General', description: 'General DevOps assistant' }
-      ]);
+    // Agent types endpoint - now from real orchestrator
+    this.app.get('/api/agents', async (req, res) => {
+      try {
+        const agents = await this.agentOrchestrator.getAvailableAgents();
+        res.json(agents);
+      } catch (error) {
+        logger.error('Error fetching agents:', error);
+        res.status(500).json({ error: 'Failed to fetch agents' });
+      }
     });
 
     // Handle common bot requests
