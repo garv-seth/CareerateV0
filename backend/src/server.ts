@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
+import path from 'path';
 
 // Logger setup
 const logger = winston.createLogger({
@@ -63,11 +64,15 @@ class CareerateServer {
     // Body parsing
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true }));
+
+    // Serve static files from public directory (frontend build)
+    const publicPath = path.join(__dirname, '..', 'public');
+    this.app.use(express.static(publicPath));
   }
 
   private setupRoutes() {
-    // Root route - what you're probably hitting
-    this.app.get('/', (req, res) => {
+    // API info route - for checking if API is running
+    this.app.get('/api', (req, res) => {
       res.json({
         message: '🚀 Careerate API is running!',
         version: '1.0.0',
@@ -140,19 +145,34 @@ class CareerateServer {
       res.status(204).end();
     });
 
-    // Catch all with better debugging
-    this.app.use('*', (req, res) => {
-      logger.warn(`404 - Route not found: ${req.method} ${req.originalUrl}`);
-      res.status(404).json({ 
-        error: 'Route not found',
-        method: req.method,
-        url: req.originalUrl,
-        availableRoutes: [
-          'GET /',
-          'GET /health', 
-          'GET /api/agents',
-          'POST /api/chat'
-        ]
+    // Catch all non-API routes and serve the frontend app (SPA routing)
+    this.app.get('*', (req, res) => {
+      // If it's an API route that wasn't found, return JSON error
+      if (req.originalUrl.startsWith('/api/')) {
+        logger.warn(`404 - API route not found: ${req.method} ${req.originalUrl}`);
+        return res.status(404).json({ 
+          error: 'API route not found',
+          method: req.method,
+          url: req.originalUrl,
+          availableRoutes: [
+            'GET /api',
+            'GET /health', 
+            'GET /api/agents',
+            'POST /api/chat'
+          ]
+        });
+      }
+
+      // For all other routes, serve the frontend app
+      const indexPath = path.join(__dirname, '..', 'public', 'index.html');
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          logger.error('Error serving index.html:', err);
+          res.status(500).json({ 
+            error: 'Frontend not available',
+            message: 'The frontend application could not be loaded'
+          });
+        }
       });
     });
   }
