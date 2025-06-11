@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { body, param, query } from 'express-validator';
 import { validateRequest } from '../middleware/validation';
 import { RealTimeCollaboration } from '../services/RealTimeCollaboration';
@@ -39,12 +39,12 @@ router.get('/', async (req, res) => {
 /**
  * Create new workspace
  */
-router.post('/',
+router.post('/', [
   body('name').isString().isLength({ min: 1, max: 100 }),
   body('description').optional().isString().isLength({ max: 500 }),
   body('isPrivate').optional().isBoolean(),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const userId = (req as any).user.id;
       const { name, description, isPrivate = true } = req.body;
@@ -73,10 +73,10 @@ router.post('/',
 /**
  * Get workspace details
  */
-router.get('/:workspaceId',
+router.get('/:workspaceId', [
   param('workspaceId').isString().isLength({ min: 1 }),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
@@ -100,13 +100,13 @@ router.get('/:workspaceId',
 /**
  * Update workspace
  */
-router.put('/:workspaceId',
+router.put('/:workspaceId', [
   param('workspaceId').isString().isLength({ min: 1 }),
   body('name').optional().isString().isLength({ min: 1, max: 100 }),
   body('description').optional().isString().isLength({ max: 500 }),
   body('isPrivate').optional().isBoolean(),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
@@ -131,10 +131,10 @@ router.put('/:workspaceId',
 /**
  * Delete workspace
  */
-router.delete('/:workspaceId',
+router.delete('/:workspaceId', [
   param('workspaceId').isString().isLength({ min: 1 }),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
@@ -158,10 +158,10 @@ router.delete('/:workspaceId',
 /**
  * Get workspace members
  */
-router.get('/:workspaceId/members',
+router.get('/:workspaceId/members', [
   param('workspaceId').isString().isLength({ min: 1 }),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
@@ -185,12 +185,12 @@ router.get('/:workspaceId/members',
 /**
  * Invite user to workspace
  */
-router.post('/:workspaceId/invite',
+router.post('/:workspaceId/invite', [
   param('workspaceId').isString().isLength({ min: 1 }),
   body('email').isEmail(),
   body('role').optional().isIn(['viewer', 'editor', 'admin']),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const workspaceId = req.params?.workspaceId as string;
       const { email, role = 'editor' } = req.body;
@@ -215,11 +215,11 @@ router.post('/:workspaceId/invite',
 /**
  * Remove member from workspace
  */
-router.delete('/:workspaceId/members/:memberId',
+router.delete('/:workspaceId/members/:memberId', [
   param('workspaceId').isString().isLength({ min: 1 }),
   param('memberId').isString().isLength({ min: 1 }),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const workspaceId = req.params?.workspaceId as string;
       const memberId = req.params?.memberId as string;
@@ -244,10 +244,10 @@ router.delete('/:workspaceId/members/:memberId',
 /**
  * Get workspace sessions (active collaborations)
  */
-router.get('/:workspaceId/sessions',
+router.get('/:workspaceId/sessions', [
   param('workspaceId').isString().isLength({ min: 1 }),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const workspaceId = req.params?.workspaceId as string;
       const userId = (req as any).user.id;
@@ -271,11 +271,11 @@ router.get('/:workspaceId/sessions',
 /**
  * Join workspace session
  */
-router.post('/:workspaceId/join',
+router.post('/:workspaceId/join', [
   param('workspaceId').isString().isLength({ min: 1 }),
   body('sessionId').optional().isString(),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const workspaceId = req.params?.workspaceId as string;
       const { sessionId } = req.body;
@@ -300,12 +300,12 @@ router.post('/:workspaceId/join',
 /**
  * Share context in workspace
  */
-router.post('/:workspaceId/context',
+router.post('/:workspaceId/context', [
   param('workspaceId').isString().isLength({ min: 1 }),
   body('context').isObject(),
   body('sessionId').optional().isString(),
-  validateRequest,
-  async (req, res) => {
+  validateRequest
+], async (req: Request, res: Response) => {
     try {
       const workspaceId = req.params?.workspaceId as string;
       const { context, sessionId } = req.body;

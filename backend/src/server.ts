@@ -241,12 +241,13 @@ class CareerateServer {
     });
 
     // Real AI chat endpoint with streaming
-    this.app.post('/api/chat', async (req: Request, res: Response) => {
+    this.app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
       try {
         const { messages, agent, context } = req.body;
         
         if (!messages || !Array.isArray(messages) || messages.length === 0) {
-          return res.status(400).json({ error: 'Messages array is required' });
+           res.status(400).json({ error: 'Messages array is required' });
+           return;
         }
 
         res.writeHead(200, {
@@ -268,10 +269,14 @@ class CareerateServer {
 
       } catch (error) {
         logger.error('Chat endpoint error:', error);
-        res.status(500).json({ 
-          error: 'Internal server error',
-          message: 'Chat service temporarily unavailable'
-        });
+        if (!res.headersSent) {
+          res.status(500).json({ 
+            error: 'Internal server error',
+            message: 'Chat service temporarily unavailable'
+          });
+        } else {
+           res.end();
+        }
       }
     });
 
