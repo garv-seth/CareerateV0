@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAgents } from '../lib/api';
 import ChatWindow from '../components/chat/ChatWindow';
+import { useMsal } from '@azure/msal-react';
 
 // Define types for clarity
 interface Agent {
@@ -11,15 +12,19 @@ interface Agent {
 }
 
 const DashboardPage = () => {
+  const { accounts } = useMsal();
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const { data: agents, isLoading, error } = useQuery<Agent[]>({
     queryKey: ['agents'],
     queryFn: getAgents,
   });
 
+  const userName = accounts[0]?.name || 'User';
+
   return (
-    <div className="container mx-auto px-4 py-8 text-white">
-      <h1 className="text-4xl font-bold mb-8 text-center">AI Agent Dashboard</h1>
+    <div className="container mx-auto px-4 py-8 text-white animate-fade-in">
+      <h1 className="text-4xl font-bold mb-2 text-center">Welcome, {userName}!</h1>
+      <p className="text-center text-gray-400 mb-8">Select an AI agent to get started.</p>
 
       {isLoading && <p className="text-center">Loading agents...</p>}
       {error && <p className="text-center text-red-500">Error: Could not load AI agents from the server.</p>}

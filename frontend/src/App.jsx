@@ -1,17 +1,31 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { MsalProvider, useIsAuthenticated } from '@azure/msal-react';
+import { MsalProvider, useIsAuthenticated, useMsal } from '@azure/msal-react';
+import { InteractionStatus } from '@azure/msal-browser';
 import { PublicClientApplication } from '@azure/msal-browser';
 
 import DashboardPage from './pages/DashboardPage';
 import LandingPage from './pages/LandingPage';
 import { msalConfig } from './config/authConfig';
+import { loginRequest } from "./config/authConfig";
 
 const msalInstance = new PublicClientApplication(msalConfig);
 
 const PrivateRoute = ({ children }) => {
+  const { instance, inProgress } = useMsal();
   const isAuthenticated = useIsAuthenticated();
-  return isAuthenticated ? children : <Navigate to="/" />;
+
+  React.useEffect(() => {
+    if (!isAuthenticated && inProgress === InteractionStatus.None) {
+      instance.loginRedirect(loginRequest);
+    }
+  }, [isAuthenticated, inProgress, instance]);
+
+  if (isAuthenticated) {
+    return children;
+  }
+
+  return <div>Loading...</div>; // Or a loading spinner
 };
 
 function App() {
