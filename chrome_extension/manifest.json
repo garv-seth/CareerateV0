@@ -1,68 +1,44 @@
 {
   "manifest_version": 3,
-  "name": "Careerate - AI DevOps Assistant",
+  "name": "Careerate AI DevOps Team",
   "version": "1.0.0",
-  "description": "AI-powered assistance for DevOps and SRE engineers with privacy-first context collection",
+  "description": "Your AI engineering team for DevOps and SRE. Provides context-aware assistance and automation.",
   "permissions": [
-    "activeTab",
     "storage",
-    "contextMenus",
+    "activeTab",
     "scripting"
   ],
   "host_permissions": [
-    "https://github.com/*",
-    "https://console.aws.amazon.com/*",
-    "https://portal.azure.com/*",
-    "https://console.cloud.google.com/*",
-    "https://grafana.com/*",
-    "https://app.datadoghq.com/*",
-    "https://stackoverflow.com/*"
+    "https://*.github.com/*",
+    "https://*.console.aws.amazon.com/*",
+    "<all_urls>"
   ],
   "action": {
-    "default_popup": "popup/popup.html",
-    "default_title": "Careerate AI Assistant",
+    "default_popup": "popup.html",
     "default_icon": {
-      "16": "icons/icon-16.png",
-      "32": "icons/icon-32.png",
-      "48": "icons/icon-48.png",
-      "128": "icons/icon-128.png"
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
     }
   },
-  "icons": {
-    "16": "icons/icon-16.png",
-    "32": "icons/icon-32.png",
-    "48": "icons/icon-48.png",
-    "128": "icons/icon-128.png"
-  },
   "background": {
-    "service_worker": "background/service-worker.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["https://github.com/*"],
-      "js": ["content/github-detector.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": [
-        "https://console.aws.amazon.com/*",
-        "https://portal.azure.com/*",
-        "https://console.cloud.google.com/*"
-      ],
-      "js": ["content/cloud-console-detector.js"],
-      "run_at": "document_idle"
-    },
-    {
-      "matches": ["https://grafana.com/*", "https://app.datadoghq.com/*"],
-      "js": ["content/monitoring-detector.js"],
+      "matches": ["<all_urls>"],
+      "js": ["src/content_script.js"],
       "run_at": "document_idle"
     }
   ],
-  "options_page": "options/settings.html",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "web_accessible_resources": [
     {
-      "resources": ["content/injected-scripts/*.js"],
+      "resources": ["icons/*.png"],
       "matches": ["<all_urls>"]
     }
   ]

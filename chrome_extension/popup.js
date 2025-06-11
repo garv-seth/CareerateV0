@@ -207,6 +207,22 @@ async function checkApiHealth() {
     }
 }
 
+// Get context from the content script in the active tab
+async function getPageContext() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab) {
+      const response = await chrome.tabs.sendMessage(tab.id, { action: 'getContext' });
+      return response || { tool: 'Unknown', context: 'General' };
+    }
+  } catch (error) {
+    console.error('Could not get page context:', error.message);
+    // This can happen on special pages like chrome://extensions
+    return { tool: 'Browser', context: 'Special Page' };
+  }
+  return { tool: 'Unknown', context: 'No active tab' };
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     // Set DOM elements
@@ -413,6 +429,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         let assistantMessageEl = null;
         let agentPersonality = null;
 
+        // Get context from the active page
+        const pageContext = await getPageContext();
+        
+        // Display the context to the user
+        addMessage('system', `Context: ${pageContext.tool} - ${pageContext.context}`);
+
         try {
             const response = await fetch(`${CAREERATE_API_URL}/chat`, {
                 method: 'POST',
@@ -420,7 +442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 body: JSON.stringify({
                     messages: conversationHistory,
                     agent: selectedAgent,
-                    context: { url: window.location.href }
+                    context: pageContext // Pass the context to the backend
                 }),
             });
 
