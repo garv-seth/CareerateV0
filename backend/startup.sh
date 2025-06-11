@@ -31,7 +31,12 @@ fi
 
 # Build the backend
 echo "🔨 Building backend..."
-npm run build
+# Use direct tsc since we're in the backend directory and workspaces don't work in Azure
+if command -v tsc &> /dev/null; then
+    tsc
+else
+    npx tsc
+fi
 
 # Create public directory and copy frontend build if it exists
 echo "🌐 Setting up frontend assets..."

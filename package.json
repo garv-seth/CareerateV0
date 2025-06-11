@@ -6,17 +6,22 @@
   "main": "backend/dist/server.js",
   "scripts": {
     "start": "cd backend && node dist/server.js",
-    "build": "npm run build:frontend && npm run build:backend",
-    "build:frontend": "cd frontend && npm ci && npm run build",
-    "build:backend": "cd backend && npm ci && npm run build",
+    "build": "npm run build:frontend:direct && npm run build --workspace=backend",
+    "build:frontend": "npm run build:frontend:direct",
+    "build:frontend:direct": "cd frontend && npx vite build",
+    "build:backend": "npm run build --workspace=backend",
+    "build:local": "cd frontend && npm ci && npm run build && cd ../backend && npm ci && npm run build",
     "dev": "concurrently \"npm run frontend:dev\" \"npm run backend:dev\"",
-    "frontend:dev": "cd frontend && npm run dev",
-    "backend:dev": "cd backend && npm run dev",
+    "frontend:dev": "npm run dev --workspace=frontend",
+    "backend:dev": "npm run dev --workspace=backend",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "cd frontend && npm run preview",
-    "postinstall": "npm run install:all",
+    "preview": "npm run preview --workspace=frontend",
     "install:all": "cd backend && npm ci && cd ../frontend && npm ci"
   },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "dependencies": {
     "@azure/identity": "^4.10.0",
     "@azure/keyvault-secrets": "^4.9.0",

@@ -35,7 +35,12 @@ fi
 
 # Build the application
 echo "🔨 Building backend..."
-npm run build
+# Use direct tsc since we're in the backend directory
+if command -v tsc &> /dev/null; then
+    tsc
+else
+    npx tsc
+fi
 
 # Copy frontend assets if available
 echo "🌐 Setting up frontend assets..."
