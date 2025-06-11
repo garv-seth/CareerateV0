@@ -416,6 +416,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         return messageEl;
     }
 
+    // Add an "agent delegation" message to the UI
+    function addAgentDelegationMessage(agentName, task) {
+        const messageEl = addMessage('system', '');
+        messageEl.innerHTML = `
+            <div class="agent-delegation">
+                <div class="delegation-icon">🤝</div>
+                <div class="delegation-details">
+                    <span class="delegation-text">
+                        <strong>Rapid</strong> is delegating a task to <strong>${agentName}</strong>...
+                    </span>
+                    <pre class="delegation-task">${JSON.stringify(task, null, 2)}</pre>
+                </div>
+            </div>
+        `;
+        return messageEl;
+    }
+
     // Handle sending a message
     async function handleSendMessage() {
         const messageText = chatInput.value.trim();
@@ -473,6 +490,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             addToolCallMessage(eventData.data.name, eventData.data.args);
                         } else if (eventData.type === 'tool_result') {
                             addToolResultMessage(eventData.data.name, eventData.data.result);
+                        } else if (eventData.type === 'agent_delegation') {
+                            addAgentDelegationMessage(eventData.data.to.name, eventData.data.task);
                         } else if (eventData.type === 'complete') {
                             // Handle completion
                         }

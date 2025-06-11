@@ -1,5 +1,5 @@
 import { BaseMessage } from '@langchain/core/messages';
-import { BaseAgent, IAgent, IAgentPersonality, IAgentTool } from './BaseAgent';
+import { BaseAgent, IAgent, IAgentPersonality, ITool } from './BaseAgent';
 
 // Define the personality for our Infrastructure Intern
 const personality: IAgentPersonality = {
@@ -15,28 +15,12 @@ const personality: IAgentPersonality = {
   - Your goal is to create reliable, scalable, and maintainable infrastructure through code.`,
 };
 
-// The Terra agent class
+// The Terra agent class now inherits the new invoke method from BaseAgent
 export class TerraAgent extends BaseAgent implements IAgent {
   constructor() {
     super(personality);
   }
 
-  // The main entry point for the agent
-  async *invoke(
-    messages: BaseMessage[],
-    tools: IAgentTool[]
-  ): AsyncGenerator<{ type: 'chunk' | 'tool' | 'complete'; data: any; }, void, unknown> {
-    
-    const formattedMessages = this.formatMessages(messages);
-
-    // For now, we will stream a simple text response.
-    // In the future, this will involve complex logic for tool usage.
-    const stream = await this.llm.stream(formattedMessages);
-    
-    for await (const chunk of stream) {
-      yield { type: 'chunk', data: chunk.content };
-    }
-
-    yield { type: 'complete', data: null };
-  }
+  // No need to override invoke, it will use the powerful one from BaseAgent.
+  // We can add specific logic here later if Terra needs unique behavior.
 } 

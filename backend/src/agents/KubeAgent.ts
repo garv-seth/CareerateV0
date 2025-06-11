@@ -15,25 +15,11 @@ const personality: IAgentPersonality = {
   - Your goal is to ensure containerized applications are running smoothly, are scalable, and resilient.`,
 };
 
-// The Kube agent class
+// The Kube agent class now inherits the new invoke method from BaseAgent
 export class KubeAgent extends BaseAgent implements IAgent {
   constructor() {
     super(personality);
   }
 
-  // The main entry point for the agent
-  async *invoke(
-    messages: BaseMessage[],
-    tools: IAgentTool[]
-  ): AsyncGenerator<{ type: 'chunk' | 'tool' | 'complete'; data: any; }, void, unknown> {
-    
-    const formattedMessages = this.formatMessages(messages);
-    const stream = await this.llm.stream(formattedMessages);
-    
-    for await (const chunk of stream) {
-      yield { type: 'chunk', data: chunk.content };
-    }
-
-    yield { type: 'complete', data: null };
-  }
+  // No need to override invoke, it will use the powerful one from BaseAgent.
 } 

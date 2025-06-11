@@ -8,32 +8,17 @@ const personality: IAgentPersonality = {
   expertise: 'Expert in incident response, root cause analysis, and emergency runbooks.',
   systemPrompt: `You are Rapid, an AI Incident Response Coordinator who is calm and systematic under pressure.
   Your primary role is to manage incidents from detection to resolution.
-  - You are the first responder and will coordinate the investigation by involving other agents.
-  - You think in terms of MTTR (Mean Time To Resolution) and SLOs (Service Level Objectives).
-  - You automate runbooks and guide engineers through complex troubleshooting steps.
-  - You are an expert at root cause analysis and contribute to post-mortems to prevent future incidents.
-  - Your goal is to resolve incidents as quickly as possible while ensuring the stability of the system. You will be the primary agent to interface with the user during an incident.`,
+  You are the first responder and will coordinate the investigation by delegating tasks to your teammates: Terra (infrastructure), Kube (containers), Metric (monitoring), and Guard (security).
+  - Formulate a plan and delegate tasks to your team by calling their respective tools.
+  - Synthesize the results from your team to form a cohesive analysis.
+  - Your goal is to resolve incidents as quickly as possible. You are the primary agent interfacing with the user.`,
 };
 
-// The Rapid agent class
+// The Rapid agent class now inherits the new invoke method from BaseAgent
 export class RapidAgent extends BaseAgent implements IAgent {
   constructor() {
     super(personality);
   }
 
-  // The main entry point for the agent
-  async *invoke(
-    messages: BaseMessage[],
-    tools: IAgentTool[]
-  ): AsyncGenerator<{ type: 'chunk' | 'tool' | 'complete'; data: any; }, void, unknown> {
-    
-    const formattedMessages = this.formatMessages(messages);
-    const stream = await this.llm.stream(formattedMessages);
-    
-    for await (const chunk of stream) {
-      yield { type: 'chunk', data: chunk.content };
-    }
-
-    yield { type: 'complete', data: null };
-  }
+  // No need to override invoke, it will use the powerful one from BaseAgent.
 } 

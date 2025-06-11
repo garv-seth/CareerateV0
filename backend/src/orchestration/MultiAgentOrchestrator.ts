@@ -1,4 +1,4 @@
-import { BaseMessage, HumanMessage, AIMessage } from '@langchain/core/messages';
+import { BaseMessage, HumanMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
 import { IAgent, IAgentTool } from '../agents/BaseAgent';
 import { TerraAgent } from '../agents/TerraAgent';
 import { KubeAgent } from '../agents/KubeAgent';
@@ -71,49 +71,69 @@ export class MultiAgentOrchestrator {
 
   public async *invoke(request: OrchestratorRequest): AsyncGenerator<{ type: string, data: any }, void, unknown> {
     if (!this.isInitialized) {
-      throw new Error("Orchestrator not initialized. Please call initialize() first.");
+      throw new Error("Orchestrator not initialized.");
     }
+
+    const { messages, context } = request;
+    const conversation: BaseMessage[] = this.formatMessages(messages);
     
-    const { messages, requestedAgent, context } = request;
+    // The main agent is always Rapid, the coordinator
+    const coordinator = this.agents.get('Rapid')!;
+    yield { type: 'agent_selected', data: coordinator.personality };
 
-    const agent = this.selectAgent(messages, requestedAgent);
-    yield { type: 'agent_selected', data: agent.personality };
+    // The main loop for the collaborative process
+    for (let i = 0; i < 5; i++) {
+      const stream = coordinator.invoke(conversation, this.getAvailableTools());
+      let fullResponse = '';
+      let toolCalls: any[] = [];
+      
+      for await (const event of stream) {
+        if (event.type === 'chunk') {
+          fullResponse += event.data;
+        } else if (event.type === 'tool_call') {
+          toolCalls.push(event.data);
+        }
+        yield event;
+      }
+      conversation.push(new AIMessage(fullResponse));
 
-    const formattedMessages = this.formatMessages(messages);
-
-    // Add context to the system prompt for the selected agent
-    if (context) {
-      // This is a simplistic way to add context. We will improve this.
-      const contextMessage = new HumanMessage(`Here is some context for your task: ${JSON.stringify(context)}`);
-      formattedMessages.push(contextMessage);
+      // If there are no tool calls, the conversation is over
+      if (toolCalls.length === 0) break;
+      
+      // Process tool calls, which may include delegating to other agents
+      for (const toolCall of toolCalls) {
+        let result;
+        if (this.agents.has(toolCall.name)) {
+          // This is a delegation to another agent
+          const subAgent = this.agents.get(toolCall.name)!;
+          yield { type: 'agent_delegation', data: { to: subAgent.personality, task: toolCall.args } };
+          result = await this.runSubAgent(subAgent, toolCall.args);
+        } else if (this.tools.has(toolCall.name)) {
+          // This is a call to a standard tool
+          const tool = this.tools.get(toolCall.name)!;
+          result = await tool.execute(toolCall.args);
+        } else {
+          result = { error: `Unknown tool or agent: ${toolCall.name}` };
+        }
+        
+        conversation.push(new ToolMessage(JSON.stringify(result), toolCall.id));
+        yield { type: 'tool_result', data: { tool_call_id: toolCall.id, name: toolCall.name, result } };
+      }
     }
-
-    // Pass the available tools to the agent
-    const availableTools = this.getAvailableTools();
-    const stream = agent.invoke(formattedMessages, availableTools);
-
-    for await (const result of stream) {
-      yield result;
-    }
+    yield { type: 'complete', data: null };
   }
-
-  private selectAgent(messages: { role: 'user' | 'assistant'; content: string }[], requestedAgent: AgentName): IAgent {
-    if (requestedAgent !== 'Auto' && this.agents.has(requestedAgent)) {
-      return this.agents.get(requestedAgent)!;
+  
+  // Helper to run a sub-agent and get its final response
+  private async runSubAgent(agent: IAgent, task: any): Promise<any> {
+    const subConversation = [new HumanMessage(JSON.stringify(task))];
+    const stream = agent.invoke(subConversation, this.getAvailableTools());
+    let finalResponse = '';
+    for await (const event of stream) {
+      if (event.type === 'chunk') {
+        finalResponse += event.data;
+      }
     }
-
-    // Advanced agent selection logic will be implemented here.
-    // For now, we'll use a simple keyword-based approach.
-    const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content.toLowerCase() || '';
-
-    if (lastUserMessage.includes('terraform') || lastUserMessage.includes('iac')) return this.agents.get('Terra')!;
-    if (lastUserMessage.includes('kubernetes') || lastUserMessage.includes('docker') || lastUserMessage.includes('pod')) return this.agents.get('Kube')!;
-    if (lastUserMessage.includes('monitoring') || lastUserMessage.includes('grafana') || lastUserMessage.includes('prometheus')) return this.agents.get('Metric')!;
-    if (lastUserMessage.includes('security') || lastUserMessage.includes('vulnerability') || lastUserMessage.includes('cve')) return this.agents.get('Guard')!;
-    if (lastUserMessage.includes('incident') || lastUserMessage.includes('outage') || lastUserMessage.includes('error')) return this.agents.get('Rapid')!;
-
-    // Default to Rapid for triage if no specific agent is matched
-    return this.agents.get('Rapid')!;
+    return { response: finalResponse };
   }
 
   private formatMessages(messages: { role: 'user' | 'assistant'; content: string }[]): BaseMessage[] {
