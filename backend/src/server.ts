@@ -45,6 +45,7 @@ class CareerateServer {
   private authService: AzureB2CAuth | null = null;
   private agentOrchestrator: MultiAgentOrchestrator;
   private isInitialized = false;
+  private frontendBuildPath: string;
 
   constructor() {
     this.app = express();
@@ -59,6 +60,8 @@ class CareerateServer {
     // Initialize services
     this.secretsManager = new AzureSecretsManager();
     this.agentOrchestrator = new MultiAgentOrchestrator();
+
+    this.frontendBuildPath = path.resolve(__dirname, '..', '..', '..', 'frontend', 'dist');
 
     this.initialize();
   }
@@ -137,9 +140,8 @@ class CareerateServer {
     this.app.use(express.json({ limit: '10mb' }));
     this.app.use(express.urlencoded({ extended: true }));
 
-    // Serve static files from public directory (frontend build)
-    const publicPath = path.join(__dirname, '..', 'public');
-    this.app.use(express.static(publicPath));
+    // Serve static files from the frontend build directory
+    this.app.use(express.static(this.frontendBuildPath));
     
     logger.info('✅ Middleware configured');
   }
@@ -160,6 +162,11 @@ class CareerateServer {
 
       this.setupCoreRoutes();
       this.setupFallbackRoutes();
+      
+      // All other GET requests not handled before will return our React app
+      this.app.get('*', (req, res) => {
+        res.sendFile(path.resolve(this.frontendBuildPath, 'index.html'));
+      });
       
       logger.info('✅ Routes configured');
     } catch (error) {

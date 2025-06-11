@@ -79,7 +79,7 @@ export const ENV_VARS = {
 
 // Azure Resources Configuration
 export const AZURE_RESOURCES = {
-  KEY_VAULT_URL: process.env.AZURE_KEY_VAULT_URL || 'https://CareerateSecretsVault.vault.azure.net',
+  KEY_VAULT_URL: process.env.AZURE_KEY_VAULT_URL || 'https://careeeratesecretsvault.vault.azure.net',
   STORAGE_ACCOUNT: 'careeratestorage',
   COSMOSDB_ACCOUNT: 'careeratedb',
   COSMOSDB_MONGODB_ACCOUNT: 'careeratemongodb',
