@@ -14,7 +14,7 @@ function App() {
   return (
     <div className="App">
        {isAuthenticated && <WelcomeUser />}
-      <ChatWindow />
+      <ChatWindow agentName="Careerate" />
     </div>
   );
 }
