@@ -1,5 +1,5 @@
 import React from 'react';
-import ChatInterface from './components/chat/ChatInterface';
+import ChatWindow from './components/chat/ChatWindow';
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";
 
 const WelcomeUser = () => {
@@ -14,7 +14,7 @@ function App() {
   return (
     <div className="App">
        {isAuthenticated && <WelcomeUser />}
-      <ChatInterface />
+      <ChatWindow />
     </div>
   );
 }
