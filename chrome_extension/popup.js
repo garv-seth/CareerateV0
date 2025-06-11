@@ -370,6 +370,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         return messageEl;
     }
 
+    // Add a "tool call" message to the UI
+    function addToolCallMessage(toolName, args) {
+        const messageEl = addMessage('system', '');
+        messageEl.innerHTML = `
+            <div class="tool-call">
+                <div class="tool-icon">⚙️</div>
+                <div class="tool-details">
+                    <span class="tool-name">${toolName}</span>
+                    <pre class="tool-args">${JSON.stringify(args, null, 2)}</pre>
+                </div>
+            </div>
+        `;
+        return messageEl;
+    }
+
+    // Add a "tool result" message to the UI
+    function addToolResultMessage(toolName, result) {
+        const messageEl = addMessage('system', '');
+        messageEl.innerHTML = `
+            <div class="tool-result">
+                <div class="tool-icon">📋</div>
+                <div class="tool-details">
+                    <span class="tool-name">${toolName} Result</span>
+                    <pre class="tool-output">${JSON.stringify(result, null, 2)}</pre>
+                </div>
+            </div>
+        `;
+        return messageEl;
+    }
+
     // Handle sending a message
     async function handleSendMessage() {
         const messageText = chatInput.value.trim();
@@ -411,13 +441,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (eventData.type === 'agent_selected') {
                             agentPersonality = eventData.data;
                             assistantMessageEl = addMessage('assistant', '', agentPersonality);
-                        } else if (eventData.type === 'chunk' && assistantMessageEl) {
+                        } else if (eventData.type === 'chunk' && eventData.data) {
+                            if (!assistantMessageEl) {
+                                assistantMessageEl = addMessage('assistant', '', agentPersonality);
+                            }
                             const textNode = assistantMessageEl.querySelector('.text');
                             textNode.textContent += eventData.data;
-                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        } else if (eventData.type === 'tool_call') {
+                            addToolCallMessage(eventData.data.name, eventData.data.args);
+                        } else if (eventData.type === 'tool_result') {
+                            addToolResultMessage(eventData.data.name, eventData.data.result);
                         } else if (eventData.type === 'complete') {
-                            // Optionally handle completion
+                            // Handle completion
                         }
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
                     }
                 }
             }

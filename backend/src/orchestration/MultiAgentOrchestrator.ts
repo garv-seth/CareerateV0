@@ -5,6 +5,9 @@ import { KubeAgent } from '../agents/KubeAgent';
 import { MetricAgent } from '../agents/MetricAgent';
 import { GuardAgent } from '../agents/GuardAgent';
 import { RapidAgent } from '../agents/RapidAgent';
+import { ITool } from '../tools/BaseTool';
+import { ShellTool } from '../tools/ShellTool';
+import { FileSystemTool } from '../tools/FileSystemTool';
 
 type AgentName = 'Terra' | 'Kube' | 'Metric' | 'Guard' | 'Rapid' | 'Auto';
 
@@ -16,7 +19,7 @@ interface OrchestratorRequest {
 
 export class MultiAgentOrchestrator {
   private agents: Map<string, IAgent> = new Map();
-  private tools: IAgentTool[] = [];
+  private tools: Map<string, ITool> = new Map();
   private isInitialized = false;
 
   constructor() {
@@ -49,13 +52,21 @@ export class MultiAgentOrchestrator {
   }
 
   private registerTools() {
-    // In the future, we will add real tools here for agents to use
-    // Example: this.tools.push(new AWSCLI_Tool());
-    console.log('✅ Tools registered (currently none)');
+    const shellTool = new ShellTool();
+    const fsTool = new FileSystemTool();
+    
+    this.tools.set(shellTool.name, shellTool);
+    this.tools.set(fsTool.name, fsTool);
+
+    console.log(`✅ Registered tools: ${Array.from(this.tools.keys()).join(', ')}`);
   }
 
   public getAvailableAgents() {
     return Array.from(this.agents.values()).map(agent => agent.personality);
+  }
+
+  public getAvailableTools(): ITool[] {
+    return Array.from(this.tools.values());
   }
 
   public async *invoke(request: OrchestratorRequest): AsyncGenerator<{ type: string, data: any }, void, unknown> {
@@ -77,7 +88,9 @@ export class MultiAgentOrchestrator {
       formattedMessages.push(contextMessage);
     }
 
-    const stream = agent.invoke(formattedMessages, this.tools);
+    // Pass the available tools to the agent
+    const availableTools = this.getAvailableTools();
+    const stream = agent.invoke(formattedMessages, availableTools);
 
     for await (const result of stream) {
       yield result;

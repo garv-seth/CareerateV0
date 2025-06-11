@@ -1,6 +1,8 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { BaseMessage, HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
+import { BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import { ITool } from '../tools/BaseTool';
+import { z } from 'zod';
 
 // Defines the tools an agent can use (e.g., AWS CLI, kubectl)
 export interface IAgentTool {
@@ -29,8 +31,8 @@ export interface IAgent {
   // The main entry point for an agent to handle a request
   invoke(
     messages: BaseMessage[],
-    tools: IAgentTool[]
-  ): AsyncGenerator<{ type: 'chunk' | 'tool' | 'complete', data: any }, void, unknown>;
+    tools: ITool[]
+  ): AsyncGenerator<{ type: 'chunk' | 'tool_call' | 'tool_result' | 'complete'; data: any; }, void, unknown>;
 }
 
 // An abstract base class providing common functionality for all agents
@@ -61,14 +63,73 @@ export abstract class BaseAgent implements IAgent {
     }
   }
 
-  // The `invoke` method must be implemented by each specialized agent
-  abstract invoke(
+  // The main entry point for an agent, now with a ReAct loop
+  async *invoke(
     messages: BaseMessage[],
-    tools: IAgentTool[]
-  ): AsyncGenerator<{ type: 'chunk' | 'tool' | 'complete', data: any }, void, unknown>;
+    tools: ITool[]
+  ): AsyncGenerator<{ type: 'chunk' | 'tool_call' | 'tool_result' | 'complete'; data: any; }, void, unknown> {
+    
+    let currentMessages = this.formatMessages(messages, tools);
+
+    for (let i = 0; i < 5; i++) { // Limit to 5 iterations to prevent infinite loops
+      const stream = await this.llm.stream(currentMessages, {
+        tools: tools.map(t => ({
+          type: 'function',
+          function: {
+            name: t.name,
+            description: t.description,
+            parameters: t.schema.input.openapi('ToolInput'),
+          },
+        })),
+      });
+
+      let fullResponse = '';
+      let toolCalls: any[] = [];
+
+      for await (const chunk of stream) {
+        fullResponse += chunk.content;
+        if (chunk.tool_calls) {
+          toolCalls.push(...(chunk.tool_calls as any[]));
+        }
+        yield { type: 'chunk', data: chunk.content };
+      }
+
+      currentMessages.push(new AIMessage(fullResponse));
+
+      if (toolCalls.length === 0) {
+        break; // No tool calls, so we're done
+      }
+
+      for (const toolCall of toolCalls) {
+        const tool = tools.find(t => t.name === toolCall.function.name);
+        if (!tool) {
+          yield { type: 'tool_result', data: { tool_call_id: toolCall.id, name: toolCall.function.name, result: 'Error: Tool not found' } };
+          continue;
+        }
+
+        try {
+          const args = JSON.parse(toolCall.function.arguments);
+          yield { type: 'tool_call', data: { name: tool.name, args } };
+          
+          const result = await tool.execute(args);
+          yield { type: 'tool_result', data: { tool_call_id: toolCall.id, name: tool.name, result } };
+          
+          currentMessages.push(new ToolMessage(JSON.stringify(result), toolCall.id));
+
+        } catch (error) {
+          const errorMessage = (error instanceof Error) ? error.message : 'Unknown error';
+          yield { type: 'tool_result', data: { tool_call_id: toolCall.id, name: tool.name, result: `Error: ${errorMessage}` } };
+        }
+      }
+    }
+
+    yield { type: 'complete', data: null };
+  }
   
-  // Helper to format messages for the LLM
-  protected formatMessages(messages: BaseMessage[]): BaseMessage[] {
-    return [new SystemMessage(this.personality.systemPrompt), ...messages];
+  // Helper to format messages with tool definitions for the LLM
+  protected formatMessages(messages: BaseMessage[], tools: ITool[]): BaseMessage[] {
+    const toolDefs = tools.map(t => `${t.name}: ${t.description}`).join('\n');
+    const systemPrompt = `${this.personality.systemPrompt}\n\nYou have access to the following tools:\n${toolDefs}\n\nYou must use these tools to answer the user's request.`;
+    return [new SystemMessage(systemPrompt), ...messages];
   }
 } 

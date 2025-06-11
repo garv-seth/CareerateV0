@@ -175,6 +175,10 @@ body {
   color: #6b7280;
   padding: 4px 0;
 }
+.system-message .message-content {
+  background-color: transparent;
+  padding: 0;
+}
 .agent-avatar {
   font-size: 1.5rem;
   line-height: 1;
@@ -256,4 +260,36 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent);
+}
+
+/* Tool Call & Result Styles */
+.tool-call, .tool-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background-color: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  margin: 8px 0;
+}
+.tool-icon {
+  font-size: 1.2rem;
+}
+.tool-details {
+  font-size: 0.9rem;
+}
+.tool-name {
+  font-weight: 600;
+  color: #4b5563;
+}
+.tool-args, .tool-output {
+  font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
+  background-color: #e5e7eb;
+  padding: 8px;
+  border-radius: 6px;
+  margin-top: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 0.85rem;
 } 
