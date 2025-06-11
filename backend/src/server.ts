@@ -330,7 +330,6 @@ class CareerateServer {
     });
   }
 
-  // ... existing websocket setup method stays the same ...
   private setupWebSocket() {
     this.io.on('connection', (socket) => {
       logger.info('Client connected:', socket.id);
@@ -342,21 +341,20 @@ class CareerateServer {
 
       socket.on('chat-message', async (data) => {
         try {
-          const { message, agentType, context, roomId } = data;
+          const { messages, agent, context, roomId } = data;
           
-          // Stream response to room
-          const responseGenerator = this.agentOrchestrator.streamResponse({
-            message,
-            agentType,
-            context,
-            userId: socket.id
+          // Use the new orchestrator's invoke method
+          const responseGenerator = this.agentOrchestrator.invoke({
+            messages,
+            requestedAgent: agent || 'Auto',
+            context
           });
 
-          for await (const chunk of responseGenerator) {
+          for await (const event of responseGenerator) {
             if (roomId) {
-              this.io.to(roomId).emit('chat-chunk', chunk);
+              this.io.to(roomId).emit('chat-event', event);
             } else {
-              socket.emit('chat-chunk', chunk);
+              socket.emit('chat-event', event);
             }
           }
         } catch (error) {
