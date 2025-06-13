@@ -39,9 +39,11 @@ export class AzureSecretsManager {
 
       if (this.secretClient) {
         try {
-          const secret = await this.secretClient.getSecret(secretName);
+          // Convert underscore to hyphen for Key Vault secret names
+          const keyVaultSecretName = secretName.replace(/_/g, '-');
+          const secret = await this.secretClient.getSecret(keyVaultSecretName);
           secretValue = secret.value || '';
-          console.log(`✅ Retrieved secret '${secretName}' from Key Vault`);
+          console.log(`✅ Retrieved secret '${keyVaultSecretName}' from Key Vault`);
         } catch (error) {
           console.warn(`⚠️  Failed to get '${secretName}' from Key Vault, trying env vars`);
           secretValue = this.getFromEnvironment(secretName);
@@ -62,6 +64,8 @@ export class AzureSecretsManager {
       throw new Error(`Secret '${secretName}' not found`);
     }
   }
+
+
 
   private getFromEnvironment(secretName: string): string {
     // Map secret names to environment variable names
