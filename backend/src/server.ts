@@ -150,17 +150,39 @@ class CareerateServer {
 
   private setupRoutes() {
     try {
-      // Use actual route handlers with error boundaries
-      if (this.authService) {
-        this.app.use('/api/auth', authRoutes);
-      } else {
+      // Wrap route imports in try-catch to prevent malformed routes from crashing
+      try {
+        if (this.authService) {
+          this.app.use('/api/auth', authRoutes);
+        } else {
+          this.app.use('/api/auth', (req, res) => {
+            res.status(503).json({ error: 'Auth service not available' });
+          });
+        }
+      } catch (authRouteError) {
+        logger.warn('❌ Auth routes failed to load:', authRouteError);
         this.app.use('/api/auth', (req, res) => {
           res.status(503).json({ error: 'Auth service not available' });
         });
       }
-      
-      this.app.use('/api/workspace', workspaceRoutes);
-      this.app.use('/api/mcp', mcpRoutes);
+
+      try {
+        this.app.use('/api/workspace', workspaceRoutes);
+      } catch (workspaceRouteError) {
+        logger.warn('❌ Workspace routes failed to load:', workspaceRouteError);
+        this.app.use('/api/workspace', (req, res) => {
+          res.status(503).json({ error: 'Workspace service not available' });
+        });
+      }
+
+      try {
+        this.app.use('/api/mcp', mcpRoutes);
+      } catch (mcpRouteError) {
+        logger.warn('❌ MCP routes failed to load:', mcpRouteError);
+        this.app.use('/api/mcp', (req, res) => {
+          res.status(503).json({ error: 'MCP service not available' });
+        });
+      }
 
       this.setupCoreRoutes();
       
