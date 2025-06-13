@@ -10,3 +10,14 @@ externalPort = 3000
 [[ports]]
 localPort = 8081
 externalPort = 80
+
+[workflows]
+
+[[workflows.workflow]]
+name = "Start Application"
+mode = "parallel"
+author = 33980514
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && npx vite dev --host 0.0.0.0 --port 3000"
