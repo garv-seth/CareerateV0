@@ -32,24 +32,34 @@ export class AzureB2CAuth {
   }
 
   async initialize() {
-    // Get B2C configuration from Azure Key Vault
-    const [
-      tenantName,
-      clientId,
-      clientSecret,
-      policyName,
-      jwtSecret,
-      jwtRefreshSecret
-    ] = await Promise.all([
-      this.secretsManager.getSecret('B2C_TENANT_NAME'),
-      this.secretsManager.getSecret('B2C_CLIENT_ID'),
-      this.secretsManager.getSecret('MICROSOFT_PROVIDER_AUTHENTICATION_SECRET'),
-      this.secretsManager.getSecret('B2C_SIGNUP_SIGNIN_POLICY_NAME'),
-      this.secretsManager.getSecret('JWT_SECRET'),
-      this.secretsManager.getSecret('JWT_REFRESH_SECRET')
-    ]);
+    try {
+      // Get B2C configuration from Azure Key Vault with fallback handling
+      const results = await Promise.allSettled([
+        this.secretsManager.getSecret('B2C_TENANT_NAME'),
+        this.secretsManager.getSecret('B2C_CLIENT_ID'),
+        this.secretsManager.getSecret('MICROSOFT_PROVIDER_AUTHENTICATION_SECRET'),
+        this.secretsManager.getSecret('B2C_SIGNUP_SIGNIN_POLICY_NAME'),
+        this.secretsManager.getSecret('JWT_SECRET'),
+        this.secretsManager.getSecret('JWT_REFRESH_SECRET')
+      ]);
 
-    this.config = {
+      const [
+        tenantName,
+        clientId,
+        clientSecret,
+        policyName,
+        jwtSecret,
+        jwtRefreshSecret
+      ] = results.map(result => 
+        result.status === 'fulfilled' ? result.value : null
+      );
+
+      // Check if we have the minimum required secrets
+      if (!tenantName || !clientId || !clientSecret || !jwtSecret) {
+        throw new Error('Missing required B2C configuration. Please provide B2C_TENANT_NAME, B2C_CLIENT_ID, MICROSOFT_PROVIDER_AUTHENTICATION_SECRET, and JWT_SECRET environment variables.');
+      }
+
+      this.config = {
       tenantId: 'bd436098-a352-4d8e-b029-849de3e6c5af', // From your Azure tenant
       tenantName,
       clientId,
@@ -82,8 +92,12 @@ export class AzureB2CAuth {
       }
     };
 
-    this.msalClient = new ConfidentialClientApplication(msalConfig);
-    console.log('✅ Azure B2C Authentication initialized');
+      this.msalClient = new ConfidentialClientApplication(msalConfig);
+      console.log('✅ Azure B2C Authentication initialized');
+    } catch (error) {
+      console.error('❌ Azure B2C initialization failed:', error);
+      throw error;
+    }
   }
 
   // Generate login URL for user authentication
