@@ -87,9 +87,11 @@
     "cross-env": "^7.0.3"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.0.0"
+    "@rollup/rollup-linux-x64-gnu": "^4.0.0",
+    "@lightningcss/linux-x64-gnu": "^1.25.1"
   },
   "overrides": {
-    "rollup": "npm:@rollup/wasm-node@^4.0.0"
+    "rollup": "npm:@rollup/wasm-node@^4.0.0",
+    "lightningcss": "npm:lightningcss-wasm@^1.25.1"
   }
 }
