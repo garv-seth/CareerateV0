@@ -32,7 +32,7 @@
     "@langchain/langgraph": "*",
     "@langchain/openai": "*",
     "@modelcontextprotocol/sdk": "*",
-    "@tailwindcss/postcss": "^4.1.9",
+    "@tailwindcss/postcss": "^4.1.10",
     "@types/js-yaml": "*",
     "@types/ws": "*",
     "ai": "*",
@@ -83,19 +83,15 @@
     "@typescript-eslint/eslint-plugin": "*",
     "@typescript-eslint/parser": "*",
     "concurrently": "*",
+    "cross-env": "^7.0.3",
     "eslint": "*",
-    "jest": "*",
-    "ts-node-dev": "*",
-    "typescript": "*",
-    "cross-env": "^7.0.3"
+    "jest": "^30.0.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "*"
   },
   "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "^4.0.0",
-    "@lightningcss/linux-x64-gnu": "^1.25.1"
-  },
-  "overrides": {
-    "rollup": "npm:@rollup/wasm-node@^4.0.0",
-    "lightningcss": "npm:lightningcss-wasm@^1.25.1"
+    "@lightningcss/linux-x64-gnu": "^1.25.1",
+    "@rollup/rollup-linux-x64-gnu": "^4.43.0"
   },
   "engines": {
     "node": ">=18.0.0",

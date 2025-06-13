@@ -136,10 +136,11 @@
 
 @layer base {
   * {
-    @apply border-border; /* Uses CSS var --border */
+    border-color: theme('borderColor.DEFAULT', 'currentColor');
   }
   body {
-    @apply bg-background text-foreground; /* Uses CSS vars */
+    background-color: var(--background);
+    color: var(--foreground);
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -339,8 +340,57 @@
   
   /* Example of a themed button (apply similar logic where buttons are styled) */
   .button-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary-hover;
-    /* Add other button base styles like padding, border-radius, etc. */
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  /* Shadcn UI button variants */
+  .button-primary:hover {
+    background-color: var(--primary-hover);
+  }
+  .button-secondary {
+    background-color: var(--secondary);
+    color: var(--secondary-foreground);
+  }
+  .button-destructive {
+    background-color: var(--destructive);
+    color: var(--destructive-foreground);
+  }
+  .button-ghost:hover {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+  .button-link {
+    color: var(--primary);
+    text-underline-offset: 4px;
+  }
+  .button-link:hover {
+    text-decoration: underline;
+  }
+  .button-outline {
+    border: 1px solid var(--input);
+    background-color: var(--background);
+  }
+  .button-outline:hover {
+    background-color: var(--accent);
+    color: var(--accent-foreground);
+  }
+  
+  /* Custom component styles */
+  .custom-card {
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  }
+  
+  .custom-input {
+    border-color: var(--input);
+  }
+
+  .custom-border {
+    border-color: var(--border);
   }
 }
 

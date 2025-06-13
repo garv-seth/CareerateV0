@@ -1,5 +1,8 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
+import type { Config } from 'tailwindcss'
+import tailwindcssAnimate from 'tailwindcss-animate'
+import tailwindcssTypography from '@tailwindcss/typography'
+
+const config = {
   darkMode: "class",
   content: [
     './pages/**/*.{ts,tsx}',
@@ -73,6 +76,9 @@ module.exports = {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+      borderColor: {
+        DEFAULT: "hsl(var(--border))",
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -89,8 +95,7 @@ module.exports = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
-  features: {
-    oxide: false,
-  },
-}
+  plugins: [tailwindcssAnimate, tailwindcssTypography],
+} satisfies Config
+
+export default config
