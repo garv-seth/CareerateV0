@@ -21,6 +21,7 @@ import { AzureB2CAuth } from './services/AzureB2CAuth';
 import authRoutes from './routes/auth';
 import workspaceRoutes from './routes/workspace';
 import mcpRoutes from './routes/mcp';
+import { MCPManager } from './services/MCPManager';
 
 // Logger setup
 const logger = winston.createLogger({
@@ -43,6 +44,7 @@ class CareerateServer {
   private io: SocketIOServer;
   private secretsManager: AzureSecretsManager;
   private authService: AzureB2CAuth | null = null;
+  private mcpManager: MCPManager;
   private agentOrchestrator: MultiAgentOrchestrator;
   private isInitialized = false;
   private frontendBuildPath: string;
@@ -60,6 +62,7 @@ class CareerateServer {
     // Initialize services
     this.secretsManager = new AzureSecretsManager();
     this.agentOrchestrator = new MultiAgentOrchestrator();
+    this.mcpManager = new MCPManager();
 
     this.frontendBuildPath = path.join(__dirname, '..', 'frontend', 'dist');
 
@@ -94,6 +97,16 @@ class CareerateServer {
         logger.info('✅ Agent orchestrator initialized');
       } catch (error) {
         logger.warn('⚠️  Agent orchestrator initialization failed, using mock responses:', error);
+      }
+
+      // Initialize MCP Manager
+      try {
+        await this.mcpManager.initialize();
+        // Expose to routes via app.locals
+        this.app.locals.mcpManager = this.mcpManager;
+        logger.info('✅ MCP Manager initialized');
+      } catch (error) {
+        logger.warn('⚠️  MCP Manager initialization failed, continuing without MCP routes:', error);
       }
 
       this.setupMiddleware();
@@ -160,7 +173,10 @@ class CareerateServer {
       }
       
       this.app.use('/api/workspace', workspaceRoutes);
-      this.app.use('/api/mcp', mcpRoutes);
+      // Only mount MCP routes if manager initialized
+      if (this.app.locals.mcpManager) {
+        this.app.use('/api/mcp', mcpRoutes);
+      }
 
       this.setupCoreRoutes();
       

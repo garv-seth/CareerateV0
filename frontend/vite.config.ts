@@ -11,6 +11,20 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/socket.io': {
+        target: 'http://localhost:8081',
+        ws: true,
+      }
+    }
+  },
   define: {
     'import.meta.env.VITE_B2C_CLIENT_ID': JSON.stringify(process.env.B2C_CLIENT_ID),
     'import.meta.env.VITE_B2C_TENANT_NAME': JSON.stringify(process.env.B2C_TENANT_NAME),
