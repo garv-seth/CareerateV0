@@ -8,7 +8,7 @@
     "start": "cd backend && node dist/server.js",
     "build": "npm run build:frontend:direct && npm run build --workspace=backend",
     "build:frontend": "npm run build:frontend:direct",
-    "build:frontend:direct": "cd frontend && npx vite build",
+    "build:frontend:direct": "npm run build --workspace=frontend",
     "build:backend": "npm run build --workspace=backend",
     "build:local": "cd frontend && npm ci && npm run build && cd ../backend && npm ci && npm run build",
     "dev": "concurrently \"npm run frontend:dev\" \"npm run backend:dev\"",
@@ -86,7 +86,8 @@
     "eslint": "*",
     "jest": "*",
     "ts-node-dev": "*",
-    "typescript": "*"
+    "typescript": "*",
+    "cross-env": "^7.0.3"
   },
   "engines": {
     "node": ">=18.0.0",
