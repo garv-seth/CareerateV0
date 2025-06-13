@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getAgents } from '../lib/api';
 import ChatWindow from '../components/chat/ChatWindow';
-import { useMsal } from '@azure/msal-react';
 
 // Define types for clarity
 interface Agent {
@@ -12,14 +11,13 @@ interface Agent {
 }
 
 const DashboardPage = () => {
-  const { accounts } = useMsal();
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const { data: agents, isLoading, error } = useQuery<Agent[]>({
     queryKey: ['agents'],
     queryFn: getAgents,
   });
 
-  const userName = accounts[0]?.name || 'User';
+  const userName = 'DevOps Engineer';
 
   return (
     <div className="container mx-auto px-4 py-8 text-white animate-fade-in">
