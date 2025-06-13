@@ -21,6 +21,7 @@ import { AzureB2CAuth } from './services/AzureB2CAuth';
 import authRoutes from './routes/auth';
 import workspaceRoutes from './routes/workspace';
 import mcpRoutes from './routes/mcp';
+import analyticsRoutes from './routes/analytics';
 
 // Logger setup
 const logger = winston.createLogger({
@@ -181,6 +182,15 @@ class CareerateServer {
         logger.warn('❌ MCP routes failed to load:', mcpRouteError);
         this.app.use('/api/mcp', (req, res) => {
           res.status(503).json({ error: 'MCP service not available' });
+        });
+      }
+
+      try {
+        this.app.use('/api/analytics', analyticsRoutes);
+      } catch (analyticsRouteError) {
+        logger.warn('❌ Analytics routes failed to load:', analyticsRouteError);
+        this.app.use('/api/analytics', (req, res) => {
+          res.status(503).json({ error: 'Analytics service not available' });
         });
       }
 
