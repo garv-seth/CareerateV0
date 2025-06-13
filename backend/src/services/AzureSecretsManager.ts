@@ -39,13 +39,23 @@ export class AzureSecretsManager {
       let secretValue: string;
 
       if (this.secretClient) {
+        // First, attempt to fetch the **hyphen-case** version (Key Vault naming convention)
+        const hyphenCaseName = secretName.replace(/_/g, '-');
         try {
-          const secret = await this.secretClient.getSecret(secretName);
+          const secret = await this.secretClient.getSecret(hyphenCaseName);
           secretValue = secret.value || '';
-          console.log(chalk.green(`✅ Retrieved secret '${secretName}' from Key Vault`));
-        } catch (error) {
-          console.warn(chalk.yellow(`⚠️  Failed to get '${secretName}' from Key Vault, trying env vars`));
-          secretValue = this.getFromEnvironment(secretName);
+          console.log(chalk.green(`✅ Retrieved secret '${hyphenCaseName}' from Key Vault`));
+        } catch (primaryError) {
+          // Fallback: try original underscore name in Key Vault
+          try {
+            const secret = await this.secretClient.getSecret(secretName);
+            secretValue = secret.value || '';
+            console.log(chalk.green(`✅ Retrieved secret '${secretName}' from Key Vault (fallback)`));
+          } catch (secondaryError) {
+            // Final fallback to environment variables (App Service settings)
+            console.warn(chalk.yellow(`⚠️  Failed to get '${hyphenCaseName}' or '${secretName}' from Key Vault, trying env vars`));
+            secretValue = this.getFromEnvironment(secretName);
+          }
         }
       } else {
         secretValue = this.getFromEnvironment(secretName);
