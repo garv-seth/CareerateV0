@@ -1,6 +1,5 @@
 import { DefaultAzureCredential } from '@azure/identity';
 import { SecretClient } from '@azure/keyvault-secrets';
-import chalk from 'chalk';
 
 export class AzureSecretsManager {
   private secretClient: SecretClient | null = null;
@@ -12,7 +11,7 @@ export class AzureSecretsManager {
       const keyVaultUrl = process.env.AZURE_KEY_VAULT_URL;
       
       if (!keyVaultUrl) {
-        console.warn(chalk.yellow('⚠️  Azure Key Vault URL not provided, using environment variables'));
+        console.warn('⚠️  Azure Key Vault URL not provided, using environment variables');
         return;
       }
 
@@ -21,9 +20,9 @@ export class AzureSecretsManager {
 
       // Test connection
       // const testSecret = await this.secretClient.getSecret('test-connection');
-      console.log(chalk.green('✅ Azure Key Vault connected successfully'));
+      console.log('✅ Azure Key Vault connected successfully');
     } catch (error) {
-      console.warn(chalk.yellow('⚠️  Azure Key Vault connection failed, falling back to env vars:'), (error as Error)?.message || 'Unknown error');
+      console.warn('⚠️  Azure Key Vault connection failed, falling back to env vars:', (error as Error)?.message || 'Unknown error');
       this.secretClient = null;
     }
   }
@@ -42,9 +41,9 @@ export class AzureSecretsManager {
         try {
           const secret = await this.secretClient.getSecret(secretName);
           secretValue = secret.value || '';
-          console.log(chalk.green(`✅ Retrieved secret '${secretName}' from Key Vault`));
+          console.log(`✅ Retrieved secret '${secretName}' from Key Vault`);
         } catch (error) {
-          console.warn(chalk.yellow(`⚠️  Failed to get '${secretName}' from Key Vault, trying env vars`));
+          console.warn(`⚠️  Failed to get '${secretName}' from Key Vault, trying env vars`);
           secretValue = this.getFromEnvironment(secretName);
         }
       } else {
@@ -59,7 +58,7 @@ export class AzureSecretsManager {
 
       return secretValue;
     } catch (error) {
-      console.error(chalk.red(`❌ Failed to retrieve secret '${secretName}':`, error));
+      console.error(`❌ Failed to retrieve secret '${secretName}':`, error);
       throw new Error(`Secret '${secretName}' not found`);
     }
   }
