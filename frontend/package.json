@@ -81,6 +81,7 @@
     "eslint-plugin-react-hooks": "*",
     "eslint-plugin-react-refresh": "*",
     "postcss": "*",
+    "@tailwindcss/postcss": "*",
     "tailwindcss": "*",
     "typescript": "*",
     "vite": "*",
