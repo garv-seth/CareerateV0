@@ -1,9 +1,14 @@
-import { ConfidentialClientApplication, Configuration, AuthenticationResult } from '@azure/msal-node';
-import { AzureSecretsManager } from './AzureSecretsManager';
+import {
+  ConfidentialClientApplication,
+  Configuration,
+  AuthenticationResult,
+  ClientCredentialRequest,
+} from '@azure/msal-node';
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import { AzureSecretsManager } from './AzureSecretsManager';
 
-interface B2CConfig {
+export interface B2CConfig {
   tenantId: string;
   tenantName: string;
   clientId: string;
@@ -12,26 +17,25 @@ interface B2CConfig {
   redirectUri: string;
 }
 
-interface UserInfo {
+export interface UserInfo {
   id: string;
   email: string;
   name: string;
   permissions: string[];
-  organizations?: string[];
 }
 
 export class AzureB2CAuth {
-  private msalClient!: ConfidentialClientApplication;
   private secretsManager: AzureSecretsManager;
-  private config!: B2CConfig;
-  private jwtSecret!: string;
-  private jwtRefreshSecret!: string;
+  private msalClient: ConfidentialClientApplication | null = null;
+  private config: B2CConfig | null = null;
+  private jwtSecret: string | null = null;
+  private jwtRefreshSecret: string | null = null;
 
   constructor(secretsManager: AzureSecretsManager) {
     this.secretsManager = secretsManager;
   }
 
-  async initialize() {
+  async initialize(): Promise<void> {
     try {
       // Get B2C configuration from Azure Key Vault with fallback handling
       const results = await Promise.allSettled([
@@ -60,37 +64,37 @@ export class AzureB2CAuth {
       }
 
       this.config = {
-      tenantId: 'bd436098-a352-4d8e-b029-849de3e6c5af', // From your Azure tenant
-      tenantName,
-      clientId,
-      clientSecret,
-      policyName,
-      redirectUri: process.env.REDIRECT_URI || 'http://localhost:5000/api/auth/callback'
-    };
+        tenantId: 'bd436098-a352-4d8e-b029-849de3e6c5af', // From your Azure tenant
+        tenantName: tenantName as string,
+        clientId: clientId as string,
+        clientSecret: clientSecret as string,
+        policyName: (policyName as string) || 'B2C_1_signup_signin',
+        redirectUri: process.env.REDIRECT_URI || 'http://localhost:5000/api/auth/callback'
+      };
 
-    this.jwtSecret = jwtSecret;
-    this.jwtRefreshSecret = jwtRefreshSecret;
+      this.jwtSecret = jwtSecret;
+      this.jwtRefreshSecret = jwtRefreshSecret || jwtSecret;
 
-    // Configure MSAL
-    const msalConfig: Configuration = {
-      auth: {
-        clientId: this.config.clientId,
-        authority: `https://login.microsoftonline.com/${this.config.tenantId}`,
-        clientSecret: this.config.clientSecret,
-        knownAuthorities: [`login.microsoftonline.com`]
-      },
-      system: {
-        loggerOptions: {
-          loggerCallback(loglevel, message, containsPii) {
-            if (!containsPii) {
-              console.log(message);
-            }
-          },
-          piiLoggingEnabled: false,
-          logLevel: 3, // Info
+      // Configure MSAL
+      const msalConfig: Configuration = {
+        auth: {
+          clientId: this.config.clientId,
+          authority: `https://login.microsoftonline.com/${this.config.tenantId}`,
+          clientSecret: this.config.clientSecret,
+          knownAuthorities: [`login.microsoftonline.com`]
+        },
+        system: {
+          loggerOptions: {
+            loggerCallback(loglevel, message, containsPii) {
+              if (!containsPii) {
+                console.log(message);
+              }
+            },
+            piiLoggingEnabled: false,
+            logLevel: 3, // Info
+          }
         }
-      }
-    };
+      };
 
       this.msalClient = new ConfidentialClientApplication(msalConfig);
       console.log('✅ Azure B2C Authentication initialized');
@@ -102,6 +106,10 @@ export class AzureB2CAuth {
 
   // Generate login URL for user authentication
   async getAuthorizationUrl(state: string): Promise<string> {
+    if (!this.msalClient || !this.config) {
+      throw new Error('Azure B2C not initialized');
+    }
+
     const authCodeUrlParameters = {
       scopes: ['openid', 'profile', 'email'],
       redirectUri: this.config.redirectUri,
@@ -118,6 +126,10 @@ export class AzureB2CAuth {
 
   // Handle the callback from Azure B2C
   async handleCallback(code: string): Promise<AuthenticationResult> {
+    if (!this.msalClient || !this.config) {
+      throw new Error('Azure B2C not initialized');
+    }
+
     const tokenRequest = {
       code,
       scopes: ['openid', 'profile', 'email'],
@@ -129,113 +141,108 @@ export class AzureB2CAuth {
       const response = await this.msalClient.acquireTokenByCode(tokenRequest);
       return response;
     } catch (error) {
-      console.error('Error acquiring token:', error);
       throw error;
     }
   }
 
-  // Exchange Azure B2C token for our JWT
+  // Exchange Azure token for JWT
   async exchangeTokenForJWT(azureToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+    if (!this.jwtSecret) {
+      throw new Error('JWT secret not configured');
+    }
+
     try {
-      // Verify the Azure token
+      // Get user info from Azure token
       const userInfo = await this.getUserInfoFromToken(azureToken);
       
-      // Add agent permissions based on user roles
+      // Get user permissions (this would typically come from your database)
       const permissions = await this.getUserPermissions(userInfo.id);
       
-      // Create our JWT tokens
+      // Generate JWT access token
       const accessToken = jwt.sign(
         {
-          userId: userInfo.id,
+          sub: userInfo.id,
           email: userInfo.email,
           name: userInfo.name,
           permissions,
-          type: 'access'
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour
         },
-        this.jwtSecret,
-        { expiresIn: '1h' }
+        this.jwtSecret
       );
 
+      // Generate refresh token
       const refreshToken = jwt.sign(
         {
-          userId: userInfo.id,
-          type: 'refresh'
+          sub: userInfo.id,
+          type: 'refresh',
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24 * 7), // 7 days
         },
-        this.jwtRefreshSecret,
-        { expiresIn: '30d' }
+        this.jwtRefreshSecret || this.jwtSecret
       );
 
       return { accessToken, refreshToken };
     } catch (error) {
-      console.error('Token exchange error:', error);
       throw error;
     }
   }
 
-  // Get user info from Microsoft Graph
-  async getUserInfoFromToken(accessToken: string): Promise<UserInfo> {
+  // Get user info from Azure token
+  private async getUserInfoFromToken(accessToken: string): Promise<UserInfo> {
     try {
       const response = await axios.get('https://graph.microsoft.com/v1.0/me', {
         headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+          'Authorization': `Bearer ${accessToken}`,
+        },
       });
 
       return {
         id: response.data.id,
         email: response.data.mail || response.data.userPrincipalName,
         name: response.data.displayName,
-        permissions: []
+        permissions: [], // Will be populated by getUserPermissions
       };
     } catch (error) {
-      console.error('Error fetching user info:', error);
       throw error;
     }
   }
 
-  // Get user permissions for agent capabilities
-  async getUserPermissions(userId: string): Promise<string[]> {
-    // In production, this would query your database or permission service
-    // For now, return default permissions based on user
-    const defaultPermissions = [
-      'agents:read',
-      'agents:chat',
-      'workspace:read',
-      'workspace:write'
-    ];
-
-    // Check if user has elevated permissions (would be from database)
-    const isAdmin = process.env.ADMIN_USERS?.includes(userId);
+  // Get user permissions (implement based on your business logic)
+  private async getUserPermissions(userId: string): Promise<string[]> {
+    // Default permissions for all users
+    const defaultPermissions = ['read:profile', 'read:workspace'];
+    
+    // Check if user is admin (this would typically come from your database)
+    const isAdmin = await this.checkIfUserIsAdmin(userId);
     
     if (isAdmin) {
-      return [
-        ...defaultPermissions,
-        'infrastructure:write',
-        'cloud:manage',
-        'kubernetes:admin',
-        'monitoring:write',
-        'alerts:manage',
-        'incident:manage',
-        'system:admin',
-        'repo:write',
-        'actions:execute'
-      ];
+      return [...defaultPermissions, 'admin:all', 'write:workspace', 'delete:workspace'];
     }
 
     return defaultPermissions;
   }
 
-  // Verify our JWT token
+  private async checkIfUserIsAdmin(userId: string): Promise<boolean> {
+    // Implement your admin check logic here
+    // This could check a database, Azure AD groups, etc.
+    return false;
+  }
+
+  // Verify JWT token
   verifyToken(token: string): any {
-    try {
-      return jwt.verify(token, this.jwtSecret);
-    } catch (error) {
-      throw new Error('Invalid token');
+    if (!this.jwtSecret) {
+      throw new Error('JWT secret not configured');
     }
+    return jwt.verify(token, this.jwtSecret);
   }
 
   // Refresh access token
   async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string }> {
+    if (!this.jwtRefreshSecret || !this.jwtSecret) {
+      throw new Error('JWT secrets not configured');
+    }
+
     try {
       const decoded = jwt.verify(refreshToken, this.jwtRefreshSecret) as any;
       
@@ -243,41 +250,41 @@ export class AzureB2CAuth {
         throw new Error('Invalid refresh token');
       }
 
-      // Get user permissions again (they might have changed)
-      const permissions = await this.getUserPermissions(decoded.userId);
+      // Get fresh user permissions
+      const permissions = await this.getUserPermissions(decoded.sub);
 
+      // Generate new access token
       const accessToken = jwt.sign(
         {
-          userId: decoded.userId,
+          sub: decoded.sub,
           permissions,
-          type: 'access'
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour
         },
-        this.jwtSecret,
-        { expiresIn: '1h' }
+        this.jwtSecret
       );
 
       return { accessToken };
     } catch (error) {
-      throw new Error('Invalid refresh token');
+      throw error;
     }
   }
 
-  // Logout user (would revoke tokens in production)
-  async logout(userId: string): Promise<void> {
-    // In production, add token to revocation list
+  // Logout user
+  async logout(userId?: string): Promise<void> {
+    // Implement logout logic (e.g., blacklist tokens, clear sessions)
     console.log(`User ${userId} logged out`);
   }
 
-  // Get authorization header
+  // Utility methods
   getAuthorizationHeader(token: string): string {
     return `Bearer ${token}`;
   }
 
-  // Extract token from request header
-  extractTokenFromHeader(authHeader?: string): string | null {
+  extractTokenFromHeader(authHeader: string): string | null {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return null;
     }
     return authHeader.substring(7);
   }
-} 
+}
