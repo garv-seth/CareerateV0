@@ -23,8 +23,12 @@ externalPort = 80
 
 [[workflows.workflow]]
 name = "Start Application"
-mode = "parallel"
+mode = "sequential"
 author = 33980514
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd backend && npx ts-node src/server.ts"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
