@@ -1,0 +1,52 @@
+nfo: 🚀 Starting Careerate Server initialization... {"timestamp":"2025-06-13T04:08:05.431Z"}
+⚠️  Azure Key Vault URL not provided, using environment variables
+info: 🚀 Careerate Server running on port 8081 {"timestamp":"2025-06-13T04:08:05.438Z"}
+info: 🌍 Environment: development {"timestamp":"2025-06-13T04:08:05.439Z"}
+info: 🔗 CORS Origin: http://localhost:3000,http://localhost:5173 {"timestamp":"2025-06-13T04:08:05.439Z"}
+info: 📍 Available routes: {"timestamp":"2025-06-13T04:08:05.439Z"}
+info:   GET  /           - API info {"timestamp":"2025-06-13T04:08:05.439Z"}
+info:   GET  /health     - Health check {"timestamp":"2025-06-13T04:08:05.439Z"}
+info:   GET  /api/agents - List agents {"timestamp":"2025-06-13T04:08:05.439Z"}
+info:   POST /api/chat   - Chat with AI {"timestamp":"2025-06-13T04:08:05.440Z"}
+info: ✅ Server ready to handle requests {"timestamp":"2025-06-13T04:08:05.440Z"}
+info: ✅ Secrets manager initialized {"timestamp":"2025-06-13T04:08:05.441Z"}
+❌ Failed to retrieve secret 'B2C_TENANT_NAME': Error: Environment variable 'B2C_TENANT_NAME' not found for secret 'B2C_TENANT_NAME'
+    at AzureSecretsManager.getFromEnvironment (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:89:13)
+    at AzureSecretsManager.getSecret (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:50:28)
+    at AzureB2CAuth.initialize (/home/runner/workspace/backend/src/services/AzureB2CAuth.ts:44:27)
+    at CareerateServer.initialize (/home/runner/workspace/backend/src/server.ts:84:32)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+❌ Failed to retrieve secret 'B2C_CLIENT_ID': Error: Environment variable 'B2C_CLIENT_ID' not found for secret 'B2C_CLIENT_ID'
+    at AzureSecretsManager.getFromEnvironment (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:89:13)
+    at AzureSecretsManager.getSecret (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:50:28)
+    at AzureB2CAuth.initialize (/home/runner/workspace/backend/src/services/AzureB2CAuth.ts:45:27)
+    at CareerateServer.initialize (/home/runner/workspace/backend/src/server.ts:84:32)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+❌ Failed to retrieve secret 'MICROSOFT_PROVIDER_AUTHENTICATION_SECRET': Error: Environment variable 'MICROSOFT_PROVIDER_AUTHENTICATION_SECRET' not found for secret 'MICROSOFT_PROVIDER_AUTHENTICATION_SECRET'
+    at AzureSecretsManager.getFromEnvironment (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:89:13)
+    at AzureSecretsManager.getSecret (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:50:28)
+    at AzureB2CAuth.initialize (/home/runner/workspace/backend/src/services/AzureB2CAuth.ts:46:27)
+    at CareerateServer.initialize (/home/runner/workspace/backend/src/server.ts:84:32)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+❌ Failed to retrieve secret 'B2C_SIGNUP_SIGNIN_POLICY_NAME': Error: Environment variable 'B2C_SIGNUP_SIGNIN_POLICY_NAME' not found for secret 'B2C_SIGNUP_SIGNIN_POLICY_NAME'
+    at AzureSecretsManager.getFromEnvironment (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:89:13)
+    at AzureSecretsManager.getSecret (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:50:28)
+    at AzureB2CAuth.initialize (/home/runner/workspace/backend/src/services/AzureB2CAuth.ts:47:27)
+    at CareerateServer.initialize (/home/runner/workspace/backend/src/server.ts:84:32)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+📝 Using environment variable 'JWT_SECRET' for secret 'JWT_SECRET'
+❌ Failed to retrieve secret 'JWT_REFRESH_SECRET': Error: Environment variable 'JWT_REFRESH_SECRET' not found for secret 'JWT_REFRESH_SECRET'
+    at AzureSecretsManager.getFromEnvironment (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:89:13)
+    at AzureSecretsManager.getSecret (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:50:28)
+    at AzureB2CAuth.initialize (/home/runner/workspace/backend/src/services/AzureB2CAuth.ts:49:27)
+    at CareerateServer.initialize (/home/runner/workspace/backend/src/server.ts:84:32)
+    at processTicksAndRejections (node:internal/process/task_queues:95:5)
+warn: ⚠️  Auth service initialization failed, continuing without auth: Secret 'B2C_TENANT_NAME' not found {"stack":"Error: Secret 'B2C_TENANT_NAME' not found\n    at AzureSecretsManager.getSecret (/home/runner/workspace/backend/src/services/AzureSecretsManager.ts:62:13)\n    at AzureB2CAuth.initialize (/home/runner/workspace/backend/src/services/AzureB2CAuth.ts:44:27)\n    at CareerateServer.initialize (/home/runner/workspace/backend/src/server.ts:84:32)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)","timestamp":"2025-06-13T04:08:05.456Z"}
+Initializing MultiAgentOrchestrator...
+✅ All agents registered
+✅ Registered tools: shell, filesystem
+✅ MultiAgentOrchestrator initialized
+info: ✅ Agent orchestrator initialized {"timestamp":"2025-06-13T04:08:05.458Z"}
+info: ✅ Middleware configured {"timestamp":"2025-06-13T04:08:05.462Z"}
+error: ❌ Route setup failed: Missing parameter name at 1: https://git.new/pathToRegexpError {"stack":"TypeError: Missing parameter name at 1: https://git.new/pathToRegexpError\n    at name (/home/runner/workspace/node_modules/path-to-regexp/src/index.ts:153:13)\n    at lexer (/home/runner/workspace/node_modules/path-to-regexp/src/index.ts:171:21)\n    at lexer.next (<anonymous>)\n    at Iter.peek (/home/runner/workspace/node_modules/path-to-regexp/src/index.ts:188:32)\n    at Iter.tryConsume (/home/runner/workspace/node_modules/path-to-regexp/src/index.ts:195:24)\n    at Iter.text (/home/runner/workspace/node_modules/path-to-regexp/src/index.ts:213:26)\n    at consume (/home/runner/workspace/node_modules/path-to-regexp/src/index.ts:285:23)\n    at parse (/home/runner/workspace/node_modules/path-to-regexp/src/index.ts:320:18)\n    at /home/runner/workspace/node_modules/path-to-regexp/src/index.ts:503:40\n    at Array.map (<anonymous>)","timestamp":"2025-06-13T04:08:05.466Z"}
+info: 🎉 Careerate Server initialization complete {"timestamp":"2025-06-13T04:08:05.467Z"}
