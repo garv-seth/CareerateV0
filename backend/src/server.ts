@@ -62,7 +62,7 @@ class CareerateServer {
     this.secretsManager = new AzureSecretsManager();
     this.agentOrchestrator = new MultiAgentOrchestrator();
 
-    this.frontendBuildPath = path.join(__dirname, '..', 'frontend', 'dist');
+    this.frontendBuildPath = path.resolve(__dirname, '..', 'public');
 
     this.initialize();
   }
@@ -151,61 +151,55 @@ class CareerateServer {
 
   private setupRoutes() {
     try {
-      // Wrap route imports in try-catch to prevent malformed routes from crashing
-      try {
-        if (this.authService) {
-          this.app.use('/api/auth', authRoutes);
-        } else {
-          this.app.use('/api/auth', (req, res) => {
-            res.status(503).json({ error: 'Auth service not available' });
-          });
-        }
-      } catch (authRouteError) {
-        logger.warn('❌ Auth routes failed to load:', authRouteError);
-        this.app.use('/api/auth', (req, res) => {
-          res.status(503).json({ error: 'Auth service not available' });
-        });
-      }
-
-      try {
-        this.app.use('/api/workspace', workspaceRoutes);
-      } catch (workspaceRouteError) {
-        logger.warn('❌ Workspace routes failed to load:', workspaceRouteError);
-        this.app.use('/api/workspace', (req, res) => {
-          res.status(503).json({ error: 'Workspace service not available' });
-        });
-      }
-
-      try {
-        this.app.use('/api/mcp', mcpRoutes);
-      } catch (mcpRouteError) {
-        logger.warn('❌ MCP routes failed to load:', mcpRouteError);
-        this.app.use('/api/mcp', (req, res) => {
-          res.status(503).json({ error: 'MCP service not available' });
-        });
-      }
-
-      try {
-        this.app.use('/api/analytics', analyticsRoutes);
-      } catch (analyticsRouteError) {
-        logger.warn('❌ Analytics routes failed to load:', analyticsRouteError);
-        this.app.use('/api/analytics', (req, res) => {
-          res.status(503).json({ error: 'Analytics service not available' });
-        });
-      }
-
+      // Setup API routes with error boundaries
+      this.setupApiRoutes();
       this.setupCoreRoutes();
-      
-      // All other GET requests not handled before will return our React app
-      this.app.get('*', (req, res) => {
-        res.sendFile(path.resolve(this.frontendBuildPath, 'index.html'));
-      });
+      this.setupFallbackRoutes();
       
       logger.info('✅ Routes configured');
     } catch (error) {
       logger.error('❌ Route setup failed:', error);
       this.setupBasicRoutes();
     }
+  }
+
+  private setupApiRoutes() {
+    // Auth routes
+    if (this.authService) {
+      this.app.use('/api/auth', authRoutes);
+    } else {
+      this.app.use('/api/auth', (req, res) => {
+        res.status(503).json({ error: 'Auth service not available' });
+      });
+    }
+
+    // Workspace routes
+    this.app.use('/api/workspace', workspaceRoutes);
+
+    // MCP routes
+    this.app.use('/api/mcp', mcpRoutes);
+
+    // Analytics routes
+    this.app.use('/api/analytics', analyticsRoutes);
+  }
+
+  private setupFallbackRoutes() {
+    // Serve static files first
+    this.app.use(express.static(this.frontendBuildPath));
+    
+    // Catch-all handler for client-side routing
+    this.app.use((req, res) => {
+      if (req.method === 'GET' && !req.path.startsWith('/api/')) {
+        try {
+          const indexPath = path.resolve(this.frontendBuildPath, 'index.html');
+          res.sendFile(indexPath);
+        } catch (error) {
+          res.status(404).json({ error: 'Frontend not found' });
+        }
+      } else {
+        res.status(404).json({ error: 'API endpoint not found' });
+      }
+    });
   }
 
   private setupCoreRoutes() {
