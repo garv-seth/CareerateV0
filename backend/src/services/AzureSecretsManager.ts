@@ -89,13 +89,13 @@ export class AzureSecretsManager {
       throw new Error(`Environment variable '${envVar}' not found for secret '${secretName}'`);
     }
 
-    console.log(chalk.blue(`📝 Using environment variable '${envVar}' for secret '${secretName}'`));
+    console.log(`📝 Using environment variable '${envVar}' for secret '${secretName}'`);
     return value;
   }
 
   clearCache(): void {
     this.cache.clear();
-    console.log(chalk.blue('🧹 Secrets cache cleared'));
+    console.log('🧹 Secrets cache cleared');
   }
 
   getCacheStats(): { size: number; keys: string[] } {

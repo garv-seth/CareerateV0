@@ -1,15 +1,12 @@
 import React from 'react';
-import { useMsal } from "@azure/msal-react";
-import { loginRequest } from "../config/authConfig";
+import { useNavigate } from 'react-router-dom';
 import { EngravedString } from '@/components/ui/interactive-string';
 
 const LandingPage = () => {
-    const { instance } = useMsal();
+    const navigate = useNavigate();
 
-    const handleLogin = () => {
-        instance.loginRedirect(loginRequest).catch(e => {
-            console.error(e);
-        });
+    const handleGetStarted = () => {
+        navigate('/dashboard');
     };
 
     return (
@@ -31,7 +28,7 @@ const LandingPage = () => {
                     Build, deploy, and manage your infrastructure with an AI partner that understands your code, streamlines your workflows, and enhances your productivity.
                 </p>
                 <button
-                    onClick={handleLogin}
+                    onClick={handleGetStarted}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500/50 animate-fade-in"
                 >
                     Get Started
