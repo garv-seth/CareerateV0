@@ -139,7 +139,8 @@
     border-color: hsl(var(--border)); /* Uses CSS var --border */
   }
   body {
-    @apply bg-background text-foreground; /* Uses CSS vars */
+    background: rgb(var(--background-rgb));
+    color: rgb(var(--foreground-rgb));
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
