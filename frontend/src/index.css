@@ -136,7 +136,7 @@
 
 @layer base {
   * {
-    @apply border-border; /* Uses CSS var --border */
+    border-color: hsl(var(--border)); /* Uses CSS var --border */
   }
   body {
     @apply bg-background text-foreground; /* Uses CSS vars */
