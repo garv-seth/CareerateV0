@@ -340,8 +340,14 @@
   
   /* Example of a themed button (apply similar logic where buttons are styled) */
   .button-primary {
-    @apply bg-primary text-primary-foreground hover:bg-primary-hover;
-    /* Add other button base styles like padding, border-radius, etc. */
+    background-color: #7c3aed;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+  }
+  
+  .button-primary:hover {
+    background-color: #6d28d9;
   }
 }
 
