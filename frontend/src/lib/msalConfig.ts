@@ -19,7 +19,7 @@ export const msalConfig: Configuration = {
         clientId: import.meta.env.VITE_B2C_CLIENT_ID || "", // Fallback to empty string
         authority: b2cPolicies.authorities.signUpSignIn.authority,
         knownAuthorities: [b2cPolicies.authorityDomain],
-        redirectUri: window.location.origin + '/auth/callback', // Must match with AAD B2C configuration
+        redirectUri: window.location.origin, // For popup authentication
         postLogoutRedirectUri: window.location.origin,
     },
     cache: {

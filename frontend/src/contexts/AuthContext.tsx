@@ -34,11 +34,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [instance]);
 
   const login = () => {
-    instance.loginRedirect().catch(e => console.error(e));
+    instance.loginPopup(loginRequest).catch(e => console.error(e));
   };
 
   const logout = () => {
-    instance.logoutRedirect({ postLogoutRedirectUri: '/' });
+    instance.logoutPopup({ postLogoutRedirectUri: '/' });
   };
 
   const value = {
