@@ -187,7 +187,7 @@ const LandingPage = () => {
                     >
                         <Badge className="mb-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20">
                             <Star className="w-4 h-4 mr-2" />
-                            #1 AI DevOps Platform of 2025
+                            #1 AI DevOps Platform of 2025 - Updated {new Date().toLocaleTimeString()}
                         </Badge>
                         
                         <h1 className="text-6xl md:text-8xl font-bold mb-8 bg-gradient-to-r from-foreground via-blue-600 to-purple-600 bg-clip-text text-transparent leading-tight">
