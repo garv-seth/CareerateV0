@@ -1,8 +1,8 @@
-# Careerate - AI DevOps Platform
+# Horizon - Stunning Three.js Landing Page
 
 ## Overview
 
-Careerate is a comprehensive AI-powered DevOps platform that provides specialized AI assistance across multiple interfaces. It consists of a full-stack web application, Chrome extension, VSCode extension, and various integrations to help DevOps teams streamline their workflows.
+Horizon is a beautiful Three.js-powered landing page featuring animated star fields, nebula effects, parallax mountains, and smooth camera movements. The application has been simplified to run on a single port with no authentication complexity, focusing on delivering a stunning visual experience.
 
 ## System Architecture
 
