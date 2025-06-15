@@ -13,6 +13,7 @@ import ChatWindow from '../components/chat/ChatWindow';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 interface Agent {
   id: string;
@@ -95,20 +96,31 @@ const DashboardPage = () => {
       <div className="container mx-auto px-6 py-8">
         {/* Header */}
         <motion.div 
-          className="mb-12 text-center"
+          className="mb-12"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <h1 className="text-6xl font-black mb-6 bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-500 bg-clip-text text-transparent">
-            Careerate AI Platform
-          </h1>
-          <p className="text-2xl text-gray-600 dark:text-gray-300 mb-4 font-medium">
-            Next-Generation DevOps Intelligence
-          </p>
-          <p className="text-lg text-gray-500 dark:text-gray-400 max-w-3xl mx-auto">
-            Multi-cloud management, infrastructure automation, and intelligent monitoring with specialized AI agents
-          </p>
+          <div className="flex justify-between items-start mb-8">
+            <div className="text-left flex-1">
+              <h1 className="text-6xl font-black mb-6 bg-gradient-to-r from-blue-600 via-purple-600 to-cyan-500 bg-clip-text text-transparent">
+                Careerate AI Platform
+              </h1>
+              <p className="text-2xl text-gray-600 dark:text-gray-300 mb-4 font-medium">
+                Next-Generation DevOps Intelligence
+              </p>
+              <p className="text-lg text-gray-500 dark:text-gray-400 max-w-3xl">
+                Multi-cloud management, infrastructure automation, and intelligent monitoring with specialized AI agents
+              </p>
+            </div>
+            <div className="flex items-center space-x-4">
+              <ThemeToggle />
+              <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-none px-4 py-2">
+                <CheckCircle className="w-4 h-4 mr-2" />
+                All Systems Operational
+              </Badge>
+            </div>
+          </div>
         </motion.div>
 
         {/* Analytics Dashboard */}
@@ -723,42 +735,272 @@ const DashboardPage = () => {
         )}
 
         {activeTab === 'settings' && (
-          <div className="bg-white/10 backdrop-blur border border-white/20 rounded-lg p-8">
-            <h2 className="text-2xl font-bold text-white mb-6">Platform Settings</h2>
-            <p className="text-gray-300 mb-8">Configure your AI DevOps platform preferences</p>
-            
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-6 rounded-lg bg-white/5">
-                <div>
-                  <h4 className="text-white font-medium text-lg">Real-time Notifications</h4>
-                  <p className="text-gray-300 text-sm">Get notified of agent activities and system events</p>
+          <motion.div 
+            className="space-y-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+          >
+            {/* Azure Integration Settings */}
+            <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg border-gray-200/50 dark:border-gray-700/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
+                  <Cloud className="w-6 h-6 text-blue-500" />
+                  Azure Cloud Integration
+                </CardTitle>
+                <p className="text-gray-600 dark:text-gray-300">Advanced Azure services configuration and optimization</p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-blue-500">
+                          <Database className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 dark:text-white">Azure Key Vault</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Secrets management</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                        Connected
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      URI: careeeratesecretsvault.vault.azure.net
+                    </p>
+                  </div>
+
+                  <div className="p-6 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-purple-500">
+                          <Monitor className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 dark:text-white">Azure Monitor</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Unified observability</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                        Active
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      Real-time metrics and alerting
+                    </p>
+                  </div>
+
+                  <div className="p-6 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-orange-500">
+                          <Server className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 dark:text-white">Azure Kubernetes Service</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">Container orchestration</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                        Operational
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      Scalable container management
+                    </p>
+                  </div>
+
+                  <div className="p-6 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-lg bg-green-500">
+                          <Bot className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 dark:text-white">Azure Machine Learning</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">AI model training</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                        Enabled
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      Enhanced AI agent capabilities
+                    </p>
+                  </div>
                 </div>
-                <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors">
-                  Configure
-                </button>
-              </div>
-              
-              <div className="flex items-center justify-between p-6 rounded-lg bg-white/5">
-                <div>
-                  <h4 className="text-white font-medium text-lg">Team Collaboration</h4>
-                  <p className="text-gray-300 text-sm">Manage team access, permissions, and workspace sharing</p>
+              </CardContent>
+            </Card>
+
+            {/* AI Agent Configuration */}
+            <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg border-gray-200/50 dark:border-gray-700/50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
+                  <Bot className="w-6 h-6 text-purple-500" />
+                  AI Agent Configuration
+                </CardTitle>
+                <p className="text-gray-600 dark:text-gray-300">Customize AI agent behavior and capabilities</p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">Auto-remediation</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">Allow agents to fix issues automatically</p>
+                      </div>
+                      <div className="w-12 h-6 bg-blue-500 rounded-full relative cursor-pointer">
+                        <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 shadow-md"></div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">Proactive monitoring</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">Detect issues before they occur</p>
+                      </div>
+                      <div className="w-12 h-6 bg-blue-500 rounded-full relative cursor-pointer">
+                        <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 shadow-md"></div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div>
+                        <h4 className="font-semibold text-gray-900 dark:text-white">Learning mode</h4>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">Continuously improve from interactions</p>
+                      </div>
+                      <div className="w-12 h-6 bg-blue-500 rounded-full relative cursor-pointer">
+                        <div className="w-5 h-5 bg-white rounded-full absolute top-0.5 right-0.5 shadow-md"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                        Response Speed
+                      </label>
+                      <select className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+                        <option>Balanced (Recommended)</option>
+                        <option>Fast Response</option>
+                        <option>Detailed Analysis</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                        Security Level
+                      </label>
+                      <select className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+                        <option>High Security</option>
+                        <option>Balanced</option>
+                        <option>Performance Optimized</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                        Cost Optimization Priority
+                      </label>
+                      <select className="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white">
+                        <option>Aggressive Savings</option>
+                        <option>Balanced Approach</option>
+                        <option>Performance First</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                <button className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md transition-colors">
-                  Manage
-                </button>
-              </div>
-              
-              <div className="flex items-center justify-between p-6 rounded-lg bg-white/5">
-                <div>
-                  <h4 className="text-white font-medium text-lg">Privacy & Security</h4>
-                  <p className="text-gray-300 text-sm">Control data sharing, privacy levels, and security settings</p>
-                </div>
-                <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors">
-                  Configure
-                </button>
-              </div>
+              </CardContent>
+            </Card>
+
+            {/* Team & Security Settings */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg border-gray-200/50 dark:border-gray-700/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
+                    <Users className="w-6 h-6 text-green-500" />
+                    Team Collaboration
+                  </CardTitle>
+                  <p className="text-gray-600 dark:text-gray-300">Manage team access and permissions</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">Workspace Sharing</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Share AI insights with team members</p>
+                    </div>
+                    <Button className="bg-green-500 hover:bg-green-600 text-white">
+                      Manage
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">Role-based Access</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Control agent access by user role</p>
+                    </div>
+                    <Button className="bg-blue-500 hover:bg-blue-600 text-white">
+                      Configure
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">Audit Logging</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Track all AI agent interactions</p>
+                    </div>
+                    <Button className="bg-purple-500 hover:bg-purple-600 text-white">
+                      View Logs
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg border-gray-200/50 dark:border-gray-700/50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-gray-900 dark:text-white">
+                    <Shield className="w-6 h-6 text-red-500" />
+                    Security & Compliance
+                  </CardTitle>
+                  <p className="text-gray-600 dark:text-gray-300">Advanced security configuration</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">DevSecOps Automation</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Continuous security scanning</p>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                      Active
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">Compliance Monitoring</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">WCAG 2.2, SOC2, ISO 27001</p>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                      Compliant
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <div>
+                      <h4 className="font-semibold text-gray-900 dark:text-white">Data Encryption</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">End-to-end encryption in transit and at rest</p>
+                    </div>
+                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                      Enabled
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

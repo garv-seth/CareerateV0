@@ -1,29 +1,160 @@
-import { DefaultAzureCredential } from '@azure/identity';
+import { DefaultAzureCredential, ManagedIdentityCredential, ClientSecretCredential } from '@azure/identity';
 import { SecretClient } from '@azure/keyvault-secrets';
+import winston from 'winston';
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
+  ]
+});
 
 export class AzureSecretsManager {
   private secretClient: SecretClient | null = null;
   private cache: Map<string, { value: string; expiry: number }> = new Map();
-  private readonly cacheTTL = 5 * 60 * 1000; // 5 minutes
+  private readonly cacheTTL = 30 * 60 * 1000; // 30 minutes
+  private isInitialized = false;
+  private refreshInterval: NodeJS.Timeout | null = null;
 
   async initialize(): Promise<void> {
     try {
-      const keyVaultUrl = process.env.AZURE_KEY_VAULT_URL;
+      const keyVaultUrl = process.env.AZURE_KEY_VAULT_URL || 'https://careeeratesecretsvault.vault.azure.net/';
       
-      if (!keyVaultUrl) {
-        console.warn('⚠️  Azure Key Vault URL not provided, using environment variables');
-        return;
+      // Try multiple authentication methods for Azure environments
+      let credential;
+      
+      try {
+        // First try Managed Identity (for Azure App Service)
+        credential = new ManagedIdentityCredential();
+        logger.info('Using Managed Identity credential for Azure Key Vault');
+      } catch {
+        // Fallback to Service Principal
+        if (process.env.AZURE_CLIENT_ID && process.env.AZURE_CLIENT_SECRET && process.env.AZURE_TENANT_ID) {
+          credential = new ClientSecretCredential(
+            process.env.AZURE_TENANT_ID,
+            process.env.AZURE_CLIENT_ID,
+            process.env.AZURE_CLIENT_SECRET
+          );
+          logger.info('Using Service Principal credential for Azure Key Vault');
+        } else {
+          // Final fallback to DefaultAzureCredential
+          credential = new DefaultAzureCredential();
+          logger.info('Using Default Azure credential for Key Vault');
+        }
       }
 
-      const credential = new DefaultAzureCredential();
       this.secretClient = new SecretClient(keyVaultUrl, credential);
-
-      // Test connection
-      // const testSecret = await this.secretClient.getSecret('test-connection');
-      console.log('✅ Azure Key Vault connected successfully');
+      
+      // Pre-load critical secrets for the platform
+      await this.preloadCriticalSecrets();
+      
+      // Setup periodic refresh
+      this.setupPeriodicRefresh();
+      
+      this.isInitialized = true;
+      logger.info('Azure Key Vault connection established successfully');
     } catch (error) {
-      console.warn('⚠️  Azure Key Vault connection failed, falling back to env vars:', (error as Error)?.message || 'Unknown error');
+      logger.warn('Azure Key Vault connection failed, falling back to environment variables:', error);
       this.secretClient = null;
+      this.isInitialized = false;
+      
+      // Load from environment as fallback
+      this.loadFromEnvironment();
+    }
+  }
+
+  private async preloadCriticalSecrets(): Promise<void> {
+    const criticalSecrets = [
+      'OPENAI_API_KEY',
+      'JWT_SECRET', 
+      'JWT_REFRESH_SECRET',
+      'SESSION_SECRET',
+      'B2C_CLIENT_ID',
+      'B2C_TENANT_NAME', 
+      'B2C_SIGNUP_SIGNIN_POLICY_NAME',
+      'AZURE_STORAGE_CONNECTION_STRING',
+      'COSMOSDB_CONNECTION_STRING_CENTRALUS',
+      'BRAVESEARCH_API_KEY',
+      'FIRECRAWL_API_KEY'
+    ];
+
+    for (const secretName of criticalSecrets) {
+      try {
+        await this.getSecret(secretName);
+      } catch (error) {
+        logger.warn(`Failed to preload secret ${secretName}:`, error);
+      }
+    }
+    
+    logger.info(`Preloaded ${this.cache.size} critical secrets`);
+  }
+
+  private loadFromEnvironment(): void {
+    const secrets = [
+      'OPENAI_API_KEY',
+      'JWT_SECRET',
+      'JWT_REFRESH_SECRET', 
+      'SESSION_SECRET',
+      'B2C_CLIENT_ID',
+      'B2C_TENANT_NAME',
+      'B2C_SIGNUP_SIGNIN_POLICY_NAME',
+      'AZURE_STORAGE_CONNECTION_STRING',
+      'COSMOSDB_CONNECTION_STRING_CENTRALUS',
+      'BRAVESEARCH_API_KEY',
+      'FIRECRAWL_API_KEY'
+    ];
+
+    let loadedCount = 0;
+    for (const secretName of secrets) {
+      const value = process.env[secretName];
+      if (value) {
+        this.cache.set(secretName, {
+          value,
+          expiry: Date.now() + this.cacheTTL
+        });
+        loadedCount++;
+      }
+    }
+    
+    logger.info(`Loaded ${loadedCount} secrets from environment variables`);
+  }
+
+  private setupPeriodicRefresh(): void {
+    // Refresh cache every 15 minutes
+    this.refreshInterval = setInterval(async () => {
+      try {
+        await this.refreshCache();
+        logger.info('Secrets cache refreshed successfully');
+      } catch (error) {
+        logger.error('Failed to refresh secrets cache:', error);
+      }
+    }, 15 * 60 * 1000);
+  }
+
+  private async refreshCache(): Promise<void> {
+    if (!this.secretClient) return;
+
+    const secretNames = Array.from(this.cache.keys());
+    for (const secretName of secretNames) {
+      try {
+        const keyVaultSecretName = secretName.replace(/_/g, '-');
+        const secret = await this.secretClient.getSecret(keyVaultSecretName);
+        if (secret.value) {
+          this.cache.set(secretName, {
+            value: secret.value,
+            expiry: Date.now() + this.cacheTTL
+          });
+        }
+      } catch (error) {
+        logger.warn(`Failed to refresh secret ${secretName}:`, error);
+      }
     }
   }
 
