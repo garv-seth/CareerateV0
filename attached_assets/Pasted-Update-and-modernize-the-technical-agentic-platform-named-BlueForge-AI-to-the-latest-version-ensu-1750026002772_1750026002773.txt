@@ -1,0 +1,111 @@
+Update and modernize the technical agentic platform, named BlueForge AI, to the latest version, ensuring all features and designs align with the README and the requirements below. The platform must outperform competitors like a37.ai (AI-driven DevOps workspace) and arvoai.ca (natural language cloud management). Use the provided Azure environment variables and Key Vault secrets for configuration.
+
+Requirements
+Design
+Redesign all pages, including the landing page, to incorporate 2025 web design trends:
+
+Dark/light mode toggle (default to light mode with blue color scheme: #1e3a8a to #60a5fa gradients).
+
+AI-driven personalization for user-specific content.
+
+3D elements or micro-animations for interactivity.
+
+Bold typography and sustainable design (optimized for energy efficiency).
+
+Mobile-first and accessible (WCAG 2.2 compliant).
+
+Retain and enhance the existing landing page hero element with modern aesthetics (e.g., gradients, animations).
+
+Ensure all pages (e.g., dashboard, settings, documentation) are visually cohesive and functional.
+
+Functionality
+Fix all known bugs and errors, ensuring 100% feature functionality.
+
+Integrate multiple AI agents for:
+
+DevOps automation (e.g., CI/CD pipelines, code testing).
+
+Multi-cloud management (Azure, AWS, GCP) with natural language interfaces.
+
+Cost optimization and observability, surpassing arvoai.ca capabilities.
+
+Support AIOps and DevSecOps practices for automation and security.
+
+Ensure the platform is plug-and-play with clear setup instructions and documentation.
+
+Azure Integration
+Optimize the platform for Azure using:
+
+Azure Kubernetes Service (AKS) for scalable container orchestration.
+
+Azure Monitor for unified observability.
+
+Azure Machine Learning for AI agent capabilities.
+
+Azure App Configuration and Azure Key Vault (URI: https://careeeratesecretsvault.vault.azure.net/) for configuration and secrets management.
+
+Azure DevOps for CI/CD pipelines.
+
+Use the following environment variables from the Azure Web App and Key Vault:
+
+AZURE_STORAGE_CONNECTION_STRING (Key Vault): For Azure Blob Storage access.
+
+B2C_CLIENT_ID (Key Vault): For Azure AD B2C authentication.
+
+B2C_SIGNUP_SIGNIN_POLICY_NAME (Key Vault): For B2C policy configuration.
+
+B2C_TENANT_NAME (Key Vault): For B2C tenant identification.
+
+BRAVESEARCH_API_KEY (Key Vault): For Brave Search API integration.
+
+CORS_ORIGIN (App Service): For CORS configuration.
+
+COSMOSDB_CONNECTION_STRING_CENTRALUS (Key Vault): For Cosmos DB access.
+
+FIRECRAWL_API_KEY (Key Vault): For Firecrawl API integration.
+
+JWT_REFRESH_SECRET (Key Vault): For JWT refresh token security.
+
+JWT_SECRET (Key Vault): For JWT token security.
+
+MICROSOFT_PROVIDER_AUTHENTICATION_SECRET (App Service): For Microsoft authentication.
+
+NODE_ENV (App Service): For environment configuration (e.g., production).
+
+OPENAI_API_KEY (Key Vault): For OpenAI API integration.
+
+SESSION_SECRET (Key Vault): For session security.
+
+WEBSITE_AUTH_AAD_ALLOWED_TENANTS (App Service): For AAD tenant restrictions.
+
+Code Reuse
+Reuse as much existing code as possible, only updating or replacing components necessary to meet design, functionality, and performance requirements.
+
+Use Git for version control to track changes and maintain stability.
+
+Deployment
+Deploy the platform using Azure DevOps pipelines for continuous integration and delivery.
+
+Ensure the platform is scalable, secure (using Azure Security Center), and optimized for performance.
+
+Deliverables
+Updated codebase with all pages, features, and AI agents implemented.
+
+Documentation for setup and usage, including environment variable configuration.
+
+Test suite to verify all functionality and performance.
+
+Instructions for Cursor Agent
+Analyze the existing codebase and README to identify reusable components and required updates.
+
+Implement the redesigned landing page and other pages (e.g., dashboard, settings) with the specified 2025 design trends.
+
+Fix all bugs by running diagnostics and testing thoroughly.
+
+Integrate AI agents using Azure Machine Learning and APIs (e.g., OpenAI, Brave Search, Firecrawl).
+
+Configure the platform to use the provided environment variables and Key Vault secrets securely.
+
+Optimize deployment on Azure, ensuring scalability and observability.
+
+Provide a summary of changes made and any additional setup instructions.
