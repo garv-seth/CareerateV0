@@ -191,10 +191,10 @@ const LandingPage = () => {
                         </Badge>
                         
                         <h1 className="text-6xl md:text-8xl font-bold mb-8 bg-gradient-to-r from-foreground via-blue-600 to-purple-600 bg-clip-text text-transparent leading-tight">
-                            The Future of
+                            Careerate: The Future of
                             <br />
                             <span className="bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                                AI DevOps
+                                AI DevOps Platform
                             </span>
                         </h1>
                         
