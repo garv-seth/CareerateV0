@@ -11,30 +11,47 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        border: "rgb(var(--border-rgb))",
+        input: "rgb(var(--input))",
+        ring: "rgb(var(--ring))",
+        background: "rgb(var(--background-rgb))",
+        foreground: "rgb(var(--foreground-rgb))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "rgb(var(--primary-rgb))",
+          foreground: "rgb(250 250 255)",
+          hover: "rgb(var(--primary-hover-rgb))",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "rgb(var(--secondary-rgb))",
+          foreground: "rgb(255 255 255)",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "rgb(var(--muted-rgb))",
+          foreground: "rgb(var(--muted-rgb))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "rgb(var(--accent-rgb))",
+          foreground: "rgb(var(--background-rgb))",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "rgb(var(--destructive-rgb))",
+          foreground: "rgb(255 255 255)",
+        },
+        success: {
+          DEFAULT: "rgb(var(--success-rgb))",
+          foreground: "rgb(var(--background-rgb))",
+        },
+        warning: {
+          DEFAULT: "rgb(var(--warning-rgb))",
+          foreground: "rgb(var(--background-rgb))",
+        },
+        card: {
+          DEFAULT: "rgb(var(--card-rgb))",
+          foreground: "rgb(var(--foreground-rgb))",
+        },
+        popover: {
+          DEFAULT: "rgb(var(--popover-rgb))",
+          foreground: "rgb(var(--foreground-rgb))",
         },
         chart: {
           "1": "hsl(var(--chart-1))",
