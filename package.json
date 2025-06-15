@@ -5,18 +5,10 @@
   "type": "module",
   "main": "backend/dist/server.js",
   "scripts": {
-    "start": "cd backend && node dist/server.js",
-    "build": "npm run build:frontend:direct && npm run build --workspace=backend",
-    "build:frontend": "npm run build:frontend:direct",
-    "build:frontend:direct": "cd frontend && npx vite build",
-    "build:backend": "npm run build --workspace=backend",
-    "build:local": "cd frontend && npm ci && npm run build && cd ../backend && npm ci && npm run build",
-    "dev": "concurrently \"npm run frontend:dev\" \"npm run backend:dev\"",
-    "frontend:dev": "npm run dev --workspace=frontend",
-    "backend:dev": "npm run dev --workspace=backend",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "npm run preview --workspace=frontend",
-    "install:all": "cd backend && npm ci && cd ../frontend && npm ci"
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build && cd ../backend && npm run build"
   },
   "workspaces": [
     "frontend",

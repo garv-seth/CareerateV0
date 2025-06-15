@@ -184,20 +184,12 @@ class CareerateServer {
   }
 
   private setupFallbackRoutes() {
-    // Serve static files first
-    this.app.use(express.static(this.frontendBuildPath));
-    
-    // Catch-all handler for client-side routing
+    // API-only backend - no static file serving
     this.app.use((req, res) => {
       if (req.method === 'GET' && !req.path.startsWith('/api/')) {
-        try {
-          const indexPath = path.resolve(this.frontendBuildPath, 'index.html');
-          res.sendFile(indexPath);
-        } catch (error) {
-          res.status(404).json({ error: 'Frontend not found' });
-        }
+        res.status(404).json({ error: 'This is an API-only backend. Frontend runs on port 3000.' });
       } else {
-        res.status(404).json({ error: 'API endpoint not found' });
+        res.status(404).json({ error: 'API endpoint not found' });t found' });
       }
     });
   }
