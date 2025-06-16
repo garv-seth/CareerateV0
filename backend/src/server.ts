@@ -373,16 +373,20 @@ class CareerateServer {
   public start(): void {
     const port = process.env.PORT || 8081;
     
-    this.server.listen(port, () => {
+    this.server.listen(port, '0.0.0.0', () => {
       logger.info(`🚀 Careerate Server running on port ${port}`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'default'}`);
       logger.info('📍 Available routes:');
-      logger.info('  GET  /           - API info');
+      logger.info('  GET  /api        - API info');
       logger.info('  GET  /health     - Health check');
       logger.info('  GET  /api/agents - List agents');
       logger.info('  POST /api/chat   - Chat with AI');
       logger.info('✅ Server ready to handle requests');
+    });
+
+    this.server.on('error', (error) => {
+      logger.error('Server error:', error);
     });
 
     // Graceful shutdown

@@ -4,7 +4,7 @@
   "description": "Careerate AI Platform Backend",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node src/server.ts",
+    "dev": "ts-node src/simple-server-backup.ts",
     "build": "npm run prebuild && tsc",
     "start": "node dist/server.js",
     "clean": "rimraf dist",
