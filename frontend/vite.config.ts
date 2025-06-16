@@ -13,7 +13,14 @@ export default defineConfig({
       'localhost',
       '.replit.dev',
       '.repl.co'
-    ]
+    ],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   resolve: {
     alias: {
