@@ -44,8 +44,8 @@ mode = "parallel"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd backend && npx ts-node src/server.ts"
+args = "cd backend && npm run dev"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd frontend && npx vite dev --host 0.0.0.0 --port 3000"
+args = "cd frontend && npm run dev -- --host 0.0.0.0 --port 3000"
