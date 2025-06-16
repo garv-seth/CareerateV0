@@ -25,19 +25,6 @@ externalPort = 80
 runButton = "Run Application"
 
 [[workflows.workflow]]
-name = "Start Application"
-mode = "sequential"
-author = 33980514
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd backend && npx ts-node src/server.ts"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && npx vite dev --host 0.0.0.0 --port 3000"
-
-[[workflows.workflow]]
 name = "Run Application"
 author = 33980514
 mode = "parallel"
