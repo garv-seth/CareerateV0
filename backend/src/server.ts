@@ -189,7 +189,7 @@ class CareerateServer {
       if (req.method === 'GET' && !req.path.startsWith('/api/')) {
         res.status(404).json({ error: 'This is an API-only backend. Frontend runs on port 3000.' });
       } else {
-        res.status(404).json({ error: 'API endpoint not found' });t found' });
+        res.status(404).json({ error: 'API endpoint not found' });
       }
     });
   }
