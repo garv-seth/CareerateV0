@@ -368,7 +368,7 @@ class CareerateServer {
   }
 
   public start(): void {
-    const port = process.env.PORT || 8081;
+    const port = process.env.PORT || 8080;
     
     this.server.listen(port, () => {
       logger.info(`🚀 Careerate Server running on port ${port}`);
