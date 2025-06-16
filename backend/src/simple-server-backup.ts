@@ -1,17 +1,26 @@
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
+import path from 'path';
 
 const app = express();
 const server = createServer(app);
 const port = parseInt(process.env.PORT || '8081', 10);
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Basic middleware
 app.use(cors({
-  origin: ["http://localhost:3000", "https://*.replit.dev", "https://*.repl.co"],
+  origin: isProduction 
+    ? ["https://careerate-app.azurewebsites.net", "https://*.replit.dev", "https://*.repl.co"]
+    : ["http://localhost:3000", "https://*.replit.dev", "https://*.repl.co"],
   credentials: true
 }));
 app.use(express.json());
+
+// Serve static files in production
+if (isProduction) {
+  app.use(express.static(path.join(__dirname, '../public')));
+}
 
 // Health check
 app.get('/health', (req, res) => {
@@ -50,6 +59,13 @@ app.get('/api/agents', (req, res) => {
     { id: 'aws', name: 'AWS Agent', status: 'available' }
   ]);
 });
+
+// Serve React app in production
+if (isProduction) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+  });
+}
 
 // Start server
 server.listen(port, () => {
