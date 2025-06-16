@@ -151,9 +151,11 @@ class CareerateServer {
 
   private setupRoutes() {
     try {
+      // Setup core routes first (health, api info)
+      this.setupCoreRoutes();
       // Setup API routes with error boundaries
       this.setupApiRoutes();
-      this.setupCoreRoutes();
+      // Setup fallback routes last
       this.setupFallbackRoutes();
       
       logger.info('✅ Routes configured');
@@ -184,13 +186,14 @@ class CareerateServer {
   }
 
   private setupFallbackRoutes() {
-    // API-only backend - no static file serving
+    // Handle 404s for API endpoints only
+    this.app.use('/api', (req, res) => {
+      res.status(404).json({ error: 'API endpoint not found' });
+    });
+
+    // For non-API routes, return a simple message
     this.app.use((req, res) => {
-      if (req.method === 'GET' && !req.path.startsWith('/api/')) {
-        res.status(404).json({ error: 'This is an API-only backend. Frontend runs on port 3000.' });
-      } else {
-        res.status(404).json({ error: 'API endpoint not found' });
-      }
+      res.status(404).json({ error: 'This is an API-only backend. Frontend runs on port 3000.' });
     });
   }
 
