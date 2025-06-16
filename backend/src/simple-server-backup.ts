@@ -22,6 +22,16 @@ app.get('/health', (req, res) => {
   });
 });
 
+// API Health check
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    port: port,
+    api: 'operational'
+  });
+});
+
 // API info
 app.get('/api', (req, res) => {
   res.json({
