@@ -184,16 +184,16 @@
 
   .glass-nav {
     background: hsla(var(--background), 0.7); /* Use CSS var for background */
-    backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
+    backdrop-filter: blur(16px) saturate(180%);
     border: 1px solid hsla(var(--border), 0.3); /* Use CSS var for border */
     box-shadow: 0 8px 32px hsla(var(--background), 0.37);
   }
 
   .glass-card {
     background: hsla(var(--card), 0.75); /* Use CSS var for card background */
-    backdrop-filter: blur(12px) saturate(150%);
     -webkit-backdrop-filter: blur(12px) saturate(150%);
+    backdrop-filter: blur(12px) saturate(150%);
     border: 1px solid hsla(var(--border), 0.2); /* Use CSS var for border */
   }
 
@@ -208,8 +208,8 @@
     border-radius: var(--radius);
     /* Glassmorphism with new theme */
     background: rgba(var(--card-rgb), 0.8); /* Slightly transparent card color */
-    backdrop-filter: blur(10px) saturate(150%);
     -webkit-backdrop-filter: blur(10px) saturate(150%);
+    backdrop-filter: blur(10px) saturate(150%);
     border: 1px solid rgba(var(--border-rgb), 0.5);
     box-shadow: 0 8px 32px rgba(var(--background-rgb), 0.2);
     padding: 0.75rem 1.5rem; /* Example padding */
@@ -226,8 +226,8 @@
     max-width: calc(100vw - 60px); /* Responsive padding */
     border-radius: var(--radius);
     background: rgba(var(--card-rgb), 0.85);
-    backdrop-filter: blur(10px) saturate(150%);
     -webkit-backdrop-filter: blur(10px) saturate(150%);
+    backdrop-filter: blur(10px) saturate(150%);
     border: 1px solid rgba(var(--border-rgb), 0.4);
     box-shadow: 0 -4px 20px rgba(var(--background-rgb), 0.15);
     padding: 0.5rem 1rem; /* Example padding */
@@ -393,4 +393,13 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--accent));
+}
+
+.horizon-hero-section-canvas {
+  background: linear-gradient(to bottom, #000428, #004e92);
+}
+
+.horizon-hero-section-title {
+  text-shadow: 0 0 20px rgba(255,255,255,0.5);
+  font-family: Arial, sans-serif;
 }

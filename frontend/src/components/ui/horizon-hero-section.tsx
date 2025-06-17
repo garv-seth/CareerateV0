@@ -238,14 +238,13 @@ export const HorizonHeroSection = () => {
       if (!refs.scene) return;
       
       const layers = [
-        { distance: -50, height: 60, color: 0x1a1a2e, opacity: 1 },
-        { distance: -100, height: 80, color: 0x16213e, opacity: 0.8 },
-        { distance: -150, height: 100, color: 0x0f3460, opacity: 0.6 },
-        { distance: -200, height: 120, color: 0x0a4668, opacity: 0.4 }
+        { height: 150, color: 0x00021a, opacity: 1, distance: -600 },
+        { height: 100, color: 0x000633, opacity: 1, distance: -500 },
+        { height: 50, color: 0x000a4d, opacity: 1, distance: -400 }
       ];
 
-      layers.forEach((layer, index) => {
-        const points = [];
+      layers.forEach(layer => {
+        const points: THREE.Vector2[] = [];
         const segments = 50;
         
         for (let i = 0; i <= segments; i++) {
@@ -271,7 +270,9 @@ export const HorizonHeroSection = () => {
         const mountain = new THREE.Mesh(geometry, material);
         mountain.position.z = layer.distance;
         mountain.position.y = layer.distance;
-        refs.scene.add(mountain);
+        if (refs.scene) {
+          refs.scene.add(mountain);
+        }
         refs.mountains.push(mountain);
       });
     };
@@ -393,8 +394,7 @@ export const HorizonHeroSection = () => {
     <div ref={containerRef} className="relative w-full h-screen overflow-hidden bg-black">
       <canvas
         ref={canvasRef}
-        className="absolute top-0 left-0 w-full h-full"
-        style={{ background: 'linear-gradient(to bottom, #000428, #004e92)' }}
+        className="absolute top-0 left-0 w-full h-full horizon-hero-section-canvas"
       />
       
       {/* Navigation */}
@@ -415,11 +415,7 @@ export const HorizonHeroSection = () => {
         <div className="text-center text-white">
           <h1 
             ref={titleRef}
-            className="text-6xl md:text-8xl font-bold mb-4 tracking-wider"
-            style={{
-              textShadow: '0 0 20px rgba(255,255,255,0.5)',
-              fontFamily: 'Arial, sans-serif'
-            }}
+            className="text-6xl md:text-8xl font-bold mb-4 tracking-wider horizon-hero-section-title"
           >
             HORIZON
           </h1>

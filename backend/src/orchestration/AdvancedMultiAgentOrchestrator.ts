@@ -1,9 +1,13 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatAnthropic } from '@langchain/anthropic';
-import { BaseMessage, HumanMessage, AIMessage, SystemMessage } from '@langchain/core/messages';
-import { StateGraph, Annotation } from '@langchain/langgraph';
+import { BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
+import { StateGraph, Annotation, START, END } from '@langchain/langgraph';
 import winston from 'winston';
 import { AzureSecretsManager } from '../services/AzureSecretsManager';
+import { ToolManager } from './ToolManager';
+import { Runnable, RunnableSequence } from '@langchain/core/runnables';
+import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
+import { v4 as uuidv4 } from 'uuid';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -20,35 +24,35 @@ const logger = winston.createLogger({
 // Advanced state management for multi-agent orchestration
 const AgentState = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
-    reducer: (x, y) => x.concat(y),
+    reducer: (x: BaseMessage[], y: BaseMessage[]) => x.concat(y),
     default: () => [],
   }),
   requestedAgent: Annotation<string>({
-    reducer: (x, y) => y ?? x,
+    reducer: (x: string, y: string | undefined) => y ?? x,
     default: () => "Auto",
   }),
   context: Annotation<any>({
-    reducer: (x, y) => ({ ...x, ...y }),
+    reducer: (x: any, y: any) => ({ ...x, ...y }),
     default: () => ({}),
   }),
   selectedAgent: Annotation<string>({
-    reducer: (x, y) => y ?? x,
+    reducer: (x: string, y: string | undefined) => y ?? x,
     default: () => "",
   }),
   agentResponses: Annotation<Record<string, any>>({
-    reducer: (x, y) => ({ ...x, ...y }),
+    reducer: (x: Record<string, any>, y: Record<string, any>) => ({ ...x, ...y }),
     default: () => ({}),
   }),
   currentStep: Annotation<string>({
-    reducer: (x, y) => y ?? x,
+    reducer: (x: string, y: string | undefined) => y ?? x,
     default: () => "analyze",
   }),
   capabilities: Annotation<string[]>({
-    reducer: (x, y) => [...new Set([...x, ...y])],
+    reducer: (x: string[], y: string[]) => [...new Set([...x, ...y])],
     default: () => [],
   }),
   metadata: Annotation<any>({
-    reducer: (x, y) => ({ ...x, ...y }),
+    reducer: (x: any, y: any) => ({ ...x, ...y }),
     default: () => ({}),
   })
 });
@@ -64,15 +68,17 @@ interface AgentDefinition {
 }
 
 export class AdvancedMultiAgentOrchestrator {
-  private graph: StateGraph<typeof AgentState.State>;
-  private openaiModel: ChatOpenAI | null = null;
-  private anthropicModel: ChatAnthropic | null = null;
+  private graph: any;
+  private openaiModel: Runnable<any, any, any> | null = null;
+  private anthropicModel: Runnable<any, any, any> | null = null;
   private secretsManager: AzureSecretsManager;
   private agents: Map<string, AgentDefinition> = new Map();
   private isInitialized = false;
+  private toolManager: ToolManager;
 
-  constructor(secretsManager: AzureSecretsManager) {
+  constructor(secretsManager: AzureSecretsManager, toolManager: ToolManager) {
     this.secretsManager = secretsManager;
+    this.toolManager = toolManager;
     this.initializeAgents();
     this.graph = this.buildOrchestrationGraph();
   }
@@ -89,8 +95,8 @@ export class AdvancedMultiAgentOrchestrator {
           modelName: 'gpt-4-turbo-preview',
           temperature: 0.1,
           streaming: true,
-        });
-        logger.info('OpenAI model initialized successfully');
+        }).bindTools(this.toolManager.getLangChainTools());
+        logger.info('OpenAI model initialized successfully with tools');
       }
 
       if (anthropicKey) {
@@ -99,8 +105,8 @@ export class AdvancedMultiAgentOrchestrator {
           modelName: 'claude-3-sonnet-20240229',
           temperature: 0.1,
           streaming: true,
-        });
-        logger.info('Anthropic model initialized successfully');
+        }).bindTools(this.toolManager.getLangChainTools());
+        logger.info('Anthropic model initialized successfully with tools');
       }
 
       this.isInitialized = true;
@@ -126,8 +132,8 @@ export class AdvancedMultiAgentOrchestrator {
 - Security scanning and compliance
 - CI/CD integration and automated deployments
 
-Provide comprehensive, production-ready solutions with proper error handling, security considerations, and cost optimization.`,
-        tools: ['terraform-validate', 'terraform-plan', 'cost-calculator', 'security-scanner'],
+Provide comprehensive, production-ready solutions with proper error handling, security considerations, and cost optimization. You have access to the following tools: ${this.toolManager.getAllTools().map(t => t.name).join(', ')}.`,
+        tools: this.toolManager.getAllTools().map(t => t.name), // Dynamically assign all available tools
         priority: 10,
         model: 'gpt-4'
       },
@@ -145,8 +151,8 @@ Provide comprehensive, production-ready solutions with proper error handling, se
 - CI/CD integration with GitOps
 - Multi-cluster and hybrid cloud deployments
 
-Provide enterprise-grade solutions with focus on reliability, scalability, and security.`,
-        tools: ['kubectl', 'helm', 'kustomize', 'security-scanner'],
+Provide enterprise-grade solutions with focus on reliability, scalability, and security. You have access to the following tools: ${this.toolManager.getAllTools().map(t => t.name).join(', ')}.`,
+        tools: this.toolManager.getAllTools().map(t => t.name), // Dynamically assign all available tools
         priority: 9,
         model: 'gpt-4'
       },
@@ -164,8 +170,8 @@ Provide enterprise-grade solutions with focus on reliability, scalability, and s
 - Database optimization and data architecture
 - Disaster recovery and business continuity
 
-Provide scalable, secure, and cost-effective AWS solutions following best practices.`,
-        tools: ['aws-cli', 'cost-explorer', 'config-rules', 'security-hub'],
+Provide scalable, secure, and cost-effective AWS solutions following best practices. You have access to the following tools: ${this.toolManager.getAllTools().map(t => t.name).join(', ')}.`,
+        tools: this.toolManager.getAllTools().map(t => t.name), // Dynamically assign all available tools
         priority: 8,
         model: 'gpt-4'
       },
@@ -183,8 +189,8 @@ Provide scalable, secure, and cost-effective AWS solutions following best practi
 - Cost optimization for monitoring infrastructure
 - Automated remediation and self-healing systems
 
-Provide intelligent monitoring solutions that prevent issues before they impact users.`,
-        tools: ['prometheus', 'grafana', 'elk-stack', 'jaeger', 'anomaly-detector'],
+Provide intelligent monitoring solutions that prevent issues before they impact users. You have access to the following tools: ${this.toolManager.getAllTools().map(t => t.name).join(', ')}.`,
+        tools: this.toolManager.getAllTools().map(t => t.name), // Dynamically assign all available tools
         priority: 7,
         model: 'claude-3-sonnet'
       },
@@ -202,8 +208,8 @@ Provide intelligent monitoring solutions that prevent issues before they impact 
 - Integration with monitoring and alerting systems
 - Knowledge management and learning from incidents
 
-Provide fast, accurate incident resolution with comprehensive analysis and prevention strategies.`,
-        tools: ['log-analyzer', 'trace-analyzer', 'runbook-executor', 'communication-bot'],
+Provide fast, accurate incident resolution with comprehensive analysis and prevention strategies. You have access to the following tools: ${this.toolManager.getAllTools().map(t => t.name).join(', ')}.`,
+        tools: this.toolManager.getAllTools().map(t => t.name), // Dynamically assign all available tools
         priority: 9,
         model: 'gpt-4'
       },
@@ -221,8 +227,8 @@ Provide fast, accurate incident resolution with comprehensive analysis and preve
 - Security scanning integration in CI/CD pipelines
 - Regulatory compliance (SOC2, ISO 27001, GDPR)
 
-Provide robust security solutions that integrate seamlessly with development workflows.`,
-        tools: ['vulnerability-scanner', 'compliance-checker', 'policy-engine', 'threat-detector'],
+Provide robust security solutions that integrate seamlessly with development workflows. You have access to the following tools: ${this.toolManager.getAllTools().map(t => t.name).join(', ')}.`,
+        tools: this.toolManager.getAllTools().map(t => t.name), // Dynamically assign all available tools
         priority: 8,
         model: 'claude-3-sonnet'
       },
@@ -240,8 +246,8 @@ Provide robust security solutions that integrate seamlessly with development wor
 - Technology evaluation and architecture decisions
 - Troubleshooting and problem-solving
 
-Provide well-rounded DevOps guidance with focus on efficiency, reliability, and team productivity.`,
-        tools: ['generic-automation', 'documentation-generator', 'best-practices-checker'],
+Provide well-rounded DevOps guidance with focus on efficiency, reliability, and team productivity. You have access to the following tools: ${this.toolManager.getAllTools().map(t => t.name).join(', ')}.`,
+        tools: this.toolManager.getAllTools().map(t => t.name), // Dynamically assign all available tools
         priority: 5,
         model: 'gpt-3.5-turbo'
       }
@@ -254,240 +260,283 @@ Provide well-rounded DevOps guidance with focus on efficiency, reliability, and 
     logger.info(`Initialized ${agents.length} specialized AI agents`);
   }
 
-  private buildOrchestrationGraph(): StateGraph<typeof AgentState.State> {
-    const graph = new StateGraph(AgentState)
-      .addNode("analyze", this.analyzeRequest.bind(this))
-      .addNode("route", this.routeToAgent.bind(this))
-      .addNode("execute", this.executeAgent.bind(this))
-      .addNode("synthesize", this.synthesizeResponse.bind(this))
-      .addEdge("__start__", "analyze")
-      .addEdge("analyze", "route")
-      .addEdge("route", "execute")
-      .addEdge("execute", "synthesize")
-      .addEdge("synthesize", "__end__");
+  private buildOrchestrationGraph(): any {
+    // LangGraph API expects the Annotation root directly, not wrapped in a channels object.
+    const graphBuilder = new StateGraph(AgentState)
+      .addNode("analyzeRequest", this.analyzeRequest.bind(this))
+      .addNode("routeToAgent", this.routeToAgent.bind(this))
+      .addNode("executeAgent", this.executeAgent.bind(this))
+      .addNode("synthesizeResponse", this.synthesizeResponse.bind(this));
 
-    return graph.compile();
+    // Wire up the control-flow using START / END virtual nodes
+    graphBuilder.addEdge(START, "analyzeRequest");
+    graphBuilder.addEdge("analyzeRequest", "routeToAgent");
+    graphBuilder.addEdge("routeToAgent", "executeAgent");
+    graphBuilder.addEdge("executeAgent", "synthesizeResponse");
+    graphBuilder.addEdge("synthesizeResponse", END);
+
+    // Compile once everything is in place
+    return graphBuilder.compile();
   }
 
   private async analyzeRequest(state: typeof AgentState.State): Promise<Partial<typeof AgentState.State>> {
+    logger.info("Orchestrator: Analyzing incoming request...");
     const lastMessage = state.messages[state.messages.length - 1];
-    const content = lastMessage.content as string;
+    if (!(lastMessage instanceof HumanMessage)) {
+      throw new Error("Last message is not a HumanMessage.");
+    }
 
-    // Advanced intent detection and capability mapping
-    const capabilities = this.detectCapabilities(content);
-    const urgency = this.detectUrgency(content);
-    const complexity = this.detectComplexity(content);
-
-    logger.info(`Request analyzed - Capabilities: ${capabilities.join(', ')}, Urgency: ${urgency}, Complexity: ${complexity}`);
+    const content = lastMessage.content;
+    const capabilities = this.detectCapabilities(content as string);
+    const urgency = this.detectUrgency(content as string);
+    const complexity = this.detectComplexity(content as string);
 
     return {
       capabilities,
-      metadata: {
-        urgency,
-        complexity,
-        analysisTimestamp: new Date().toISOString()
-      },
-      currentStep: "route"
+      metadata: { urgency, complexity },
+      currentStep: "routeToAgent",
     };
   }
 
   private async routeToAgent(state: typeof AgentState.State): Promise<Partial<typeof AgentState.State>> {
-    let selectedAgent = state.requestedAgent;
-
-    if (selectedAgent === "Auto") {
-      selectedAgent = this.selectOptimalAgent(state.capabilities, state.metadata);
-    }
-
-    // Validate agent exists
-    if (!this.agents.has(selectedAgent)) {
-      selectedAgent = "General Agent";
-    }
-
-    logger.info(`Routing request to: ${selectedAgent}`);
-
-    return {
-      selectedAgent,
-      currentStep: "execute"
-    };
+    logger.info("Orchestrator: Routing request to optimal agent...");
+    const selectedAgent = this.selectOptimalAgent(state.capabilities, state.metadata);
+    logger.info(`Orchestrator: Selected agent: ${selectedAgent}`);
+    return { selectedAgent, currentStep: "executeAgent" };
   }
 
   private async executeAgent(state: typeof AgentState.State): Promise<Partial<typeof AgentState.State>> {
-    const agent = this.agents.get(state.selectedAgent);
-    if (!agent) {
-      throw new Error(`Agent ${state.selectedAgent} not found`);
+    logger.info(`Orchestrator: Executing agent: ${state.selectedAgent}`);
+    const agentDefinition = this.agents.get(state.selectedAgent);
+    if (!agentDefinition) {
+      throw new Error(`Agent ${state.selectedAgent} not found.`);
     }
 
-    const model = this.getModelForAgent(agent);
-    if (!model) {
-      throw new Error(`No available model for agent ${state.selectedAgent}`);
+    const agentModel = this.getModelForAgent(agentDefinition);
+    if (!agentModel) {
+      throw new Error(`Model for agent ${agentDefinition.name} not initialized.`);
     }
 
-    // Prepare enhanced context for the agent
-    const enhancedMessages = [
-      new SystemMessage(agent.systemPrompt),
-      ...state.messages
+    const messages = [
+      new SystemMessage(agentDefinition.systemPrompt),
+      ...state.messages,
     ];
 
-    try {
-      const response = await model.invoke(enhancedMessages);
-      
-      return {
-        agentResponses: {
-          [state.selectedAgent]: {
-            response: response.content,
-            timestamp: new Date().toISOString(),
-            capabilities: agent.capabilities,
-            model: agent.model
+    const toolMap = new Map(this.toolManager.getAllTools().map(tool => [tool.name, tool]));
+
+    // Define a runnable for the agent that can use tools
+    const agentRunnable: Runnable<any, any, any> = RunnableSequence.from([
+      ChatPromptTemplate.fromMessages([new MessagesPlaceholder("messages")]),
+      agentModel.withConfig({ runName: "Agent" }),
+      {
+        tool_calls: (input: AIMessage) => input.tool_calls || [],
+        output: (input: AIMessage) => input.content,
+        tool_outputs: async (input: AIMessage) => {
+          const toolCalls = input.tool_calls || [];
+          const toolResults = [];
+          for (const toolCall of toolCalls) {
+            const tool = toolMap.get(toolCall.name);
+            if (tool) {
+              try {
+                const toolOutput = await tool.execute(toolCall.args);
+                const toolMsg = new ToolMessage({
+                  content: JSON.stringify(toolOutput),
+                  name: toolCall.name,
+                  tool_call_id: toolCall.id ?? uuidv4(),
+                });
+                messages.push(toolMsg);
+                toolResults.push(toolMsg);
+                // Re-invoke the agent with the tool output
+                const toolOutputStream = await agentRunnable.stream({ messages });
+                for await (const toolOutputChunk of toolOutputStream) {
+                  if (toolOutputChunk.output) {
+                    const content = typeof toolOutputChunk.output === 'string' ? toolOutputChunk.output : JSON.stringify(toolOutputChunk.output);
+                    toolResults.push(new AIMessage(content as string));
+                  } else if (toolOutputChunk.tool_calls) {
+                    // Handle nested tool calls (unlikely but possible)
+                     for (const nestedToolCall of toolOutputChunk.tool_calls) {
+                        logger.warn(`Nested tool call detected: ${nestedToolCall.name}. Current implementation does not fully support multi-level tool calling within a single turn.`);
+                        toolResults.push(new AIMessage(`Warning: Nested tool call detected (${nestedToolCall.name}). Please try to refine your request if the agent does not respond as expected.`));
+                     }
+                  }
+                }
+
+              } catch (e) {
+                logger.error(`Error executing tool ${toolCall.name}:`, e);
+                const errMsg = new ToolMessage({
+                  content: JSON.stringify({ error: (e as Error).message }),
+                  name: toolCall.name,
+                  tool_call_id: toolCall.id ?? uuidv4(),
+                });
+                messages.push(errMsg);
+                toolResults.push(errMsg);
+              }
+            } else {
+              const notFoundMsg = new ToolMessage({
+                content: JSON.stringify({ error: `Tool ${toolCall.name} not found.` }),
+                name: toolCall.name,
+                tool_call_id: toolCall.id ?? uuidv4(),
+              });
+              messages.push(notFoundMsg);
+              toolResults.push(notFoundMsg);
+            }
           }
-        },
-        currentStep: "synthesize"
-      };
+          return toolResults;
+        }
+      }
+    ]);
+
+    let agentResponse: BaseMessage[] = [];
+    try {
+      const stream = await agentRunnable.stream({ messages });
+
+      for await (const chunk of stream) {
+        // Handle tool calls by executing them and appending ToolMessage
+        if (chunk.tool_calls) {
+          for (const toolCall of chunk.tool_calls) {
+            const tool = toolMap.get(toolCall.name);
+            if (tool) {
+              try {
+                const toolOutput = await tool.execute(toolCall.args);
+                const toolMsg = new ToolMessage({
+                  content: JSON.stringify(toolOutput),
+                  name: toolCall.name,
+                  tool_call_id: toolCall.id ?? uuidv4(),
+                });
+                messages.push(toolMsg);
+                agentResponse.push(toolMsg);
+                // Re-invoke the agent with the tool output
+                const toolOutputStream = await agentRunnable.stream({ messages });
+                for await (const toolOutputChunk of toolOutputStream) {
+                  if (toolOutputChunk.output) {
+                    const content = typeof toolOutputChunk.output === 'string' ? toolOutputChunk.output : JSON.stringify(toolOutputChunk.output);
+                    agentResponse.push(new AIMessage(content as string));
+                  } else if (toolOutputChunk.tool_calls) {
+                    // Handle nested tool calls (unlikely but possible)
+                     for (const nestedToolCall of toolOutputChunk.tool_calls) {
+                        logger.warn(`Nested tool call detected: ${nestedToolCall.name}. Current implementation does not fully support multi-level tool calling within a single turn.`);
+                        agentResponse.push(new AIMessage(`Warning: Nested tool call detected (${nestedToolCall.name}). Please try to refine your request if the agent does not respond as expected.`));
+                     }
+                  }
+                }
+
+              } catch (e) {
+                logger.error(`Error executing tool ${toolCall.name}:`, e);
+                const errMsg = new ToolMessage({
+                  content: JSON.stringify({ error: (e as Error).message }),
+                  name: toolCall.name,
+                  tool_call_id: toolCall.id ?? uuidv4(),
+                });
+                messages.push(errMsg);
+                agentResponse.push(errMsg);
+              }
+            } else {
+              const notFoundMsg = new ToolMessage({
+                content: JSON.stringify({ error: `Tool ${toolCall.name} not found.` }),
+                name: toolCall.name,
+                tool_call_id: toolCall.id ?? uuidv4(),
+              });
+              messages.push(notFoundMsg);
+              agentResponse.push(notFoundMsg);
+            }
+          }
+        } else if (chunk.output) {
+          const content = typeof chunk.output === 'string' ? chunk.output : JSON.stringify(chunk.output);
+          agentResponse.push(new AIMessage(content as string));
+        }
+      }
     } catch (error) {
-      logger.error(`Agent execution failed for ${state.selectedAgent}:`, error);
-      throw error;
+      logger.error(`Error during agent execution for ${agentDefinition.name}:`, error);
+      agentResponse.push(new AIMessage(`An error occurred while executing ${agentDefinition.name}: ${(error as Error).message}.`));
     }
+
+    return {
+      agentResponses: { [agentDefinition.name]: agentResponse },
+      messages: state.messages.concat(agentResponse),
+      currentStep: "synthesizeResponse",
+    };
   }
 
   private async synthesizeResponse(state: typeof AgentState.State): Promise<Partial<typeof AgentState.State>> {
-    const agentResponse = state.agentResponses[state.selectedAgent];
+    logger.info("Orchestrator: Synthesizing final response...");
+    // This is a placeholder. In a real scenario, a dedicated synthesis agent
+    // or logic would combine agentResponses and context into a coherent reply.
+    const finalResponse = Object.values(state.agentResponses).flat().map(msg => {
+      if (msg instanceof AIMessage) return msg.content;
+      if (msg instanceof ToolMessage) return `Tool ${msg.name} output: ${msg.content}`;
+      return msg.toString();
+    }).join('\n\n');
     
-    if (!agentResponse) {
-      throw new Error('No agent response to synthesize');
-    }
-
-    // Add metadata and formatting to the response
-    const synthesizedMessage = new AIMessage({
-      content: agentResponse.response,
-      additional_kwargs: {
-        agent: state.selectedAgent,
-        capabilities: agentResponse.capabilities,
-        timestamp: agentResponse.timestamp,
-        model: agentResponse.model
-      }
-    });
-
-    return {
-      messages: [synthesizedMessage]
-    };
+    logger.info(`Orchestrator: Final response synthesized.`);
+    return { messages: state.messages.concat(new AIMessage(finalResponse)), currentStep: "end" };
   }
 
   private detectCapabilities(content: string): string[] {
-    const capabilityKeywords = {
-      'terraform': ['terraform', 'infrastructure', 'iac', 'provisioning', 'state'],
-      'kubernetes': ['kubernetes', 'k8s', 'pods', 'containers', 'deployment', 'service'],
-      'aws': ['aws', 'ec2', 's3', 'lambda', 'cloudformation', 'cloudwatch'],
-      'monitoring': ['monitoring', 'metrics', 'alerts', 'prometheus', 'grafana', 'observability'],
-      'security': ['security', 'vulnerability', 'compliance', 'scan', 'audit', 'rbac'],
-      'incident-response': ['incident', 'outage', 'downtime', 'troubleshoot', 'debug', 'emergency'],
-      'cost-optimization': ['cost', 'optimize', 'budget', 'savings', 'efficiency'],
-      'automation': ['automate', 'ci/cd', 'pipeline', 'deploy', 'build']
-    };
+    // Simple keyword-based capability detection for demonstration
+    const capabilities = new Set<string>();
+    if (content.toLowerCase().includes('terraform')) capabilities.add('terraform');
+    if (content.toLowerCase().includes('kubernetes') || content.toLowerCase().includes('k8s')) capabilities.add('kubernetes');
+    if (content.toLowerCase().includes('aws') || content.toLowerCase().includes('amazon web services')) capabilities.add('aws');
+    if (content.toLowerCase().includes('monitor') || content.toLowerCase().includes('observability') || content.toLowerCase().includes('alert')) capabilities.add('monitoring');
+    if (content.toLowerCase().includes('incident') || content.toLowerCase().includes('troubleshoot') || content.toLowerCase().includes('debug')) capabilities.add('incident-response');
+    if (content.toLowerCase().includes('security') || content.toLowerCase().includes('compliance') || content.toLowerCase().includes('vulnerability')) capabilities.add('security');
+    if (content.toLowerCase().includes('general devops') || content.toLowerCase().includes('automation') || content.toLowerCase().includes('ci/cd')) capabilities.add('devops');
 
-    const detected: string[] = [];
-    const lowerContent = content.toLowerCase();
-
-    for (const [capability, keywords] of Object.entries(capabilityKeywords)) {
-      if (keywords.some(keyword => lowerContent.includes(keyword))) {
-        detected.push(capability);
-      }
-    }
-
-    return detected.length > 0 ? detected : ['general'];
+    return Array.from(capabilities);
   }
 
   private detectUrgency(content: string): 'low' | 'medium' | 'high' | 'critical' {
-    const urgencyKeywords = {
-      critical: ['emergency', 'critical', 'urgent', 'outage', 'down', 'broken', 'failure'],
-      high: ['important', 'asap', 'quickly', 'soon', 'issue', 'problem'],
-      medium: ['need', 'help', 'question', 'how to'],
-      low: ['learn', 'understand', 'example', 'documentation']
-    };
-
-    const lowerContent = content.toLowerCase();
-
-    for (const [level, keywords] of Object.entries(urgencyKeywords)) {
-      if (keywords.some(keyword => lowerContent.includes(keyword))) {
-        return level as 'low' | 'medium' | 'high' | 'critical';
-      }
-    }
-
-    return 'medium';
+    if (content.toLowerCase().includes('critical') || content.toLowerCase().includes('urgent') || content.toLowerCase().includes('immediately')) return 'critical';
+    if (content.toLowerCase().includes('high priority') || content.toLowerCase().includes('soon')) return 'high';
+    if (content.toLowerCase().includes('medium priority')) return 'medium';
+    return 'low';
   }
 
   private detectComplexity(content: string): 'simple' | 'moderate' | 'complex' | 'enterprise' {
-    const complexityIndicators = {
-      enterprise: ['enterprise', 'scale', 'multi-cloud', 'production', 'compliance'],
-      complex: ['architecture', 'design', 'integration', 'multiple', 'advanced'],
-      moderate: ['configure', 'setup', 'implement', 'deploy'],
-      simple: ['how', 'what', 'explain', 'example', 'simple']
-    };
-
-    const lowerContent = content.toLowerCase();
-    const wordCount = content.split(' ').length;
-
-    // Word count factor
-    if (wordCount > 100) return 'complex';
-    if (wordCount > 50) return 'moderate';
-
-    // Keyword analysis
-    for (const [level, keywords] of Object.entries(complexityIndicators)) {
-      if (keywords.some(keyword => lowerContent.includes(keyword))) {
-        return level as 'simple' | 'moderate' | 'complex' | 'enterprise';
-      }
-    }
-
-    return 'moderate';
+    if (content.toLowerCase().includes('enterprise') || content.toLowerCase().includes('large scale') || content.toLowerCase().includes('complex architecture')) return 'enterprise';
+    if (content.toLowerCase().includes('complex') || content.toLowerCase().includes('distributed')) return 'complex';
+    if (content.toLowerCase().includes('moderate')) return 'moderate';
+    return 'simple';
   }
 
   private selectOptimalAgent(capabilities: string[], metadata: any): string {
-    const agentScores = new Map<string, number>();
+    let bestAgent: AgentDefinition | undefined;
+    let maxScore = -1;
 
-    // Score agents based on capability match
-    for (const [agentName, agent] of this.agents) {
+    this.agents.forEach(agent => {
       let score = 0;
+      const matchedCapabilities = capabilities.filter(cap => agent.capabilities.includes(cap));
+      score += matchedCapabilities.length * 5; // Reward matching capabilities
 
-      // Capability matching
-      const matchedCapabilities = capabilities.filter(cap => 
-        agent.capabilities.some(agentCap => 
-          agentCap.includes(cap) || cap.includes(agentCap)
-        )
-      );
-      
-      score += matchedCapabilities.length * 10;
-
-      // Priority bonus
+      // Prioritize agents with higher defined priority
       score += agent.priority;
 
-      // Urgency factor
-      if (metadata.urgency === 'critical' && agentName.includes('Incident')) {
-        score += 20;
+      // Adjust score based on urgency and complexity from metadata
+      if (metadata.urgency === 'critical') score += 10;
+      else if (metadata.urgency === 'high') score += 5;
+
+      if (metadata.complexity === 'enterprise') score += 10;
+      else if (metadata.complexity === 'complex') score += 5;
+
+      // If an agent specifically lists requested tools, increase score
+      // (This requires a more sophisticated tool matching which we can add later)
+
+      if (score > maxScore) {
+        maxScore = score;
+        bestAgent = agent;
       }
+    });
 
-      // Complexity factor
-      if (metadata.complexity === 'enterprise' && agent.model === 'gpt-4') {
-        score += 10;
-      }
-
-      agentScores.set(agentName, score);
-    }
-
-    // Return highest scoring agent
-    const selectedAgent = Array.from(agentScores.entries())
-      .sort(([,a], [,b]) => b - a)[0][0];
-
-    return selectedAgent || 'General Agent';
+    return bestAgent ? bestAgent.name : 'General Agent'; // Fallback to General Agent
   }
 
-  private getModelForAgent(agent: AgentDefinition): ChatOpenAI | ChatAnthropic | null {
-    switch (agent.model) {
-      case 'gpt-4':
-      case 'gpt-3.5-turbo':
-        return this.openaiModel;
-      case 'claude-3-sonnet':
-        return this.anthropicModel;
-      default:
-        return this.openaiModel || this.anthropicModel;
+  private getModelForAgent(agent: AgentDefinition): Runnable<any, any, any> | null {
+    if (agent.model === 'gpt-4' || agent.model === 'gpt-3.5-turbo') {
+      return this.openaiModel;
+    } else if (agent.model === 'claude-3-sonnet') {
+      return this.anthropicModel;
     }
+    return null;
   }
 
   public async *invoke(input: {
@@ -496,66 +545,59 @@ Provide well-rounded DevOps guidance with focus on efficiency, reliability, and 
     context?: any;
   }): AsyncGenerator<any, void, unknown> {
     if (!this.isInitialized) {
-      yield {
-        type: 'error',
-        data: { message: 'Orchestrator not initialized' }
-      };
-      return;
+      logger.warn('Orchestrator not initialized. Attempting initialization...');
+      await this.initialize();
+      if (!this.isInitialized) {
+        throw new Error('Orchestrator failed to initialize.');
+      }
     }
 
-    try {
-      yield {
-        type: 'status',
-        data: { message: 'Analyzing request and routing to optimal agent...' }
-      };
+    const state: typeof AgentState.State = {
+      messages: input.messages,
+      requestedAgent: input.requestedAgent ?? "Auto",
+      context: input.context || {},
+      selectedAgent: "", // Will be determined by routeToAgent
+      agentResponses: {},
+      currentStep: "analyze",
+      capabilities: [],
+      metadata: {},
+    };
 
-      const initialState = {
-        messages: input.messages,
-        requestedAgent: input.requestedAgent || "Auto",
-        context: input.context || {},
-        selectedAgent: "",
-        agentResponses: {},
-        currentStep: "analyze",
-        capabilities: [],
-        metadata: {}
-      };
+    let currentState = state;
+    const graphExecutor = this.graph; // this.graph already holds the compiled graph
 
-      const result = await this.graph.invoke(initialState);
+    for await (const chunk of await graphExecutor.stream(currentState)) {
+      currentState = { ...currentState, ...chunk };
+      logger.debug(`Current graph state: ${currentState.currentStep}`);
 
-      const finalMessage = result.messages[result.messages.length - 1];
-      
-      yield {
-        type: 'agent_selected',
-        data: { 
-          agent: result.selectedAgent,
-          capabilities: result.capabilities,
-          metadata: result.metadata
+      // Yield response chunks as they are generated by the executeAgent step
+      if (currentState.currentStep === "synthesizeResponse" && currentState.agentResponses) {
+        for (const agentName in currentState.agentResponses) {
+          const responses = currentState.agentResponses[agentName];
+          for (const msg of responses) {
+            if (msg instanceof AIMessage) {
+              yield { type: 'chunk', data: msg.content };
+            } else if (msg instanceof ToolMessage) {
+               try {
+                const toolOutput = JSON.parse(msg.content);
+                yield { type: 'tool_output', name: msg.name, output: toolOutput };
+              } catch (e) {
+                logger.error(`Failed to parse tool message content as JSON: ${msg.content}`, e);
+                yield { type: 'tool_output', name: msg.name, output: { raw: msg.content, error: 'Failed to parse JSON output' } };
+              }
+            }
+          }
         }
-      };
+      }
+    }
 
-      yield {
-        type: 'response',
-        data: {
-          content: finalMessage.content,
-          agent: result.selectedAgent,
-          metadata: finalMessage.additional_kwargs
-        }
-      };
-
-      yield {
-        type: 'complete',
-        data: { message: 'Request processed successfully' }
-      };
-
-    } catch (error) {
-      logger.error('Orchestration error:', error);
-      yield {
-        type: 'error',
-        data: { 
-          message: 'Failed to process request',
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }
-      };
+    // After the graph finishes, yield the final message if it exists
+    const finalMessage = currentState.messages[currentState.messages.length - 1];
+    if (finalMessage instanceof AIMessage) {
+      const data = typeof finalMessage.content === 'string' ? finalMessage.content : JSON.stringify(finalMessage.content);
+      yield { type: 'complete', data };
+    } else {
+      yield { type: 'complete', data: 'Orchestration complete, but no final AI message generated.' };
     }
   }
 
@@ -566,12 +608,12 @@ Provide well-rounded DevOps guidance with focus on efficiency, reliability, and 
     capabilities: string[];
     status: 'online' | 'offline';
   }> {
-    return Array.from(this.agents.entries()).map(([name, agent]) => ({
-      id: name.toLowerCase().replace(/\s+/g, '-'),
+    return Array.from(this.agents.values()).map(agent => ({
+      id: agent.name.replace(/ /g, '-').toLowerCase(),
       name: agent.name,
       description: agent.description,
       capabilities: agent.capabilities,
-      status: this.isInitialized ? 'online' : 'offline'
+      status: this.getModelForAgent(agent) ? 'online' : 'offline', // Check if model is initialized
     }));
   }
 
@@ -581,18 +623,15 @@ Provide well-rounded DevOps guidance with focus on efficiency, reliability, and 
     isInitialized: boolean;
     capabilityCoverage: string[];
   } {
-    const allCapabilities = Array.from(this.agents.values())
-      .flatMap(agent => agent.capabilities)
-      .filter((cap, index, array) => array.indexOf(cap) === index);
+    const models: string[] = [];
+    if (this.openaiModel) models.push('OpenAI');
+    if (this.anthropicModel) models.push('Anthropic');
 
     return {
       totalAgents: this.agents.size,
-      modelsAvailable: [
-        ...(this.openaiModel ? ['OpenAI GPT-4'] : []),
-        ...(this.anthropicModel ? ['Anthropic Claude-3'] : [])
-      ],
+      modelsAvailable: models,
       isInitialized: this.isInitialized,
-      capabilityCoverage: allCapabilities
+      capabilityCoverage: Array.from(new Set(Array.from(this.agents.values()).flatMap(agent => agent.capabilities))),
     };
   }
 }

@@ -8,15 +8,17 @@ import { Configuration, LogLevel } from "@azure/msal-browser";
 //    The authority is typically: https://<TENANT_NAME>.b2clogin.com/<TENANT_NAME>.onmicrosoft.com/<POLICY_NAME>
 //    Or for custom domains: https://<YOUR_CUSTOM_DOMAIN>/<TENANT_NAME>.onmicrosoft.com/<POLICY_NAME>
 
+// MSAL Configuration Placeholders
+// These should be replaced with your actual Azure AD B2C application registration details.
+// It's recommended to use environment variables for these values in production.
 export const MSAL_CONFIG_PLACEHOLDERS = {
-  AZURE_AD_B2C_TENANT_NAME: "YOUR_TENANT_NAME", // e.g., "contoso"
-  AZURE_AD_B2C_CLIENT_ID: "YOUR_CLIENT_ID", // Application (client) ID from Azure portal
-  AZURE_AD_B2C_SIGNUP_SIGNIN_POLICY: "YOUR_SIGNUP_SIGNIN_POLICY_NAME", // e.g., "B2C_1_SignUpSignIn"
-  AZURE_AD_B2C_PASSWORD_RESET_POLICY: "YOUR_PASSWORD_RESET_POLICY_NAME", // e.g., "B2C_1_PasswordReset"
-  AZURE_AD_B2C_PROFILE_EDIT_POLICY: "YOUR_PROFILE_EDIT_POLICY_NAME", // e.g., "B2C_1_ProfileEdit" (optional)
-  AZURE_AD_B2C_CUSTOM_DOMAIN: "", // Optional: e.g., "login.careerate.com" if using custom domain for B2C login
-  // Optional: If your tenant ID is different from TENANT_NAME.onmicrosoft.com
-  AZURE_AD_B2C_TENANT_ID_OVERRIDE: "", // e.g., "YOUR_TENANT_NAME.onmicrosoft.com" or a GUID for tenant ID
+  AZURE_AD_B2C_TENANT_NAME: import.meta.env.VITE_AZURE_AD_B2C_TENANT_NAME || "YOUR_TENANT_NAME",
+  AZURE_AD_B2C_CLIENT_ID: import.meta.env.VITE_AZURE_AD_B2C_CLIENT_ID || "YOUR_CLIENT_ID",
+  AZURE_AD_B2C_SIGNUP_SIGNIN_POLICY: import.meta.env.VITE_AZURE_AD_B2C_SIGNUP_SIGNIN_POLICY || "YOUR_SIGNUP_SIGNIN_POLICY_NAME",
+  AZURE_AD_B2C_PASSWORD_RESET_POLICY: import.meta.env.VITE_AZURE_AD_B2C_PASSWORD_RESET_POLICY || "YOUR_PASSWORD_RESET_POLICY_NAME",
+  AZURE_AD_B2C_PROFILE_EDIT_POLICY: import.meta.env.VITE_AZURE_AD_B2C_PROFILE_EDIT_POLICY || "YOUR_PROFILE_EDIT_POLICY_NAME",
+  AZURE_AD_B2C_CUSTOM_DOMAIN: import.meta.env.VITE_AZURE_AD_B2C_CUSTOM_DOMAIN || "",
+  AZURE_AD_B2C_TENANT_ID_OVERRIDE: import.meta.env.VITE_AZURE_AD_B2C_TENANT_ID_OVERRIDE || "",
 };
 
 const tenantName = MSAL_CONFIG_PLACEHOLDERS.AZURE_AD_B2C_TENANT_NAME;
@@ -96,15 +98,20 @@ export const loginRequest = {
   scopes: [
     "openid", 
     "profile",
+    "email",
     // Add any backend API scopes here if needed, e.g.:
     // `https://${tenantId}/your_api_name/YourScope.Read`,
     // `https://${tenantId}/your_api_name/YourScope.Write`,
   ],
+  prompt: 'select_account'
 };
 
 // Add here scopes for access token request for backend APIs
 export const tokenRequest = {
     scopes: [
+      'openid', 
+      'profile',
+      'email',
       // `https://${tenantId}/your_api_name/YourScope.Read`,
       // `https://${tenantId}/your_api_name/YourScope.Write`,
     ], 

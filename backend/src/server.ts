@@ -8,12 +8,13 @@ import { v4 as uuidv4 } from 'uuid';
 import winston from 'winston';
 import path from 'path';
 import dotenv from 'dotenv';
+import { ChatOpenAI } from '@langchain/openai';
+import { HumanMessage, AIMessage, BaseMessage, ToolMessage } from '@langchain/core/messages';
+import { ChatPromptTemplate, MessagesPlaceholder } from '@langchain/core/prompts';
+import { Runnable, RunnableSequence } from '@langchain/core/runnables';
 
 // Load environment variables
 dotenv.config();
-
-// New Orchestrator
-import { MultiAgentOrchestrator } from './orchestration/MultiAgentOrchestrator';
 
 // Import services and routes
 import { AzureSecretsManager } from './services/AzureSecretsManager';
@@ -22,6 +23,7 @@ import authRoutes from './routes/auth';
 import workspaceRoutes from './routes/workspace';
 import mcpRoutes from './routes/mcp';
 import analyticsRoutes from './routes/analytics';
+import { ToolManager } from './orchestration/ToolManager';
 
 // Logger setup
 const logger = winston.createLogger({
@@ -44,9 +46,10 @@ class CareerateServer {
   private io: SocketIOServer;
   private secretsManager: AzureSecretsManager;
   private authService: AzureB2CAuth | null = null;
-  private agentOrchestrator: MultiAgentOrchestrator;
   private isInitialized = false;
   private frontendBuildPath: string;
+  private llm: Runnable<any, any, any> | null = null;
+  private toolManager: ToolManager;
 
   constructor() {
     this.app = express();
@@ -60,11 +63,12 @@ class CareerateServer {
 
     // Initialize services
     this.secretsManager = new AzureSecretsManager();
-    this.agentOrchestrator = new MultiAgentOrchestrator();
+    this.toolManager = new ToolManager();
 
     this.frontendBuildPath = path.resolve(__dirname, '..', 'public');
 
     this.initialize();
+    this.initializeLLM();
   }
 
   private async initialize() {
@@ -91,7 +95,6 @@ class CareerateServer {
 
       // Initialize agent orchestrator
       try {
-        await this.agentOrchestrator.initialize();
         logger.info('✅ Agent orchestrator initialized');
       } catch (error) {
         logger.warn('⚠️  Agent orchestrator initialization failed, using mock responses:', error);
@@ -109,6 +112,22 @@ class CareerateServer {
       this.setupMiddleware();
       this.setupBasicRoutes();
       this.isInitialized = true;
+    }
+  }
+
+  private initializeLLM() {
+    if (process.env.OPENAI_API_KEY) {
+      // Bind tools to the LLM
+      const toolLLM = new ChatOpenAI({
+        openAIApiKey: process.env.OPENAI_API_KEY,
+        modelName: 'gpt-4-turbo-preview',
+        streaming: true,
+        temperature: 0.7,
+      });
+      this.llm = toolLLM.bindTools(this.toolManager.getLangChainTools());
+      logger.info('✅ OpenAI LLM initialized with tools');
+    } else {
+      logger.warn('⚠️  OpenAI API key not found, LLM will not be available for tool use');
     }
   }
 
@@ -183,6 +202,178 @@ class CareerateServer {
 
     // Analytics routes
     this.app.use('/api/analytics', analyticsRoutes);
+
+    // AI chat endpoint with streaming
+    this.app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
+      try {
+        const { messages, agent } = req.body;
+        
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+          res.status(400).json({ error: 'Messages array is required' });
+          return;
+        }
+
+        if (!this.llm) {
+          res.status(503).json({ error: 'AI service not available' });
+          return;
+        }
+
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        });
+
+        // Convert messages to LangChain format
+        let langchainMessages: BaseMessage[] = messages.map((msg: any) => {
+          return msg.role === 'user' ? new HumanMessage(msg.content) : new AIMessage(msg.content);
+        });
+
+        // Add system prompt based on selected agent
+        const systemPrompts: { [key: string]: string } = {
+          terraform: "You are a Terraform expert specializing in Infrastructure as Code. Help with Terraform configurations, best practices, and troubleshooting. You have access to tools to read, write, and list files, and execute shell commands.",
+          kubernetes: "You are a Kubernetes expert specializing in container orchestration. Help with K8s deployments, troubleshooting, and best practices. You have access to tools to read, write, and list files, and execute shell commands.",
+          aws: "You are an AWS cloud expert. Help with AWS services, architecture, and best practices. You have access to tools to read, write, and list files, and execute shell commands.",
+          monitoring: "You are a monitoring and observability expert. Help with metrics, alerting, and system monitoring. You have access to tools to read, write, and list files, and execute shell commands.",
+          incident: "You are an incident response expert. Help with troubleshooting, root cause analysis, and emergency procedures. You have access to tools to read, write, and list files, and execute shell commands.",
+          general: "You are a DevOps expert. Help with general DevOps practices, automation, and system administration. You have access to tools to read, write, and list files, and execute shell commands."
+        };
+
+        const selectedAgent = agent || 'general';
+        const systemPrompt = systemPrompts[selectedAgent as keyof typeof systemPrompts] || systemPrompts.general;
+        
+        // Prepend system message only if not already present
+        if (!langchainMessages.some(msg => msg instanceof HumanMessage && typeof msg.content === 'string' && msg.content.startsWith("System:"))) {
+          langchainMessages = [new HumanMessage(`System: ${systemPrompt}\n\nUser: ${messages[messages.length - 1].content}`)];
+        } else {
+          // If system message is already part of history, just update the last user message.
+          // This is a simplification; a more robust solution would manage prompt templates.
+          const lastMessage = langchainMessages[langchainMessages.length - 1];
+          if (lastMessage instanceof HumanMessage && typeof lastMessage.content === 'string') {
+            lastMessage.content = `System: ${systemPrompt}\n\nUser: ${lastMessage.content}`;
+          }
+        }
+
+        const tools = this.toolManager.getAllTools();
+        const toolMap = new Map(tools.map(tool => [tool.name, tool]));
+
+        // Create a runnable for the LLM and tools
+        const runnable = RunnableSequence.from([
+          ChatPromptTemplate.fromMessages([new MessagesPlaceholder("messages")]),
+          this.llm.withConfig({ runName: "Agent" }),
+          {
+            tool_calls: (input: AIMessage) => input.tool_calls || [],
+            output: (input: AIMessage) => input.content,
+            tool_outputs: async (input: AIMessage) => {
+              const toolCalls = input.tool_calls || [];
+              const toolResults = [];
+              for (const toolCall of toolCalls) {
+                const tool = toolMap.get(toolCall.name);
+                if (tool) {
+                  try {
+                    const toolOutput = await tool.execute(toolCall.args);
+                    toolResults.push({ name: toolCall.name, output: toolOutput });
+                  } catch (e) {
+                    logger.error(`Error executing tool ${toolCall.name}:`, e);
+                    toolResults.push({ name: toolCall.name, output: { error: (e as Error).message } });
+                  }
+                } else {
+                  toolResults.push({ name: toolCall.name, output: { error: `Tool ${toolCall.name} not found.` } });
+                }
+              }
+              return toolResults;
+            }
+          }
+        ]);
+
+        const stream = await runnable.stream(langchainMessages);
+
+        for await (const chunk of stream) {
+          if (chunk.tool_calls) {
+            for (const toolCall of chunk.tool_calls) {
+              const data = {
+                type: 'tool_code',
+                name: toolCall.name,
+                args: toolCall.args,
+              };
+              res.write(`data: ${JSON.stringify(data)}\n\n`);
+            }
+          } else if (chunk.output) {
+            const data = {
+              type: 'chunk',
+              data: chunk.output
+            };
+            res.write(`data: ${JSON.stringify(data)}\n\n`);
+          } else if (chunk.tool_outputs) {
+             for (const toolOutput of chunk.tool_outputs) {
+              const data = {
+                type: 'tool_output',
+                name: toolOutput.name,
+                output: toolOutput.output,
+              };
+              res.write(`data: ${JSON.stringify(data)}\n\n`);
+            }
+          }
+        }
+
+        res.write(`data: ${JSON.stringify({ type: 'complete', data: null })}\n\n`);
+        res.end();
+
+      } catch (error) {
+        logger.error('Chat endpoint error:', error);
+        if (!res.headersSent) {
+          res.status(500).json({ 
+            error: 'Internal server error',
+            message: 'Chat service temporarily unavailable'
+          });
+        } else {
+          res.end();
+        }
+      }
+    });
+
+    // Get available agents
+    this.app.get('/api/agents', (req: Request, res: Response) => {
+      const agents = [
+        {
+          name: 'Terraform',
+          icon: '🏗️',
+          expertise: 'Infrastructure as Code specialist',
+          description: 'Expert in Terraform configurations, best practices, and troubleshooting, with access to file and shell tools.'
+        },
+        {
+          name: 'Kubernetes',
+          icon: '☸️',
+          expertise: 'Container orchestration expert',
+          description: 'Specialist in K8s deployments, troubleshooting, and best practices, with access to file and shell tools.'
+        },
+        {
+          name: 'AWS',
+          icon: '☁️',
+          expertise: 'Cloud platform specialist',
+          description: 'Expert in AWS services, architecture, and best practices, with access to file and shell tools.'
+        },
+        {
+          name: 'Monitoring',
+          icon: '📊',
+          expertise: 'Observability and alerting expert',
+          description: 'Specialist in metrics, alerting, and system monitoring, with access to file and shell tools.'
+        },
+        {
+          name: 'Incident',
+          icon: '🚨',
+          expertise: 'Emergency response specialist',
+          description: 'Expert in troubleshooting, root cause analysis, and emergency procedures, with access to file and shell tools.'
+        },
+        {
+          name: 'General',
+          icon: '🛠️',
+          expertise: 'DevOps generalist',
+          description: 'Expert in general DevOps practices, automation, and system administration, with access to file and shell tools.'
+        }
+      ];
+      res.json(agents);
+    });
   }
 
   private setupFallbackRoutes() {
@@ -205,7 +396,7 @@ class CareerateServer {
         version: '1.0.0',
         status: 'operational',
         features: {
-          aiAgents: true,
+          aiAgents: !!this.llm,
           streaming: true,
           authentication: !!this.authService,
           secretsManager: true
@@ -260,57 +451,6 @@ class CareerateServer {
         }
       });
     });
-
-    // Real AI chat endpoint with streaming
-    this.app.post('/api/chat', async (req: Request, res: Response): Promise<void> => {
-      try {
-        const { messages, agent, context } = req.body;
-        
-        if (!messages || !Array.isArray(messages) || messages.length === 0) {
-           res.status(400).json({ error: 'Messages array is required' });
-           return;
-        }
-
-        res.writeHead(200, {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          'Connection': 'keep-alive',
-        });
-
-        const responseGenerator = this.agentOrchestrator.invoke({
-          messages,
-          requestedAgent: agent || 'Auto',
-          context,
-        });
-
-        for await (const event of responseGenerator) {
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-        }
-        res.end();
-
-      } catch (error) {
-        logger.error('Chat endpoint error:', error);
-        if (!res.headersSent) {
-          res.status(500).json({ 
-            error: 'Internal server error',
-            message: 'Chat service temporarily unavailable'
-          });
-        } else {
-           res.end();
-        }
-      }
-    });
-
-    // Get available agents
-    this.app.get('/api/agents', (req: Request, res: Response) => {
-      try {
-        const agents = this.agentOrchestrator.getAvailableAgents();
-        res.json(agents);
-      } catch (error) {
-        logger.error('Agents endpoint error:', error);
-        res.status(500).json({ error: 'Failed to get agents' });
-      }
-    });
   }
 
   private setupBasicRoutes() {
@@ -333,69 +473,127 @@ class CareerateServer {
 
   private setupWebSocket() {
     this.io.on('connection', (socket) => {
-      logger.info('Client connected:', socket.id);
+      logger.info(`⚡️ WebSocket client connected: ${socket.id}`);
 
-      socket.on('join-room', (roomId) => {
-        socket.join(roomId);
-        logger.info(`Client ${socket.id} joined room ${roomId}`);
+      socket.on('chatMessage', async (message: string) => {
+        logger.info(`Received chat message from ${socket.id}: ${message}`);
+        socket.emit('chatMessage', `Server received: ${message}`);
       });
 
-      socket.on('chat-message', async (data) => {
+      socket.on('runAgent', async (data: { agent: string, prompt: string }) => {
+        logger.info(`Received runAgent request from ${socket.id}: Agent=${data.agent}, Prompt=${data.prompt}`);
+        
         try {
-          const { messages, agent, context, roomId } = data;
-          
-          // Use the new orchestrator's invoke method
-          const responseGenerator = this.agentOrchestrator.invoke({
-            messages,
-            requestedAgent: agent || 'Auto',
-            context
-          });
+          if (!this.llm) {
+            socket.emit('agentResponse', { type: 'error', data: 'AI service not available' });
+            return;
+          }
 
-          for await (const event of responseGenerator) {
-            if (roomId) {
-              this.io.to(roomId).emit('chat-event', event);
-            } else {
-              socket.emit('chat-event', event);
+          socket.emit('agentResponse', { type: 'start', data: `Running ${data.agent} agent with prompt: "${data.prompt}"` });
+
+          const systemPrompts: { [key: string]: string } = {
+            terraform: "You are a Terraform expert specializing in Infrastructure as Code. Help with Terraform configurations, best practices, and troubleshooting. You have access to tools to read, write, and list files, and execute shell commands.",
+            kubernetes: "You are a Kubernetes expert specializing in container orchestration. Help with K8s deployments, troubleshooting, and best practices. You have access to tools to read, write, and list files, and execute shell commands.",
+            aws: "You are an AWS cloud expert. Help with AWS services, architecture, and best practices. You have access to tools to read, write, and list files, and execute shell commands.",
+            monitoring: "You are a monitoring and observability expert. Help with metrics, alerting, and system monitoring. You have access to tools to read, write, and list files, and execute shell commands.",
+            incident: "You are an incident response expert. Help with troubleshooting, root cause analysis, and emergency procedures. You have access to tools to read, write, and list files, and execute shell commands.",
+            general: "You are a DevOps expert. Help with general DevOps practices, automation, and system administration. You have access to tools to read, write, and list files, and execute shell commands."
+          };
+
+          const selectedAgent = data.agent || 'general';
+          const systemPrompt = systemPrompts[selectedAgent as keyof typeof systemPrompts] || systemPrompts.general;
+          
+          let messages: BaseMessage[] = [new HumanMessage(`System: ${systemPrompt}\n\nUser: ${data.prompt}`)];
+          
+          const tools = this.toolManager.getAllTools();
+          const toolMap = new Map(tools.map(tool => [tool.name, tool]));
+
+          // Create a runnable for the LLM and tools
+          const runnable = RunnableSequence.from([
+            ChatPromptTemplate.fromMessages([new MessagesPlaceholder("messages")]),
+            this.llm.withConfig({ runName: "Agent" }),
+            {
+              tool_calls: (input: AIMessage) => input.tool_calls || [],
+              output: (input: AIMessage) => input.content,
+              tool_outputs: async (input: AIMessage) => {
+                const toolCalls = input.tool_calls || [];
+                const toolResults = [];
+                for (const toolCall of toolCalls) {
+                  const tool = toolMap.get(toolCall.name);
+                  if (tool) {
+                    try {
+                      const toolOutput = await tool.execute(toolCall.args);
+                      toolResults.push({ name: toolCall.name, output: toolOutput });
+                    } catch (e) {
+                      logger.error(`Error executing tool ${toolCall.name}:`, e);
+                      toolResults.push({ name: toolCall.name, output: { error: (e as Error).message } });
+                    }
+                  } else {
+                    toolResults.push({ name: toolCall.name, output: { error: `Tool ${toolCall.name} not found.` } });
+                  }
+                }
+                return toolResults;
+              }
+            }
+          ]);
+
+          const stream = await runnable.stream(messages);
+
+          for await (const chunk of stream) {
+            if (chunk.tool_calls) {
+              for (const toolCall of chunk.tool_calls) {
+                socket.emit('agentResponse', { 
+                  type: 'tool_code',
+                  name: toolCall.name,
+                  args: toolCall.args,
+                });
+              }
+            } else if (chunk.output) {
+              socket.emit('agentResponse', { 
+                type: 'chunk',
+                data: chunk.output
+              });
+            } else if (chunk.tool_outputs) {
+                for (const toolOutput of chunk.tool_outputs) {
+                socket.emit('agentResponse', { 
+                  type: 'tool_output',
+                  name: toolOutput.name,
+                  output: toolOutput.output,
+                });
+              }
             }
           }
+
+          socket.emit('agentResponse', { type: 'complete', data: null });
+
         } catch (error) {
-          logger.error('WebSocket chat error:', error);
-          socket.emit('chat-error', { error: 'Message processing failed' });
+          logger.error('Error running agent:', error);
+          socket.emit('agentResponse', { type: 'error', data: 'Error running agent. Please try again.' });
         }
       });
 
       socket.on('disconnect', () => {
-        logger.info('Client disconnected:', socket.id);
+        logger.info(`Client disconnected: ${socket.id}`);
       });
     });
+    logger.info('✅ WebSocket configured');
   }
 
   public start(): void {
-    const port = process.env.PORT || 8081;
-    
-    this.server.listen(port, '0.0.0.0', () => {
-      logger.info(`🚀 Careerate Server running on port ${port}`);
+    const port = parseInt(process.env.PORT || '8080', 10);
+    this.server.listen(port, () => {
+      logger.info(`🚀 Backend server running on port ${port}`);
       logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`🔗 CORS Origin: ${process.env.CORS_ORIGIN || 'default'}`);
-      logger.info('📍 Available routes:');
-      logger.info('  GET  /api        - API info');
-      logger.info('  GET  /health     - Health check');
-      logger.info('  GET  /api/agents - List agents');
-      logger.info('  POST /api/chat   - Chat with AI');
-      logger.info('✅ Server ready to handle requests');
+      if (!this.isInitialized) {
+        logger.warn('⚠️  Server not fully initialized. Some services may be unavailable.');
+      } else {
+        logger.info('✅ Server ready');
+      }
     });
 
-    this.server.on('error', (error) => {
+    this.server.on('error', (error: any) => {
       logger.error('Server error:', error);
-    });
-
-    // Graceful shutdown
-    process.on('SIGTERM', () => {
-      logger.info('SIGTERM received, shutting down gracefully');
-      this.server.close(() => {
-        logger.info('Server closed');
-        process.exit(0);
-      });
+      process.exit(1); // Exit with failure code
     });
   }
 }
