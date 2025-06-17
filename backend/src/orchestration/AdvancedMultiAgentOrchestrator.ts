@@ -579,11 +579,18 @@ Provide well-rounded DevOps guidance with focus on efficiency, reliability, and 
               yield { type: 'chunk', data: msg.content };
             } else if (msg instanceof ToolMessage) {
                try {
-                const toolOutput = JSON.parse(msg.content);
+                let toolOutputContent: string;
+                if (typeof msg.content === 'string') {
+                    toolOutputContent = msg.content;
+                } else {
+                    // If content is not a string, stringify it to make it a valid JSON string for parsing.
+                    toolOutputContent = JSON.stringify(msg.content);
+                }
+                const toolOutput = JSON.parse(toolOutputContent);
                 yield { type: 'tool_output', name: msg.name, output: toolOutput };
               } catch (e) {
                 logger.error(`Failed to parse tool message content as JSON: ${msg.content}`, e);
-                yield { type: 'tool_output', name: msg.name, output: { raw: msg.content, error: 'Failed to parse JSON output' } };
+                yield { type: 'tool_output', name: msg.name, output: { raw: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content), error: 'Failed to parse JSON output' } };
               }
             }
           }
