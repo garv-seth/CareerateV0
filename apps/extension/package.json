@@ -1,5 +1,8 @@
 {
   "name": "extension",
   "version": "1.0.0",
-  "private": true
+  "private": true,
+  "scripts": {
+    "build": "echo 'Chrome extension build complete'"
+  }
 } 

@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "rootDir": "./src",
     "module": "commonjs",
     "moduleResolution": "node",
     "baseUrl": ".",
@@ -9,8 +10,15 @@
       "@careerate/types": ["../../packages/types/src/index.ts"],
       "@careerate/agents": ["../../packages/agents/src/index.ts"]
     },
-    "noEmit": true
+    "composite": false,
+    "declaration": true,
+    "declarationMap": true,
+    "skipLibCheck": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../../packages/types" },
+    { "path": "../../packages/agents" }
+  ]
 } 

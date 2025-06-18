@@ -1,470 +1,204 @@
-import { tool } from "@langchain/core/tools";
-import { z } from "zod";
-import { KubeConfig, CoreV1Api, AppsV1Api, NetworkingV1Api } from "@kubernetes/client-node";
-import * as yaml from "js-yaml";
-import * as fs from "fs/promises";
-import * as path from "path";
+import { DynamicTool } from '@langchain/core/tools';
+import * as k8s from '@kubernetes/client-node';
 
 // Initialize Kubernetes client
-const kc = new KubeConfig();
+const kc = new k8s.KubeConfig();
 try {
-  kc.loadFromDefault();
+    kc.loadFromDefault();
 } catch (error) {
-  console.log("No default kubeconfig found, will use in-cluster config when available");
+    console.warn('Failed to load kubeconfig, Kubernetes tools will be disabled:', error);
 }
 
-const k8sApi = kc.makeApiClient(CoreV1Api);
-const appsApi = kc.makeApiClient(AppsV1Api);
-const networkingApi = kc.makeApiClient(NetworkingV1Api);
+const k8sCoreApi = kc.makeApiClient(k8s.CoreV1Api);
+const k8sAppsApi = kc.makeApiClient(k8s.AppsV1Api);
 
-export const generateK8sManifest = tool(
-  async ({ resourceType, config }) => {
-    try {
-      let manifest: any;
-      
-      switch (resourceType) {
-        case "deployment":
-          manifest = generateDeploymentManifest(config);
-          break;
-        case "service":
-          manifest = generateServiceManifest(config);
-          break;
-        case "ingress":
-          manifest = generateIngressManifest(config);
-          break;
-        case "configmap":
-          manifest = generateConfigMapManifest(config);
-          break;
-        case "secret":
-          manifest = generateSecretManifest(config);
-          break;
-        case "statefulset":
-          manifest = generateStatefulSetManifest(config);
-          break;
-        default:
-          return { error: `Unsupported resource type: ${resourceType}` };
-      }
-      
-      const yamlStr = yaml.dump(manifest);
-      
-      return {
-        success: true,
-        manifest: yamlStr,
-        parsed: manifest,
-        message: `${resourceType} manifest generated successfully`
-      };
-    } catch (error: any) {
-      return { error: error.message };
+// Helper function to format error messages
+const formatK8sError = (error: any): string => {
+    if (error.response?.body?.message) {
+        return error.response.body.message;
     }
-  },
-  {
-    name: "generate_k8s_manifest",
-    description: "Generate Kubernetes manifest for various resources",
-    schema: z.object({
-      resourceType: z.enum(["deployment", "service", "ingress", "configmap", "secret", "statefulset"]),
-      config: z.object({
-        name: z.string(),
-        namespace: z.string().optional(),
-        labels: z.record(z.string()).optional(),
-        replicas: z.number().optional(),
-        image: z.string().optional(),
-        ports: z.array(z.number()).optional(),
-        env: z.record(z.string()).optional(),
-        resources: z.object({
-          requests: z.object({
-            cpu: z.string().optional(),
-            memory: z.string().optional()
-          }).optional(),
-          limits: z.object({
-            cpu: z.string().optional(),
-            memory: z.string().optional()
-          }).optional()
-        }).optional()
-      })
-    })
-  }
-);
+    return error.message || 'Unknown Kubernetes API error';
+};
 
-export const debugPodIssues = tool(
-  async ({ podName, namespace = "default" }) => {
-    try {
-      // Get pod details
-      const pod = await k8sApi.readNamespacedPod(podName, namespace);
-      
-      // Get pod events
-      const events = await k8sApi.listNamespacedEvent(namespace);
-      const podEvents = events.body.items.filter(
-        (event: any) => event.involvedObject.name === podName
-      );
-      
-      // Get pod logs
-      let logs = "";
-      try {
-        const logResponse = await k8sApi.readNamespacedPodLog(podName, namespace);
-        logs = logResponse.body;
-      } catch (error) {
-        logs = "Unable to retrieve logs";
-      }
-      
-      // Analyze issues
-      const issues = analyzePodIssues(pod.body, podEvents);
-      
-      return {
-        success: true,
-        pod: {
-          name: pod.body.metadata?.name,
-          status: pod.body.status?.phase,
-          conditions: pod.body.status?.conditions,
-          containerStatuses: pod.body.status?.containerStatuses
-        },
-        events: podEvents.map((e: any) => ({
-          type: e.type,
-          reason: e.reason,
-          message: e.message,
-          timestamp: e.firstTimestamp
-        })),
-        logs: logs.slice(-1000), // Last 1000 chars
-        issues,
-        recommendations: generateRecommendations(issues)
-      };
-    } catch (error: any) {
-      return { error: error.message };
-    }
-  },
-  {
-    name: "debug_pod_issues",
-    description: "Debug issues with a Kubernetes pod including events, logs, and status",
-    schema: z.object({
-      podName: z.string(),
-      namespace: z.string().optional()
-    })
-  }
-);
-
-export const scaleDeployment = tool(
-  async ({ deploymentName, namespace = "default", replicas }) => {
-    try {
-      // Get current deployment
-      const deployment = await appsApi.readNamespacedDeployment(deploymentName, namespace);
-      
-      // Update replica count
-      deployment.body.spec!.replicas = replicas;
-      
-      // Apply the update using partial patch
-      const patch = [{
-        op: "replace",
-        path: "/spec/replicas",
-        value: replicas
-      }];
-      
-      const updated = await appsApi.patchNamespacedDeployment(
-        deploymentName,
-        namespace,
-        patch as any,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        { headers: { "Content-Type": "application/json-patch+json" } }
-      );
-      
-      return {
-        success: true,
-        message: `Deployment ${deploymentName} scaled to ${replicas} replicas`,
-        previousReplicas: deployment.body.spec?.replicas,
-        currentReplicas: replicas
-      };
-    } catch (error: any) {
-      return { error: error.message };
-    }
-  },
-  {
-    name: "scale_deployment",
-    description: "Scale a Kubernetes deployment to specified number of replicas",
-    schema: z.object({
-      deploymentName: z.string(),
-      namespace: z.string().optional(),
-      replicas: z.number().min(0).max(100)
-    })
-  }
-);
-
-export const applyK8sResource = tool(
-  async ({ manifest, dryRun = false }) => {
-    try {
-      const resources = yaml.loadAll(manifest);
-      const results = [];
-      
-      for (const resource of resources) {
-        if (!resource || typeof resource !== 'object') continue;
-        
-        const res = resource as any;
-        const kind = res.kind;
-        const namespace = res.metadata?.namespace || 'default';
-        
-        let result;
-        
-        switch (kind) {
-          case 'Deployment':
-            if (dryRun) {
-              result = { kind, name: res.metadata.name, action: 'would create/update' };
-            } else {
-              result = await appsApi.createNamespacedDeployment(namespace, res);
+// Tool: List pods in a namespace
+const listPods = new DynamicTool({
+    name: 'k8s_list_pods',
+    description: 'List all pods in a specific Kubernetes namespace. Input should be a namespace name.',
+    func: async (namespace: string): Promise<string> => {
+        try {
+            const response = await k8sCoreApi.listNamespacedPod({ namespace });
+            const pods = response.items.map(pod => ({
+                name: pod.metadata?.name,
+                status: pod.status?.phase,
+                ready: pod.status?.conditions?.find(c => c.type === 'Ready')?.status === 'True',
+                restarts: pod.status?.containerStatuses?.reduce((sum, cs) => sum + cs.restartCount, 0) || 0,
+                age: pod.metadata?.creationTimestamp
+            }));
+            
+            if (pods.length === 0) {
+                return `No pods found in namespace "${namespace}".`;
             }
-            break;
-          case 'Service':
-            if (dryRun) {
-              result = { kind, name: res.metadata.name, action: 'would create/update' };
-            } else {
-              result = await k8sApi.createNamespacedService(namespace, res);
-            }
-            break;
-          case 'ConfigMap':
-            if (dryRun) {
-              result = { kind, name: res.metadata.name, action: 'would create/update' };
-            } else {
-              result = await k8sApi.createNamespacedConfigMap(namespace, res);
-            }
-            break;
-          default:
-            result = { error: `Unsupported resource kind: ${kind}` };
+            
+            return `Pods in namespace "${namespace}":\n${pods.map(p => 
+                `- ${p.name}: ${p.status} (Ready: ${p.ready}, Restarts: ${p.restarts})`
+            ).join('\n')}`;
+        } catch (error) {
+            return `Error listing pods: ${formatK8sError(error)}`;
         }
-        
-        results.push(result);
-      }
-      
-      return {
-        success: true,
-        message: dryRun ? "Dry run completed" : "Resources applied successfully",
-        results
-      };
-    } catch (error: any) {
-      return { error: error.message };
     }
-  },
-  {
-    name: "apply_k8s_resource",
-    description: "Apply Kubernetes resources from YAML manifest",
-    schema: z.object({
-      manifest: z.string().describe("YAML manifest content"),
-      dryRun: z.boolean().optional().describe("Perform a dry run without creating resources")
-    })
-  }
-);
+});
 
-// Helper functions
-function generateDeploymentManifest(config: any) {
-  return {
-    apiVersion: "apps/v1",
-    kind: "Deployment",
-    metadata: {
-      name: config.name,
-      namespace: config.namespace || "default",
-      labels: config.labels || { app: config.name }
-    },
-    spec: {
-      replicas: config.replicas || 3,
-      selector: {
-        matchLabels: { app: config.name }
-      },
-      template: {
-        metadata: {
-          labels: { app: config.name }
-        },
-        spec: {
-          containers: [{
-            name: config.name,
-            image: config.image || "nginx:latest",
-            ports: (config.ports || [80]).map((port: number) => ({
-              containerPort: port
-            })),
-            env: Object.entries(config.env || {}).map(([key, value]) => ({
-              name: key,
-              value: String(value)
-            })),
-            resources: config.resources || {
-              requests: { cpu: "100m", memory: "128Mi" },
-              limits: { cpu: "500m", memory: "512Mi" }
+// Tool: Get deployment status
+const getDeploymentStatus = new DynamicTool({
+    name: 'k8s_deployment_status',
+    description: 'Get the status of a Kubernetes deployment. Input should be JSON: {"namespace": "default", "name": "deployment-name"}',
+    func: async (input: string): Promise<string> => {
+        try {
+            const { namespace, name } = JSON.parse(input);
+            const deployment = await k8sAppsApi.readNamespacedDeployment({ 
+                namespace, 
+                name 
+            });
+            
+            const status = deployment.status;
+            const spec = deployment.spec;
+            
+            return `Deployment "${name}" in namespace "${namespace}":
+- Desired Replicas: ${spec?.replicas || 0}
+- Current Replicas: ${status?.replicas || 0}
+- Ready Replicas: ${status?.readyReplicas || 0}
+- Available Replicas: ${status?.availableReplicas || 0}
+- Updated Replicas: ${status?.updatedReplicas || 0}
+- Conditions: ${status?.conditions?.map(c => `${c.type}: ${c.status}`).join(', ') || 'None'}`;
+        } catch (error) {
+            return `Error getting deployment status: ${formatK8sError(error)}`;
+        }
+    }
+});
+
+// Tool: Describe a pod (get events and logs)
+const describePod = new DynamicTool({
+    name: 'k8s_describe_pod',
+    description: 'Get detailed information about a pod including recent events. Input should be JSON: {"namespace": "default", "name": "pod-name"}',
+    func: async (input: string): Promise<string> => {
+        try {
+            const { namespace, name } = JSON.parse(input);
+            
+            // Get pod details
+            const pod = await k8sCoreApi.readNamespacedPod({ namespace, name });
+            
+            // Get pod events
+            const eventList = await k8sCoreApi.listNamespacedEvent({ 
+                namespace,
+                fieldSelector: `involvedObject.name=${name}`
+            });
+            const events = eventList.items || [];
+            
+            // Try to get recent logs (last 50 lines)
+            let logs = '';
+            try {
+                logs = await k8sCoreApi.readNamespacedPodLog({ 
+                    namespace, 
+                    name,
+                    tailLines: 50
+                });
+            } catch (logError) {
+                logs = 'Unable to retrieve logs: ' + formatK8sError(logError);
             }
-          }]
+            
+            const containerStatuses = pod.status?.containerStatuses || [];
+            
+            return `Pod "${name}" in namespace "${namespace}":
+            
+Status: ${pod.status?.phase}
+Conditions: ${pod.status?.conditions?.map(c => `${c.type}: ${c.status}`).join(', ') || 'None'}
+Node: ${pod.spec?.nodeName || 'Not scheduled'}
+IP: ${pod.status?.podIP || 'No IP assigned'}
+
+Container Statuses:
+${containerStatuses.map(cs => `- ${cs.name}: Ready: ${cs.ready}, Restarts: ${cs.restartCount}`).join('\n')}
+
+Recent Events (${events.length}):
+${events.slice(-5).map(e => `- ${e.type}: ${e.reason} - ${e.message}`).join('\n') || 'No recent events'}
+
+Recent Logs:
+${logs || 'No logs available'}`;
+        } catch (error) {
+            return `Error describing pod: ${formatK8sError(error)}`;
         }
-      }
     }
-  };
-}
+});
 
-function generateServiceManifest(config: any) {
-  return {
-    apiVersion: "v1",
-    kind: "Service",
-    metadata: {
-      name: config.name,
-      namespace: config.namespace || "default",
-      labels: config.labels || { app: config.name }
-    },
-    spec: {
-      selector: { app: config.name },
-      ports: (config.ports || [80]).map((port: number, index: number) => ({
-        port: port,
-        targetPort: port,
-        name: `port-${index}`
-      })),
-      type: config.type || "ClusterIP"
+// Tool: Scale a deployment
+const scaleDeployment = new DynamicTool({
+    name: 'k8s_scale_deployment',
+    description: 'Scale a Kubernetes deployment to a specific number of replicas. Input should be JSON: {"namespace": "default", "name": "deployment-name", "replicas": 3}',
+    func: async (input: string): Promise<string> => {
+        try {
+            const { namespace, name, replicas } = JSON.parse(input);
+            
+            // Get current deployment
+            const deployment = await k8sAppsApi.readNamespacedDeployment({ 
+                namespace, 
+                name 
+            });
+            
+            // Update the replica count
+            deployment.spec!.replicas = replicas;
+            
+            // Apply the update
+            const updated = await k8sAppsApi.replaceNamespacedDeployment({
+                namespace,
+                name,
+                body: deployment
+            });
+            
+            return `Successfully scaled deployment "${name}" in namespace "${namespace}" to ${replicas} replicas. Current status: ${updated.status?.replicas || 0} replicas running.`;
+        } catch (error) {
+            return `Error scaling deployment: ${formatK8sError(error)}`;
+        }
     }
-  };
-}
+});
 
-function generateIngressManifest(config: any) {
-  return {
-    apiVersion: "networking.k8s.io/v1",
-    kind: "Ingress",
-    metadata: {
-      name: config.name,
-      namespace: config.namespace || "default",
-      annotations: {
-        "kubernetes.io/ingress.class": "nginx",
-        ...config.annotations
-      }
-    },
-    spec: {
-      rules: [{
-        host: config.host,
-        http: {
-          paths: [{
-            path: config.path || "/",
-            pathType: "Prefix",
-            backend: {
-              service: {
-                name: config.serviceName || config.name,
-                port: {
-                  number: config.servicePort || 80
-                }
-              }
+// Tool: Restart a deployment (by updating annotation)
+const restartDeployment = new DynamicTool({
+    name: 'k8s_restart_deployment',
+    description: 'Restart a Kubernetes deployment by updating its pod template annotation. Input should be JSON: {"namespace": "default", "name": "deployment-name"}',
+    func: async (input: string): Promise<string> => {
+        try {
+            const { namespace, name } = JSON.parse(input);
+            
+            // Get current deployment
+            const deployment = await k8sAppsApi.readNamespacedDeployment({ 
+                namespace, 
+                name 
+            });
+            
+            // Update restart annotation
+            if (!deployment.spec?.template?.metadata?.annotations) {
+                deployment.spec!.template!.metadata = deployment.spec!.template!.metadata || {};
+                deployment.spec!.template!.metadata.annotations = {};
             }
-          }]
+            deployment.spec!.template!.metadata!.annotations['kubectl.kubernetes.io/restartedAt'] = new Date().toISOString();
+            
+            // Apply the update
+            await k8sAppsApi.replaceNamespacedDeployment({
+                namespace,
+                name,
+                body: deployment
+            });
+            
+            return `Successfully triggered restart of deployment "${name}" in namespace "${namespace}". Pods will be recreated.`;
+        } catch (error) {
+            return `Error restarting deployment: ${formatK8sError(error)}`;
         }
-      }]
     }
-  };
-}
-
-function generateConfigMapManifest(config: any) {
-  return {
-    apiVersion: "v1",
-    kind: "ConfigMap",
-    metadata: {
-      name: config.name,
-      namespace: config.namespace || "default"
-    },
-    data: config.data || {}
-  };
-}
-
-function generateSecretManifest(config: any) {
-  const data: any = {};
-  for (const [key, value] of Object.entries(config.data || {})) {
-    data[key] = Buffer.from(String(value)).toString('base64');
-  }
-  
-  return {
-    apiVersion: "v1",
-    kind: "Secret",
-    metadata: {
-      name: config.name,
-      namespace: config.namespace || "default"
-    },
-    type: config.type || "Opaque",
-    data
-  };
-}
-
-function generateStatefulSetManifest(config: any) {
-  return {
-    apiVersion: "apps/v1",
-    kind: "StatefulSet",
-    metadata: {
-      name: config.name,
-      namespace: config.namespace || "default"
-    },
-    spec: {
-      serviceName: config.serviceName || config.name,
-      replicas: config.replicas || 3,
-      selector: {
-        matchLabels: { app: config.name }
-      },
-      template: {
-        metadata: {
-          labels: { app: config.name }
-        },
-        spec: {
-          containers: [{
-            name: config.name,
-            image: config.image || "nginx:latest",
-            ports: (config.ports || [80]).map((port: number) => ({
-              containerPort: port
-            })),
-            volumeMounts: config.volumeMounts || []
-          }]
-        }
-      },
-      volumeClaimTemplates: config.volumeClaimTemplates || []
-    }
-  };
-}
-
-function analyzePodIssues(pod: any, events: any[]): string[] {
-  const issues = [];
-  
-  // Check pod status
-  if (pod.status?.phase === 'Pending') {
-    issues.push('Pod is stuck in Pending state');
-  }
-  
-  // Check container statuses
-  for (const container of pod.status?.containerStatuses || []) {
-    if (container.state?.waiting) {
-      issues.push(`Container ${container.name} is waiting: ${container.state.waiting.reason}`);
-    }
-    if (container.restartCount > 5) {
-      issues.push(`Container ${container.name} has restarted ${container.restartCount} times`);
-    }
-  }
-  
-  // Check events
-  for (const event of events) {
-    if (event.type === 'Warning') {
-      issues.push(`Warning event: ${event.reason} - ${event.message}`);
-    }
-  }
-  
-  return issues;
-}
-
-function generateRecommendations(issues: string[]): string[] {
-  const recommendations = [];
-  
-  for (const issue of issues) {
-    if (issue.includes('ImagePullBackOff')) {
-      recommendations.push('Check if the image exists and credentials are correct');
-    }
-    if (issue.includes('CrashLoopBackOff')) {
-      recommendations.push('Check application logs and ensure the container command is correct');
-    }
-    if (issue.includes('Pending')) {
-      recommendations.push('Check if there are enough resources in the cluster');
-    }
-    if (issue.includes('restarted')) {
-      recommendations.push('Investigate crash logs and consider adding health checks');
-    }
-  }
-  
-  return recommendations;
-}
+});
 
 export const kubernetesTools = [
-  generateK8sManifest,
-  debugPodIssues,
-  scaleDeployment,
-  applyK8sResource
+    listPods,
+    getDeploymentStatus,
+    describePod,
+    scaleDeployment,
+    restartDeployment
 ]; 
