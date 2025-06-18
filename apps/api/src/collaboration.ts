@@ -1,17 +1,38 @@
 import { Server, Socket } from 'socket.io';
 import http from 'http';
-import { AgentAction, UserMessage } from '@careerate/types';
+import { AgentAction, UserMessage, Agent, AgentStatus } from '@careerate/types';
 import { app as agentWorkflow } from './orchestrator/workflow';
+import { agents as agentDefinitions } from '@careerate/agents';
+import { HumanMessage, AIMessage } from '@langchain/core/messages';
 
 interface Team {
     id: string;
-    agents: any[]; // Replace with actual Agent type
-    activeCollaborations: any[]; // Replace with actual Collaboration type
+    agents: Agent[];
+    activeCollaborations: Collaboration[];
+    members: Set<string>; // Socket IDs of team members
+}
+
+interface Collaboration {
+    id: string;
+    agents: string[]; // Agent IDs involved
+    task: string;
+    status: 'active' | 'completed' | 'failed';
+    startTime: Date;
+    messages: CollaborationMessage[];
+}
+
+interface CollaborationMessage {
+    agentId: string;
+    content: string;
+    timestamp: Date;
+    type: 'action' | 'result' | 'question' | 'answer';
 }
 
 export class CollaborationServer {
     private io: Server;
     private activeTeams: Map<string, Team> = new Map();
+    private activeCollaborations: Map<string, Collaboration> = new Map();
+    private agentStates: Map<string, AgentStatus> = new Map();
   
     constructor(io: Server) {
       this.io = io;

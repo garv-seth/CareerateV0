@@ -1,13 +1,26 @@
 {
   "name": "careerate-aintern-suite",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "AI agent platform for DevOps/SRE professionals",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "hello": "echo \"hello world\""
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm --filter './packages/*' build && pnpm --filter './apps/*' build",
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm --filter web dev",
+    "build:extension": "pnpm --filter extension build",
+    "test": "pnpm --parallel --filter './apps/*' --filter './packages/*' test",
+    "lint": "pnpm --parallel --filter './apps/*' --filter './packages/*' lint",
+    "deploy:azure": "bash scripts/deploy-azure.sh",
+    "prisma:generate": "pnpm --filter api exec prisma generate",
+    "prisma:migrate": "pnpm --filter api exec prisma migrate dev",
+    "setup": "pnpm install && pnpm prisma:generate"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "keywords": ["devops", "ai", "agents", "automation"],
+  "author": "Careerate",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
 } 

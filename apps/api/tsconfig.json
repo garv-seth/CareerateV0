@@ -4,16 +4,13 @@
     "outDir": "./dist",
     "module": "commonjs",
     "moduleResolution": "node",
-    "composite": true,
+    "baseUrl": ".",
     "paths": {
       "@careerate/types": ["../../packages/types/src/index.ts"],
       "@careerate/agents": ["../../packages/agents/src/index.ts"]
-    }
+    },
+    "noEmit": true
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"],
-  "references": [
-    { "path": "../../packages/agents" },
-    { "path": "../../packages/types" }
-  ]
+  "exclude": ["node_modules", "dist"]
 } 

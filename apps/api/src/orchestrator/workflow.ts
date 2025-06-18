@@ -5,13 +5,18 @@ import { agents as agentDefinitions } from "@careerate/agents";
 import { model } from "./llm";
 import { tools } from "../tools";
 
-// Helper function to determine which agent is best for the job
-const determinePrimaryAgent = async (query: string): Promise<string> => {
-    const agentList = agentDefinitions.map(a => `- ${a.id} (${a.name}): ${a.specialty} - ${a.personality.description}`).join("\n");
+// Helper function to determine which agents should collaborate
+const determineAgentTeam = async (query: string): Promise<string[]> => {
+    const agentList = agentDefinitions.map((a: any) => `- ${a.id} (${a.name}): ${a.specialty} - ${a.personality.description}`).join("\n");
     const prompt = new SystemMessage(
-      `You are an expert dispatcher. Your job is to determine which SINGLE agent is best suited to handle a user's query.
-      You must respond with only the agent's ID. Do not provide any other text or explanation.
-  
+      `You are an expert dispatcher. Analyze the user's query and determine which agents should collaborate.
+      
+      IMPORTANT: 
+      - For simple queries, select ONE primary agent
+      - For complex tasks requiring multiple expertise areas, select 2-3 agents
+      - Never select more than 3 agents
+      - Return ONLY agent IDs separated by commas (e.g., "terra,kube" or just "cloud")
+      
       Available Agents:
       ${agentList}
       
@@ -19,15 +24,17 @@ const determinePrimaryAgent = async (query: string): Promise<string> => {
     );
   
     const response = await model.invoke([prompt]);
-    const agentId = response.content.toString().trim();
+    const agentIds = response.content.toString().trim().split(',').map(id => id.trim());
     
-    if (agentId in agentRunners) {
-        console.log(`Primary agent selected: ${agentId}`);
-        return agentId;
+    const validAgents = agentIds.filter(id => id in agentRunners);
+    
+    if (validAgents.length === 0) {
+        console.log("No valid agents determined, defaulting to 'cloud'.");
+        return ['cloud'];
     }
     
-    console.log("Could not determine a specific agent, defaulting to 'cloud'.");
-    return 'cloud'; // Default fallback
+    console.log(`Agent team selected: ${validAgents.join(', ')}`);
+    return validAgents;
 };
 
 interface AgentState {
@@ -37,8 +44,12 @@ interface AgentState {
 const callModel = async (state: AgentState) => {
     const { messages } = state;
     const query = messages.find(m => m instanceof HumanMessage)?.content as string;
-    const agentId = await determinePrimaryAgent(query);
-    const agentRunner = agentRunners[agentId as keyof typeof agentRunners];
+    const agentTeam = await determineAgentTeam(query);
+    
+    // For now, use the primary agent (first in the team)
+    // TODO: Implement true multi-agent collaboration
+    const primaryAgentId = agentTeam[0];
+    const agentRunner = agentRunners[primaryAgentId as keyof typeof agentRunners];
 
     const response = await agentRunner.invoke({
         input: query,
@@ -63,7 +74,7 @@ const callTool = async (state: AgentState) => {
         if (!tool) {
             continue;
         }
-        const response = await tool.invoke(toolCall.args);
+        const response = await (tool as any).invoke(toolCall.args);
         if (toolCall.id) {
             toolResponses.push(new ToolMessage({
                 content: response,

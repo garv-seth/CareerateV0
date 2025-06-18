@@ -94,7 +94,7 @@ export const debugPodIssues = tool(
       // Get pod events
       const events = await k8sApi.listNamespacedEvent(namespace);
       const podEvents = events.body.items.filter(
-        event => event.involvedObject.name === podName
+        (event: any) => event.involvedObject.name === podName
       );
       
       // Get pod logs
@@ -117,7 +117,7 @@ export const debugPodIssues = tool(
           conditions: pod.body.status?.conditions,
           containerStatuses: pod.body.status?.containerStatuses
         },
-        events: podEvents.map(e => ({
+        events: podEvents.map((e: any) => ({
           type: e.type,
           reason: e.reason,
           message: e.message,
@@ -150,16 +150,23 @@ export const scaleDeployment = tool(
       // Update replica count
       deployment.body.spec!.replicas = replicas;
       
-      // Apply the update
+      // Apply the update using partial patch
+      const patch = [{
+        op: "replace",
+        path: "/spec/replicas",
+        value: replicas
+      }];
+      
       const updated = await appsApi.patchNamespacedDeployment(
         deploymentName,
         namespace,
-        deployment.body,
+        patch as any,
         undefined,
         undefined,
         undefined,
         undefined,
-        { headers: { "Content-Type": "application/strategic-merge-patch+json" } }
+        undefined,
+        { headers: { "Content-Type": "application/json-patch+json" } }
       );
       
       return {

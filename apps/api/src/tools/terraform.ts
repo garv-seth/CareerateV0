@@ -47,7 +47,7 @@ export const generateTerraformConfig = tool(
         message: "Terraform configuration generated successfully"
       };
     } catch (error) {
-      return { error: error.message };
+      return { error: error instanceof Error ? error.message : String(error) };
     }
   },
   {
@@ -74,7 +74,7 @@ export const validateTerraformConfig = tool(
       
       return { valid: true, message: "Configuration is valid" };
     } catch (error) {
-      return { valid: false, errors: error.message };
+      return { valid: false, errors: error instanceof Error ? error.message : String(error) };
     }
   },
   {
@@ -112,7 +112,7 @@ export const planTerraformDeployment = tool(
         fullOutput: stdout
       };
     } catch (error) {
-      return { error: error.message };
+      return { error: error instanceof Error ? error.message : String(error) };
     }
   },
   {

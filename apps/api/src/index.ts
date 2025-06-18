@@ -11,8 +11,7 @@ import { app as agentWorkflow } from './orchestrator/workflow';
 import { db } from './lib/db';
 import authRouter from './router/auth';
 import userRouter from './router/user';
-import { protect, AuthenticatedRequest } from './auth/middleware';
-import { User } from '@prisma/client';
+import { protect } from './auth/middleware';
 
 const app = express();
 const server = http.createServer(app);
@@ -60,7 +59,7 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // API endpoint to run the agent workflow
-app.get('/api/v1/orchestrate', protect, async (req: AuthenticatedRequest, res: Response) => {
+app.get('/api/v1/orchestrate', protect, async (req: Request, res: Response) => {
     // The new workflow expects the entire message history
     const { messages } = req.query; 
 
@@ -91,8 +90,8 @@ app.get('/api/v1/orchestrate', protect, async (req: AuthenticatedRequest, res: R
 
         // After the stream is finished, save the conversation from the last event
         if (lastEvent && lastEvent.messages) {
-            const user = req.user as User;
-            if (!user) {
+            const user = req.user as any;
+            if (!user || !user.id) {
                 logger.error("Error: User not found on authenticated request.");
                 return res.end();
             }

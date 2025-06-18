@@ -86,12 +86,47 @@ class ContextCollector {
     }
 }
 
-// This script can be expanded to listen for events or messages
-// from the background script or popup.
+// Initialize and set up message handling
 console.log("Careerate AIntern Suite content script loaded.");
 const collector = new ContextCollector();
-// Example of how you might use it:
-// const context = collector.collectPageContext();
-// if (context) {
-//     chrome.runtime.sendMessage({ type: "PAGE_CONTEXT", context });
-// } 
+
+// Listen for messages from extension
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'collectContext') {
+    const context = collector.collectPageContext();
+    sendResponse({ context });
+  } else if (request.action === 'getSelection') {
+    const selection = window.getSelection().toString();
+    sendResponse({ selection });
+  }
+  return true;
+});
+
+// Auto-detect and notify about errors
+const observeErrors = () => {
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList') {
+        const context = collector.collectPageContext();
+        if (context && context.errorMessages.length > 0) {
+          chrome.runtime.sendMessage({
+            action: 'errorDetected',
+            context
+          });
+        }
+      }
+    });
+  });
+
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+};
+
+// Start observing when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', observeErrors);
+} else {
+  observeErrors();
+} 

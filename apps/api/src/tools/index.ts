@@ -1,5 +1,9 @@
 import axios from 'axios';
 import { DynamicTool } from '@langchain/core/tools';
+import { terraformTools } from './terraform';
+import { kubernetesTools } from './kubernetes';
+import { awsTools } from './aws';
+import { incidentTools } from './incident';
 
 const braveSearch = new DynamicTool({
   name: 'brave_search',
@@ -40,4 +44,20 @@ const braveSearch = new DynamicTool({
   },
 });
 
-export const tools = [braveSearch]; 
+// Export all tools for agents to use
+export const tools = [
+  braveSearch,
+  ...(terraformTools || []),
+  ...(kubernetesTools || []),
+  ...(awsTools || []),
+  ...(incidentTools || [])
+].filter(Boolean);
+
+// Export tool categories for specific agent access
+export const toolsByCategory = {
+  general: [braveSearch],
+  terraform: terraformTools || [],
+  kubernetes: kubernetesTools || [],
+  aws: awsTools || [],
+  incident: incidentTools || []
+}; 
