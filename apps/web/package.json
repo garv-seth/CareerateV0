@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@azure/msal-browser": "^4.13.1",
+    "@azure/msal-react": "^3.0.12",
     "@hookform/resolvers": "^3.4.2",
     "@langchain/core": "^0.2.36",
     "@monaco-editor/react": "^4.6.2",

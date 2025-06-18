@@ -11,22 +11,23 @@ import { useStore, UIMessage } from "@/lib/store";
 import { HumanMessage } from "@langchain/core/messages";
 
 export const ChatPanel = () => {
-    const { messages, agents, addMessage, setMessages, setAgents } = useStore();
-
-    // Initialize agents in the store on component mount
-    useEffect(() => {
-        const agentsWithStatus = staticAgents.map((a: Agent) => ({...a, status: AgentStatus.IDLE}));
-        setAgents(agentsWithStatus);
-    }, [setAgents]);
+    const { messages, agents, addMessage, setMessages, setAgents, authToken } = useStore();
 
     const handleSendMessage = async (content: string) => {
+        if (!authToken) {
+            // Handle case where user is not authenticated
+            addMessage({ role: 'system', content: 'You must be logged in to chat.' });
+            return;
+        }
+
         // 1. Add user message to the store locally for immediate feedback
         const userMessage: UIMessage = { role: 'human', content };
         const currentMessages = [...messages, userMessage];
         setMessages(currentMessages); // Optimistically update UI
 
         // 2. Open EventSource connection to the backend
-        const url = `http://localhost:3001/api/v1/orchestrate?messages=${encodeURIComponent(JSON.stringify(currentMessages))}`;
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const url = `${apiUrl}/api/v1/orchestrate?messages=${encodeURIComponent(JSON.stringify(currentMessages))}&auth_token=${authToken}`;
         const eventSource = new EventSource(url);
         
         eventSource.onmessage = (event) => {

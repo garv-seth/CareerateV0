@@ -5,111 +5,149 @@ import { agents as agentDefinitions } from "@careerate/agents";
 import { model } from "./llm";
 import { tools } from "../tools";
 
-// Helper function to determine which agents should collaborate
-const determineAgentTeam = async (query: string): Promise<string[]> => {
-    const agentList = agentDefinitions.map((a: any) => `- ${a.id} (${a.name}): ${a.specialty} - ${a.personality.description}`).join("\n");
-    const prompt = new SystemMessage(
-      `You are an expert dispatcher. Analyze the user's query and determine which agents should collaborate.
-      
-      IMPORTANT: 
-      - For simple queries, select ONE primary agent
-      - For complex tasks requiring multiple expertise areas, select 2-3 agents
-      - Never select more than 3 agents
-      - Return ONLY agent IDs separated by commas (e.g., "terra,kube" or just "cloud")
-      
-      Available Agents:
-      ${agentList}
-      
-      User Query: "${query}"`
-    );
-  
-    const response = await model.invoke([prompt]);
-    const agentIds = response.content.toString().trim().split(',').map(id => id.trim());
-    
-    const validAgents = agentIds.filter(id => id in agentRunners);
-    
-    if (validAgents.length === 0) {
-        console.log("No valid agents determined, defaulting to 'cloud'.");
-        return ['cloud'];
-    }
-    
-    console.log(`Agent team selected: ${validAgents.join(', ')}`);
-    return validAgents;
-};
+// === Sub-Graph for a Single Agent ===
 
-interface AgentState {
+interface AgentWorkerState {
     messages: BaseMessage[];
 }
 
-const callModel = async (state: AgentState) => {
-    const { messages } = state;
-    const query = messages.find(m => m instanceof HumanMessage)?.content as string;
-    const agentTeam = await determineAgentTeam(query);
+const createAgentWorker = (agentId: keyof typeof agentRunners) => {
+    const agentRunner = agentRunners[agentId];
     
-    // For now, use the primary agent (first in the team)
-    // TODO: Implement true multi-agent collaboration
-    const primaryAgentId = agentTeam[0];
-    const agentRunner = agentRunners[primaryAgentId as keyof typeof agentRunners];
+    // 1. Agent node
+    const agentNode = async (state: AgentWorkerState): Promise<Partial<AgentWorkerState>> => {
+        const response = await agentRunner.invoke(state);
+        return { messages: [response] };
+    };
 
-    const response = await agentRunner.invoke({
-        input: query,
-        messages: messages, // Pass the whole history
+    // 2. Tools node
+    const toolNode = async (state: AgentWorkerState): Promise<Partial<AgentWorkerState>> => {
+        const lastMessage = state.messages[state.messages.length - 1];
+        if (!(lastMessage instanceof AIMessage) || !lastMessage.tool_calls) {
+            throw new Error("Invalid state: last message is not an AIMessage with tool calls.");
+        }
+        
+        const toolResponses: ToolMessage[] = [];
+        for (const toolCall of lastMessage.tool_calls) {
+             const tool = tools.find((t) => t.name === toolCall.name);
+             if (!tool) {
+                toolResponses.push(new ToolMessage({ content: `Tool '${toolCall.name}' not found.`, tool_call_id: toolCall.id! }));
+                continue;
+             };
+             try {
+                const response = await (tool as any).invoke(toolCall.args);
+                toolResponses.push(new ToolMessage({ content: JSON.stringify(response), tool_call_id: toolCall.id! }));
+             } catch (error: any) {
+                toolResponses.push(new ToolMessage({ content: `Error executing tool '${toolCall.name}': ${error.message}`, tool_call_id: toolCall.id! }));
+             }
+        }
+        return { messages: toolResponses };
+    };
+
+    // 3. Edge logic
+    const shouldContinue = (state: AgentWorkerState) => {
+        const lastMessage = state.messages[state.messages.length - 1];
+        if (lastMessage instanceof AIMessage && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
+            return "tools";
+        }
+        return END;
+    };
+
+    // 4. Assemble the graph
+    const workerGraph = new StateGraph<AgentWorkerState>({
+        channels: {
+            messages: {
+                value: (x, y) => x.concat(y),
+                default: () => [],
+            },
+        }
     });
+
+    workerGraph.addNode("agent", agentNode);
+    workerGraph.addNode("tools", toolNode);
+    workerGraph.setEntryPoint("agent");
+    workerGraph.addConditionalEdges("agent", shouldContinue);
+    workerGraph.addEdge("tools", "agent");
     
-    return { messages: [response] };
-};
+    return workerGraph.compile();
+}
 
-const callTool = async (state: AgentState) => {
-    const { messages } = state;
-    const lastMessage = messages[messages.length - 1];
+// === Main Graph for Orchestration ===
 
-    if (!(lastMessage instanceof AIMessage) || !lastMessage.tool_calls) {
-        throw new Error("No tool calls found in the last message.");
-    }
+interface AgentState {
+    messages: BaseMessage[];
+    user_query: string;
+    assigned_agents: string[];
+    responses: Record<string, BaseMessage>;
+}
 
-    const toolResponses: ToolMessage[] = [];
+// 1. Dispatcher Node
+const dispatcherNode = async (state: AgentState): Promise<Partial<AgentState>> => {
+    const user_query = state.messages.find(m => m instanceof HumanMessage)?.content as string;
+    const agentList = agentDefinitions.map((a: any) => `- ${a.id} (${a.name}): ${a.specialty}`).join("\n");
+    const prompt = new SystemMessage(
+      `You are an expert dispatcher. Analyze the user's query and determine which agents should collaborate.
+       Return ONLY a comma-separated list of agent IDs (e.g., "terra,kube" or "cloud").
+       Available Agents:\n${agentList}\n\nUser Query: "${user_query}"`
+    );
+    const response = await model.invoke([prompt]);
+    const agentIds = response.content.toString().trim().split(',').map(id => id.trim()).filter(id => id);
+    const validAgents = agentIds.filter(id => id in agentRunners);
+    const assigned = validAgents.length > 0 ? validAgents : ['cloud'];
+    console.log(`Dispatcher selected: ${assigned.join(', ')}`);
+    return { assigned_agents: assigned, user_query };
+}
 
-    for (const toolCall of lastMessage.tool_calls) {
-        const tool = tools.find((t) => t.name === toolCall.name);
-        if (!tool) {
-            continue;
-        }
-        const response = await (tool as any).invoke(toolCall.args);
-        if (toolCall.id) {
-            toolResponses.push(new ToolMessage({
-                content: response,
-                tool_call_id: toolCall.id,
-            }));
-        }
-    }
+// 2. Synthesizer Node
+const synthesizerNode = async (state: AgentState): Promise<Partial<AgentState>> => {
+    const { user_query, responses } = state;
+    const responseList = Object.entries(responses).map(([agentId, message]) => 
+        `### Response from ${agentId}:\n${message ? message.content : 'No response provided.'}`
+    ).join("\n\n---\n\n");
 
-    return { messages: toolResponses };
-};
+    const prompt = new SystemMessage(
+        `You are a master synthesizer. Your job is to combine the responses from multiple AI agents into a single, cohesive, and comprehensive answer for the user.
+        User's original query: "${user_query}"
+        Agent responses:\n${responseList}
+        Please synthesize these into a single, final answer.`
+    );
+    const finalResponse = await model.invoke([prompt]);
+    return { messages: [finalResponse] };
+}
 
-const shouldContinue = (state: AgentState) => {
-    const { messages } = state;
-    const lastMessage = messages[messages.length - 1];
-
-    if (lastMessage instanceof AIMessage && lastMessage.tool_calls && lastMessage.tool_calls.length > 0) {
-      return "tools";
-    }
-    return END;
-};
-
+// 3. Assemble the main graph
 const graph = new StateGraph<AgentState>({
     channels: {
-        messages: {
-            value: (x: BaseMessage[], y: BaseMessage[]) => x.concat(y),
-            default: () => [],
-        },
-    }
+        messages: { value: (x, y) => x.concat(y), default: () => [] },
+        user_query: { value: (x, y) => y, default: () => "" },
+        assigned_agents: { value: (x, y) => y, default: () => [] },
+        responses: { value: (x, y) => ({...x, ...y}), default: () => ({}) },
+    },
 });
 
-graph.addNode("agent", callModel);
-graph.addNode("tools", callTool);
+graph.addNode("dispatcher", dispatcherNode);
+graph.addNode("synthesizer", synthesizerNode);
 
-graph.setEntryPoint("agent");
-graph.addConditionalEdges("agent", shouldContinue);
-graph.addEdge("tools", "agent");
+// Add agent worker nodes
+for (const agentId in agentRunners) {
+    const worker = createAgentWorker(agentId as keyof typeof agentRunners);
+    graph.addNode(agentId, async (state: AgentState) => {
+        const result = await worker.invoke({ messages: state.messages });
+        // The last message from the worker is its final response
+        const lastMessage = result.messages.pop();
+        return { responses: { [agentId]: lastMessage } };
+    });
+    graph.addEdge(agentId, "synthesizer");
+}
+
+graph.setEntryPoint("dispatcher");
+
+graph.addConditionalEdges(
+    "dispatcher", 
+    (state: AgentState) => state.assigned_agents,
+    Object.fromEntries(Object.keys(agentRunners).map(id => [id, id]))
+);
+
+graph.addEdge("synthesizer", END);
 
 export const app = graph.compile(); 

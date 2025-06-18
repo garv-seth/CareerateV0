@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import passport from 'passport';
 import { User } from '@prisma/client';
 
 // Extend Express Request interface to include Passport's user property
@@ -7,8 +8,11 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export const protect = (req: Request, res: Response, next: NextFunction) => {
-    if (req.isAuthenticated && req.isAuthenticated()) {
-        return next();
-    }
-    res.status(401).json({ message: 'User not authenticated.' });
+    passport.authenticate('jwt', { session: false }, (err: Error | null, user: User | false, info: any) => {
+        if (err || !user) {
+            return res.status(401).json({ message: info?.message || 'User not authenticated.' });
+        }
+        req.user = user;
+        next();
+    })(req, res, next);
 }; 

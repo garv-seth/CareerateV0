@@ -1,9 +1,12 @@
 'use client';
 
 import { Agent } from "@careerate/types";
-import { agents } from "@careerate/agents";
 
-export const AgentStatusBar = () => {
+interface AgentStatusBarProps {
+  agents: Agent[];
+}
+
+export const AgentStatusBar = ({ agents }: AgentStatusBarProps) => {
   return (
     <div className="flex items-center space-x-2 bg-glass-white rounded-full px-3 py-1.5 
                   border border-glass-border backdrop-blur-sm">

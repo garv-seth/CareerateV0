@@ -20,9 +20,20 @@ const msalConfig = B2C_TENANT_NAME && B2C_CLIENT_ID ? {
 
 export const msalInstance = msalConfig ? new ConfidentialClientApplication(msalConfig) : null;
 
+const fromQueryParam = (req: any) => {
+    let token = null;
+    if (req && req.query) {
+        token = req.query.auth_token;
+    }
+    return token;
+}
+
 // JWT Strategy for API authentication
 const jwtOptions: StrategyOptions = {
-    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        fromQueryParam,
+    ]),
     secretOrKey: process.env.JWT_SECRET || 'your-secret-key',
     algorithms: ['HS256']
 };

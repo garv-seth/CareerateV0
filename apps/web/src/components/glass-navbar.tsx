@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useStore } from '@/lib/store';
 import { LogoIcon } from './icons/logo-icon';
 import { NavPill } from './nav-pill';
 import { AgentStatusBar } from './agent-status-bar';
@@ -15,6 +16,7 @@ const navItems = [
 
 export const GlassNavbar = () => {
   const [activePath, setActivePath] = useState('/');
+  const agents = useStore((state) => state.agents);
 
   return (
     <nav className="fixed top-0 w-full z-50 backdrop-blur-xl bg-glass-dark border-b border-glass-border">
@@ -45,7 +47,7 @@ export const GlassNavbar = () => {
 
           {/* Agent Status Indicators */}
           <div className="flex items-center space-x-4">
-            <AgentStatusBar />
+            <AgentStatusBar agents={agents} />
             <UserMenu />
           </div>
         </div>
