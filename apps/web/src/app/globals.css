@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Primary Blues */
+  --primary-deep: #1a365d;      /* Deep navy from logo */
+  --primary-main: #2563eb;      /* Vibrant blue */
+  --primary-light: #3b82f6;     /* Medium blue */
+  --primary-soft: #60a5fa;      /* Light blue */
+  
+  /* Greys & Neutrals */
+  --neutral-dark: #1e293b;      /* Dark grey from logo */
+  --neutral-main: #64748b;      /* Medium grey */
+  --neutral-light: #94a3b8;     /* Light grey */
+  --neutral-soft: #e2e8f0;      /* Very light grey */
+  
+  /* Glass & Transparency */
+  --glass-white: rgba(255, 255, 255, 0.1);
+  --glass-blue: rgba(37, 99, 235, 0.1);
+  --glass-dark: rgba(30, 41, 59, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  
+  /* Accent Colors */
+  --accent-success: #10b981;    /* Green for success states */
+  --accent-warning: #f59e0b;    /* Amber for warnings */
+  --accent-danger: #ef4444;     /* Red for errors */
+  --accent-info: #06b6d4;       /* Cyan for info */
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  --gradient-mesh: radial-gradient(ellipse at top, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+}
+
+@layer base {
+  body {
+    @apply bg-neutral-dark text-neutral-soft;
+  }
+} 
