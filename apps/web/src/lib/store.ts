@@ -1,23 +1,22 @@
 import { create } from 'zustand';
-import { Agent, AgentActivity, AgentStatus } from '@careerate/types';
+import { Agent, AgentStatus } from '@careerate/types';
+import { AIMessage, HumanMessage } from "@langchain/core/messages";
 
-export interface Message {
-    id: string;
-    sender: 'user' | string; // user or agent id
+// A simplified, explicit message structure for the UI
+export interface UIMessage {
+    role: 'human' | 'ai' | 'tool' | 'system';
     content: string;
-    isTyping?: boolean;
+    id?: string;
+    name?: string;
 }
 
 interface AppState {
-    messages: Message[];
+    messages: UIMessage[];
     agents: Agent[];
     setAgents: (agents: Agent[]) => void;
-    addMessage: (message: Message) => void;
-    streamAgentResponse: (agentId: string) => void;
-    updateAgentResponse: (agentId: string, chunk: string) => void;
-    finalizeAgentResponse: (agentId: string) => void;
+    addMessage: (message: UIMessage) => void;
+    setMessages: (messages: UIMessage[]) => void;
     setAgentStatus: (agentId: string, status: AgentStatus) => void;
-    // ... other state and actions
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -25,34 +24,7 @@ export const useStore = create<AppState>((set, get) => ({
     agents: [],
     setAgents: (agents) => set({ agents }),
     addMessage: (message) => set((state) => ({ messages: [...state.messages, message] })),
-
-    streamAgentResponse: (agentId) => {
-        const newMessage: Message = { id: Date.now().toString(), sender: agentId, content: "", isTyping: true };
-        set((state) => ({ messages: [...state.messages, newMessage] }));
-    },
-
-    updateAgentResponse: (agentId, chunk) => {
-        set((state) => {
-            const messages = [...state.messages];
-            const agentMessageIndex = messages.findLastIndex(m => m.sender === agentId && m.isTyping);
-            if (agentMessageIndex !== -1) {
-                messages[agentMessageIndex].content += chunk;
-            }
-            return { messages };
-        });
-    },
-
-    finalizeAgentResponse: (agentId) => {
-        set((state) => {
-            const messages = [...state.messages];
-            const agentMessageIndex = messages.findLastIndex(m => m.sender === agentId);
-            if (agentMessageIndex !== -1) {
-                messages[agentMessageIndex].isTyping = false;
-            }
-            return { messages };
-        });
-    },
-
+    setMessages: (messages) => set({ messages }),
     setAgentStatus: (agentId, status) => {
         set((state) => {
             const agents = state.agents.map(a => 

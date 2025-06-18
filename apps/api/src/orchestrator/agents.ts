@@ -1,62 +1,44 @@
 import { Agent, AgentResponse } from "@careerate/types";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
 import { model } from "./llm";
 import { agents as agentDefinitions } from "@careerate/agents";
+import { tools } from "../tools";
+import { Runnable } from "@langchain/core/runnables";
 
 // A map for easy lookup
 const agentMap = new Map<string, Agent>(
   agentDefinitions.map((agent: Agent) => [agent.id, agent])
 );
 
-async function runAgent(agentId: string, query: string, context: any): Promise<AgentResponse> {
+function createAgentRunner(agentId: string): Runnable {
   const agent = agentMap.get(agentId);
   if (!agent) {
     throw new Error(`Agent with id ${agentId} not found.`);
   }
 
-  const systemPrompt = `You are ${agent.name}, an AI assistant with the specialty of ${agent.specialty}. 
-Your personality is: ${agent.personality.description}.
-Your expertise level is ${agent.personality.expertise_level}.
-Your communication style is ${agent.personality.communicationStyle}.
-Your quirks are: ${agent.personality.quirks.join(', ')}.
+  const systemPrompt = `You are ${agent.name}, a specialized AI assistant.
+Your personality: ${agent.personality.description}
+Communication Style: ${agent.personality.communicationStyle}
+Expertise: ${agent.specialty} (${agent.personality.expertise_level})
+Capabilities: ${agent.capabilities.join(', ')}
 
-Your capabilities are:
-- ${agent.capabilities.join('\n- ')}
+You have access to a powerful web search tool. Use it to find the most current information to answer questions, especially if it involves competitor analysis or recent events.
 
-A user has the following query: "${query}"
+When you have a final answer for the user, respond directly. Otherwise, you can use the search tool.`;
 
-Additional context for the query is:
-${JSON.stringify(context, null, 2)}
-
-Based on your personality and capabilities, provide a concise and actionable response.`;
-
-  const messages = [
+  const prompt = [
     new SystemMessage(systemPrompt),
-    new HumanMessage(query),
+    new HumanMessage("{input}"),
+    new AIMessage("{agent_scratchpad}"),
   ];
 
-  console.log(`Invoking ${agent.name} (${agent.id}) for query: ${query}`);
-  const response = await model.invoke(messages);
-
-  return {
-    agentId: agent.id,
-    content: response.content.toString(),
-  };
+  // This is a key step: binding the tools to the model tells the LLM how to call them.
+  return model.bindTools(tools);
 }
 
-
-export const terraAgent = {
-  process: (query: string, context: any) => runAgent("terra", query, context),
-};
-
-export const kubeAgent = {
-  process: (query: string, context: any) => runAgent("kube", query, context),
-};
-
-export const cloudAgent = {
-  process: (query: string, context: any) => runAgent("cloud", query, context),
-};
-
-export const rapidAgent = {
-  process: (query: string, context: any) => runAgent("rapid", query, context),
+export const agentRunners = {
+  terra: createAgentRunner("terra"),
+  kube: createAgentRunner("kube"),
+  cloud: createAgentRunner("cloud"),
+  rapid: createAgentRunner("rapid"),
 }; 

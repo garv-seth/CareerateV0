@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - CORS_ORIGIN=http://localhost:3000
+      # --- INJECT SECRETS HERE ---
+      # You must create a .env file in the root directory
+      # and add your secrets there for docker-compose to use them.
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - BRAVESEARCH_API_KEY=${BRAVESEARCH_API_KEY}
+    env_file:
+      - .env
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+
+networks:
+  default:
+    driver: bridge 

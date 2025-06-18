@@ -1,0 +1,48 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("COSMOSDB_CONNECTION_STRING_CENTRALUS")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// User and Team models for multi-tenancy
+model User {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  email         String         @unique
+  oidc          String?        @unique // Azure B2C Object ID
+  name          String?
+  password      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  teamId        String
+  team          Team           @relation(fields: [teamId], references: [id])
+  conversations Conversation[]
+}
+
+model Team {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users     User[]
+}
+
+// Conversation and Message models for chat history
+model Conversation {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  messages  Message[]
+}
+
+model Message {
+  id              String       @id @default(auto()) @map("_id") @db.ObjectId
+  content         String
+  role            String // "human", "ai", "system", "tool"
+  createdAt       DateTime     @default(now())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+} 

@@ -4,8 +4,15 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import helmet from 'helmet';
 import winston from 'winston';
+import session from 'express-session';
+import passport from './auth/passport';
 import { CollaborationServer } from './collaboration';
 import { app as agentWorkflow } from './orchestrator/workflow';
+import { db } from './lib/db';
+import authRouter from './router/auth';
+import userRouter from './router/user';
+import { protect, AuthenticatedRequest } from './auth/middleware';
+import { User } from '@prisma/client';
 
 const app = express();
 const server = http.createServer(app);
@@ -32,6 +39,20 @@ app.use(cors({
 }));
 app.use(express.json());
 
+// Session middleware required for Passport
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'secret',
+    resave: false,
+    saveUninitialized: false,
+}));
+
+// Passport middleware
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Routers
+app.use('/api/auth', authRouter);
+app.use('/api/user', userRouter);
 
 // Health check endpoint
 app.get('/health', (req: Request, res: Response) => {
@@ -39,19 +60,19 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // API endpoint to run the agent workflow
-app.get('/api/v1/orchestrate', async (req: Request, res: Response) => {
-    const { user_query, context } = req.query;
+app.get('/api/v1/orchestrate', protect, async (req: AuthenticatedRequest, res: Response) => {
+    // The new workflow expects the entire message history
+    const { messages } = req.query; 
 
-    if (!user_query || typeof user_query !== 'string') {
-        return res.status(400).json({ error: 'user_query string parameter is required' });
+    if (!messages || typeof messages !== 'string') {
+        return res.status(400).json({ error: '`messages` query parameter (a JSON stringified array) is required' });
     }
 
-    const parsedContext = typeof context === 'string' ? JSON.parse(context) : {};
-
     try {
+        const parsedMessages = JSON.parse(messages);
+
         const stream = await agentWorkflow.stream({
-            user_query: user_query,
-            context: parsedContext,
+            messages: parsedMessages,
         });
 
         res.setHeader('Content-Type', 'text/event-stream');
@@ -59,8 +80,34 @@ app.get('/api/v1/orchestrate', async (req: Request, res: Response) => {
         res.setHeader('Connection', 'keep-alive');
         res.flushHeaders();
 
+        let lastEvent: any = null;
         for await (const event of stream) {
-            res.write(`data: ${JSON.stringify(event)}\n\n`);
+            // The new stream format directly gives us the messages
+            if (event.messages) {
+                res.write(`data: ${JSON.stringify(event.messages)}\n\n`);
+                lastEvent = event;
+            }
+        }
+
+        // After the stream is finished, save the conversation from the last event
+        if (lastEvent && lastEvent.messages) {
+            const user = req.user as User;
+            if (!user) {
+                logger.error("Error: User not found on authenticated request.");
+                return res.end();
+            }
+            const conversation = await db.conversation.create({
+                data: {
+                    userId: user.id,
+                    messages: {
+                        create: lastEvent.messages.map((msg: any) => ({
+                            content: msg.content.toString(),
+                            role: msg._getType(),
+                        }))
+                    }
+                }
+            });
+            logger.info(`Saved conversation with ID: ${conversation.id}`);
         }
 
         res.end();

@@ -1,15 +1,17 @@
 'use client';
 
+import React from 'react';
 import { agents as staticAgents } from "@careerate/agents";
 import { Agent, AgentStatus } from "@careerate/types";
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { AgentCard } from "./agent-card";
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
-import { useStore, Message } from "@/lib/store";
+import { useStore, UIMessage } from "@/lib/store";
+import { HumanMessage } from "@langchain/core/messages";
 
 export const ChatPanel = () => {
-    const { messages, agents, addMessage, setAgents, setAgentStatus, streamAgentResponse, updateAgentResponse, finalizeAgentResponse } = useStore();
+    const { messages, agents, addMessage, setMessages, setAgents } = useStore();
 
     // Initialize agents in the store on component mount
     useEffect(() => {
@@ -18,52 +20,27 @@ export const ChatPanel = () => {
     }, [setAgents]);
 
     const handleSendMessage = async (content: string) => {
-        // 1. Add user message to the store
-        const userMessage = { id: Date.now().toString(), sender: 'user', content };
-        addMessage(userMessage);
+        // 1. Add user message to the store locally for immediate feedback
+        const userMessage: UIMessage = { role: 'human', content };
+        const currentMessages = [...messages, userMessage];
+        setMessages(currentMessages); // Optimistically update UI
 
         // 2. Open EventSource connection to the backend
-        const url = `http://localhost:3001/api/v1/orchestrate?user_query=${encodeURIComponent(content)}`;
+        const url = `http://localhost:3001/api/v1/orchestrate?messages=${encodeURIComponent(JSON.stringify(currentMessages))}`;
         const eventSource = new EventSource(url);
         
-        let currentAgentId: string | null = null;
-        let activeAgentMessages = new Set<string>();
-
         eventSource.onmessage = (event) => {
             try {
-                const data = JSON.parse(event.data);
-                
-                if (data.assign_agents && data.assign_agents.assigned_agents) {
-                    data.assign_agents.assigned_agents.forEach((agentId: string) => {
-                        setAgentStatus(agentId, AgentStatus.THINKING);
-                    });
-                }
-                
-                if (data.run_agents && data.run_agents.responses) {
-                    const response = data.run_agents.responses[data.run_agents.responses.length - 1]; 
-                    if (response && response.agentId) {
-                        currentAgentId = response.agentId;
-                        if (currentAgentId && !activeAgentMessages.has(currentAgentId)) {
-                            streamAgentResponse(currentAgentId);
-                            setAgentStatus(currentAgentId, AgentStatus.ACTIVE);
-                            activeAgentMessages.add(currentAgentId);
-                        }
-                        if (currentAgentId) {
-                            updateAgentResponse(currentAgentId, response.content);
-                        }
-                    }
-                } 
-                
-                else if (data.synthesize_response && data.synthesize_response.final_solution) {
-                    activeAgentMessages.forEach(agentId => {
-                        finalizeAgentResponse(agentId);
-                        setAgentStatus(agentId, AgentStatus.IDLE);
-                    });
-                    
-                    addMessage({ id: Date.now().toString(), sender: 'aintern', content: data.synthesize_response.final_solution });
-                    
-                    eventSource.close();
-                }
+                const newMessages = JSON.parse(event.data);
+                // The API now returns an array of message-like objects
+                // We need to ensure they fit our UIMessage interface
+                const uiMessages: UIMessage[] = newMessages.map((msg: any) => ({
+                    role: msg.role || (msg.tool_calls ? 'ai' : 'human'), // Best guess
+                    content: msg.content || (msg.tool_calls ? JSON.stringify(msg.tool_calls) : ''),
+                    name: msg.name,
+                    id: msg.id,
+                }));
+                setMessages(uiMessages); // Replace the entire message state
             } catch (error) {
                 console.error("Failed to parse SSE event data:", error);
             }
@@ -72,7 +49,8 @@ export const ChatPanel = () => {
         eventSource.onerror = (err) => {
             console.error("EventSource failed:", err);
             eventSource.close();
-            // Optionally show an error message in the UI
+            const errorMessage: UIMessage = { role: 'system', content: 'An error occurred with the AI service.' };
+            setMessages([...currentMessages, errorMessage]);
         };
     };
 
@@ -92,8 +70,8 @@ export const ChatPanel = () => {
     
           {/* Conversation History */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
-            {messages.map((message: Message) => (
-              <MessageBubble key={message.id} message={message} />
+            {messages.map((message, index) => (
+              <MessageBubble key={index} message={message} />
             ))}
           </div>
     
