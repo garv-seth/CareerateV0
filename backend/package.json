@@ -1,6 +1,7 @@
 {
   "name": "careerate-backend",
   "version": "1.0.0",
+  "type": "commonjs",
   "description": "Careerate AI Platform Backend",
   "main": "dist/server.js",
   "scripts": {
