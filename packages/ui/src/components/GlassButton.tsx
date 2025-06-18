@@ -3,12 +3,12 @@
 import React from 'react';
 import { motion, HTMLMotionProps } from 'framer-motion';
 
-type GlassButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onAnimationStart' | 'onDrag' | 'onDragEnd' | 'onDragStart' | 'style'> & {
+interface GlassButtonProps extends Omit<HTMLMotionProps<"button">, "ref"> {
     children: React.ReactNode;
     variant?: 'primary' | 'glass';
     fullWidth?: boolean;
     className?: string;
-};
+}
 
 export const GlassButton = ({ children, variant = 'primary', fullWidth = false, className = '', ...props }: GlassButtonProps) => {
     return (

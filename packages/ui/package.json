@@ -2,17 +2,14 @@
   "name": "@careerate/ui",
   "version": "1.0.0",
   "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
   "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    }
+    ".": "./src/index.tsx"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
-    "build": "tsup src/index.tsx --format cjs,esm --dts --tsconfig tsconfig.json"
+    "build": "tsc"
   },
   "devDependencies": {
     "@careerate/types": "workspace:*",
