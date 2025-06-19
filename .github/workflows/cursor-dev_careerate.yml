@@ -60,7 +60,9 @@ jobs:
           cp apps/api/package.json deploy/apps/api/
           # Copy Web files
           cp -r apps/web/.next deploy/apps/web/
-          cp -r apps/web/public deploy/apps/web/
+          if [ -d "apps/web/public" ]; then
+            cp -r apps/web/public deploy/apps/web/
+          fi
           cp apps/web/package.json deploy/apps/web/
           # Copy workspace files
           cp package.json deploy/
