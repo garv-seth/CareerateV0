@@ -51,23 +51,27 @@ jobs:
       - name: Build project
         run: pnpm run build
 
-      - name: Prune development dependencies
-        run: pnpm -r prune --prod
-
-      - name: Prepare deployment package
+      - name: Prepare deployment package structure
         run: |
           mkdir -p deploy/apps/api
           mkdir -p deploy/apps/web
+          # Copy API files
           cp -r apps/api/dist deploy/apps/api/
           cp apps/api/package.json deploy/apps/api/
+          # Copy Web files
           cp -r apps/web/.next deploy/apps/web/
           cp -r apps/web/public deploy/apps/web/
           cp apps/web/package.json deploy/apps/web/
+          # Copy workspace files
           cp package.json deploy/
           cp pnpm-lock.yaml deploy/
           cp pnpm-workspace.yaml deploy/
+          # Copy prisma schema
           cp -r prisma deploy/
-          cp -r node_modules/.prisma deploy/node_modules/
+      
+      - name: Install production dependencies in deployment package
+        working-directory: ./deploy
+        run: pnpm install --prod
 
       - name: Zip artifact for deployment
         working-directory: ./deploy
