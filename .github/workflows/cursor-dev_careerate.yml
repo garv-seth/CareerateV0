@@ -31,8 +31,8 @@ jobs:
 
       - name: Build web app
         run: |
-          # Install dependencies
-          pnpm install --frozen-lockfile
+          # Install dependencies (no frozen lockfile due to cross-platform issues)
+          pnpm install --no-frozen-lockfile
           
           # Generate Prisma client
           pnpm run prisma:generate
