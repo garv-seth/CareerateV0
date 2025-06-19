@@ -12,6 +12,7 @@ import { db } from './lib/db';
 import authRouter from './router/auth';
 import userRouter from './router/user';
 import { protect } from './auth/middleware';
+import path from 'path';
 
 const app = express();
 const server = http.createServer(app);
@@ -48,6 +49,10 @@ app.use(session({
 // Passport middleware
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Serve static files from the Next.js app
+const webappPath = path.resolve(__dirname, '..', '..', 'web');
+app.use(express.static(path.join(webappPath, '.next', 'static')));
 
 // Routers
 app.use('/api/auth', authRouter);
@@ -118,6 +123,11 @@ app.get('/api/v1/orchestrate', protect, async (req: Request, res: Response) => {
             res.status(500).json({ error: 'An error occurred during orchestration.' });
         }
     }
+});
+
+// For all other routes, serve the Next.js app
+app.get('*', (req, res) => {
+    res.sendFile(path.join(webappPath, '.next', 'server', 'pages', 'index.html'));
 });
 
 // Initialize WebSocket collaboration server
