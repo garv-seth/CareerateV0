@@ -10,11 +10,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      id-token: write
+      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
@@ -23,56 +22,53 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
-      
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8
 
-      - name: Build web app
+      - name: npm install, build, and test
         run: |
-          # Install dependencies (no frozen lockfile due to cross-platform issues)
-          pnpm install --no-frozen-lockfile
-          
-          # Generate Prisma client
-          pnpm run prisma:generate
-          
-          # Build only the web app
-          pnpm --filter web build
-          
-          # Create deployment package with only built files
-          cd apps/web
-          mkdir -p ../../deploy
-          
-          # For Next.js standalone build
-          if [ -d ".next/standalone" ]; then
-            cp -r .next/standalone/* ../../deploy/
-            mkdir -p ../../deploy/.next
-            cp -r .next/static ../../deploy/.next/
-            cp -r public ../../deploy/ 2>/dev/null || true
-          else
-            # Fallback: copy entire web directory
-            cp -r . ../../deploy/
-          fi
-          
-          cd ../../deploy
-          
-          # Create a simple start script for Azure
-          echo '{
-            "name": "careerate-web",
-            "version": "1.0.0",
-            "scripts": {
-              "start": "node server.js || next start -p $PORT || next start -p 8080"
-            }
-          }' > package.json
+          npm install
+          npm run build --if-present
+          npm run test --if-present
 
-      # Deploy using publish profile (check for Azure-generated secret first)
+      - name: Zip artifact for deployment
+        run: zip release.zip ./* -r
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: release.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_C5AB63C2BC2442BCB25E849A52FF175F }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_823AE88CAACA4270AEE07230D5DB7AE8 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_4C67B4F60A9944BDA2BE54A65E005916 }}
+
       - name: 'Deploy to Azure Web App'
+        id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
-        timeout-minutes: 5
         with:
           app-name: 'Careerate'
           slot-name: 'Production'
-          package: deploy
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E1F0FF5A0E5B47228EC10E6C77C3C1BB }}
+          package: .
           
