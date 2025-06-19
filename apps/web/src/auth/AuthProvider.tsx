@@ -4,11 +4,21 @@ import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { MsalProvider, AuthenticatedTemplate, UnauthenticatedTemplate, useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { PublicClientApplication, EventType } from '@azure/msal-browser';
-import { msalConfig } from './msalConfig';
+import { msalConfig, validateConfig } from './msalConfig';
 import { useStore } from '@/lib/store';
 import LoginPage from '@/app/login/page';
 
-const msalInstance = new PublicClientApplication(msalConfig);
+// Create MSAL instance conditionally to handle build-time scenarios
+let msalInstance: PublicClientApplication | null = null;
+
+if (typeof window !== 'undefined') {
+    try {
+        validateConfig();
+        msalInstance = new PublicClientApplication(msalConfig);
+    } catch (error) {
+        console.error('MSAL configuration error:', error);
+    }
+}
 
 // This is a separate component to ensure it re-renders when authentication state changes
 const AuthHandler = ({ children }: { children: ReactNode }) => {
@@ -59,6 +69,23 @@ const AuthHandler = ({ children }: { children: ReactNode }) => {
 
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+    // Handle case where MSAL instance is not available (e.g., during build)
+    if (!msalInstance) {
+        // Return children directly during build/SSR
+        if (typeof window === 'undefined') {
+            return <>{children}</>;
+        }
+        // Show error in browser if config is missing
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gradient-dark">
+                <div className="text-white text-center">
+                    <h1 className="text-2xl font-bold mb-4">Configuration Error</h1>
+                    <p>Azure AD B2C configuration is missing. Please check your environment variables.</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <MsalProvider instance={msalInstance}>
             <AuthenticatedTemplate>

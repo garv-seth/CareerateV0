@@ -1,12 +1,15 @@
 import { Configuration, LogLevel } from '@azure/msal-browser';
 
-const B2C_TENANT_NAME = process.env.NEXT_PUBLIC_B2C_TENANT_NAME;
-const B2C_CLIENT_ID = process.env.NEXT_PUBLIC_B2C_CLIENT_ID;
-const B2C_SIGNUP_SIGNIN_POLICY_NAME = process.env.NEXT_PUBLIC_B2C_SIGNUP_SIGNIN_POLICY_NAME;
+const B2C_TENANT_NAME = process.env.NEXT_PUBLIC_B2C_TENANT_NAME || '';
+const B2C_CLIENT_ID = process.env.NEXT_PUBLIC_B2C_CLIENT_ID || '';
+const B2C_SIGNUP_SIGNIN_POLICY_NAME = process.env.NEXT_PUBLIC_B2C_SIGNUP_SIGNIN_POLICY_NAME || '';
 
-if (!B2C_TENANT_NAME || !B2C_CLIENT_ID || !B2C_SIGNUP_SIGNIN_POLICY_NAME) {
-    throw new Error("Azure AD B2C environment variables are not set. Please check your .env.local file.");
-}
+// Check will be done at runtime when actually using the config
+const validateConfig = () => {
+    if (!B2C_TENANT_NAME || !B2C_CLIENT_ID || !B2C_SIGNUP_SIGNIN_POLICY_NAME) {
+        throw new Error("Azure AD B2C environment variables are not set. Please check your .env.local file.");
+    }
+};
 
 export const b2cPolicies = {
     names: {
@@ -58,4 +61,6 @@ export const msalConfig: Configuration = {
 
 export const loginRequest = {
     scopes: []
-}; 
+};
+
+export { validateConfig }; 

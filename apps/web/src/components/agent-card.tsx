@@ -1,7 +1,7 @@
 'use client';
 
 import { Agent, AgentStatus } from "@careerate/types";
-import { GlassCard } from "@careerate/ui";
+import { GlassCard } from "./ui/GlassCard";
 import { motion } from "framer-motion";
 
 const statusIndicator = {

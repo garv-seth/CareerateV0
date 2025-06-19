@@ -1,6 +1,6 @@
 'use client';
 
-import { GlassButton } from "@careerate/ui";
+import { GlassButton } from "./ui/GlassButton";
 import { Send } from "lucide-react";
 import React, { useState } from "react";
 
@@ -28,7 +28,7 @@ export const ChatInput = ({ onSend }: ChatInputProps) => {
                 placeholder="Ask your AInterns..."
                 className="flex-1 w-full px-4 py-2 text-sm text-white bg-glass-white border border-glass-border rounded-lg focus:ring-2 focus:ring-primary-main focus:outline-none backdrop-blur-sm"
             />
-            <GlassButton size="md" onClick={handleSend}>
+            <GlassButton onClick={handleSend}>
                 <Send className="w-4 h-4" />
             </GlassButton>
         </div>
