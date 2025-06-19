@@ -66,13 +66,7 @@ jobs:
             }
           }' > package.json
 
-      - name: Login to Azure
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_89F2DD025EE44F7D882E783705B632AD }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_D385994E30AA455BBE88AD3D72281A5C }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7B49095499FE4A5AB929F63D188A19DF }}
-
+      # Skip Azure login - use publish profile directly
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         timeout-minutes: 5
@@ -81,4 +75,5 @@ jobs:
           slot-name: 'Production'
           package: deploy
           clean: true
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           
