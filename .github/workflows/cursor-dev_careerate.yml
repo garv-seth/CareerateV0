@@ -66,7 +66,7 @@ jobs:
             }
           }' > package.json
 
-      # Skip Azure login - use publish profile directly
+      # Deploy using publish profile (check for Azure-generated secret first)
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         timeout-minutes: 5
@@ -74,6 +74,5 @@ jobs:
           app-name: 'Careerate'
           slot-name: 'Production'
           package: deploy
-          clean: true
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_E1F0FF5A0E5B47228EC10E6C77C3C1BB }}
           
