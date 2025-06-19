@@ -69,7 +69,7 @@ jobs:
           cp pnpm-lock.yaml deploy/
           cp pnpm-workspace.yaml deploy/
           # Copy prisma schema
-          cp -r prisma deploy/
+          cp -r apps/api/prisma deploy/apps/api/
       
       - name: Install production dependencies in deployment package
         working-directory: ./deploy
