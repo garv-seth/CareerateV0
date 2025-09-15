@@ -268,6 +268,224 @@ export const infrastructureResources = pgTable("infrastructure_resources", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// =====================================================
+// Multi-Cloud Provider Integration Tables
+// =====================================================
+
+// Cloud Providers Master Table
+export const cloudProviders = pgTable("cloud_providers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // "aws", "azure", "gcp", "digitalocean", "linode"
+  displayName: text("display_name").notNull(), // "Amazon Web Services", "Microsoft Azure", etc.
+  type: text("type").notNull().default("public"), // "public", "private", "hybrid"
+  status: text("status").notNull().default("active"), // "active", "inactive", "maintenance"
+  apiEndpoint: text("api_endpoint"),
+  documentationUrl: text("documentation_url"),
+  pricing: jsonb("pricing").default({}), // pricing models and calculators
+  features: jsonb("features").default({}), // supported services and capabilities
+  regions: jsonb("regions").default([]), // list of available regions
+  compliance: jsonb("compliance").default([]), // SOC2, GDPR, HIPAA, etc.
+  supportTiers: jsonb("support_tiers").default([]),
+  metadata: jsonb("metadata").default({}),
+  isEnabled: boolean("is_enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Secure Cloud Credentials Storage (encrypted)
+export const cloudCredentials = pgTable("cloud_credentials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  providerId: varchar("provider_id").notNull().references(() => cloudProviders.id),
+  name: text("name").notNull(), // user-friendly name
+  credentialType: text("credential_type").notNull(), // "api-key", "service-account", "access-token", "certificate"
+  encryptedCredentials: text("encrypted_credentials").notNull(), // encrypted JSON blob
+  region: text("region"), // default region for this credential
+  scope: jsonb("scope").default([]), // permissions/scopes
+  isDefault: boolean("is_default").default(false),
+  lastUsed: timestamp("last_used"),
+  expiresAt: timestamp("expires_at"),
+  rotationPolicy: jsonb("rotation_policy").default({}),
+  metadata: jsonb("metadata").default({}),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Detailed Cloud Regions and Availability Zones
+export const cloudRegions = pgTable("cloud_regions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  providerId: varchar("provider_id").notNull().references(() => cloudProviders.id),
+  regionCode: text("region_code").notNull(), // "us-east-1", "eastus", "us-central1"
+  regionName: text("region_name").notNull(), // "US East (N. Virginia)"
+  country: text("country"),
+  city: text("city"),
+  latitude: decimal("latitude", { precision: 10, scale: 8 }),
+  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  availabilityZones: jsonb("availability_zones").default([]),
+  services: jsonb("services").default([]), // available services in this region
+  compliance: jsonb("compliance").default([]),
+  costs: jsonb("costs").default({}), // regional cost multipliers
+  latencyBenchmarks: jsonb("latency_benchmarks").default({}),
+  isActive: boolean("is_active").default(true),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Provider Service Capabilities Mapping
+export const providerCapabilities = pgTable("provider_capabilities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  providerId: varchar("provider_id").notNull().references(() => cloudProviders.id),
+  serviceType: text("service_type").notNull(), // "compute", "storage", "database", "networking", "ml", "analytics"
+  serviceName: text("service_name").notNull(), // "EC2", "App Service", "Compute Engine"
+  capability: text("capability").notNull(), // "auto-scaling", "load-balancing", "backup", "monitoring"
+  isSupported: boolean("is_supported").default(true),
+  limitations: jsonb("limitations").default({}),
+  configuration: jsonb("configuration").default({}),
+  pricing: jsonb("pricing").default({}),
+  performance: jsonb("performance").default({}), // benchmarks and metrics
+  maturityLevel: text("maturity_level").default("stable"), // "alpha", "beta", "stable", "deprecated"
+  lastVerified: timestamp("last_verified").defaultNow(),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Real-time Cost Analytics Across Providers
+export const costAnalytics = pgTable("cost_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  providerId: varchar("provider_id").notNull().references(() => cloudProviders.id),
+  resourceId: varchar("resource_id").references(() => infrastructureResources.id),
+  period: text("period").notNull(), // "hourly", "daily", "monthly"
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  actualCost: decimal("actual_cost", { precision: 12, scale: 4 }).notNull(),
+  estimatedCost: decimal("estimated_cost", { precision: 12, scale: 4 }),
+  currency: text("currency").default("USD"),
+  costCategory: text("cost_category"), // "compute", "storage", "network", "database", "other"
+  usageMetrics: jsonb("usage_metrics").default({}), // CPU hours, GB-hours, requests, etc.
+  optimizationOpportunities: jsonb("optimization_opportunities").default([]),
+  tags: jsonb("tags").default({}),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Migration Projects and Workload Analysis
+export const migrationProjects = pgTable("migration_projects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  sourceProvider: varchar("source_provider").references(() => cloudProviders.id),
+  targetProvider: varchar("target_provider").notNull().references(() => cloudProviders.id),
+  migrationStrategy: text("migration_strategy").notNull(), // "lift-and-shift", "re-platform", "re-architect", "hybrid"
+  status: text("status").notNull().default("planning"), // "planning", "assessment", "executing", "testing", "completed", "failed"
+  complexity: text("complexity").default("medium"), // "low", "medium", "high", "critical"
+  estimatedDuration: integer("estimated_duration"), // days
+  estimatedCost: decimal("estimated_cost", { precision: 12, scale: 4 }),
+  actualCost: decimal("actual_cost", { precision: 12, scale: 4 }),
+  riskAssessment: jsonb("risk_assessment").default({}),
+  dependencies: jsonb("dependencies").default([]),
+  milestones: jsonb("milestones").default([]),
+  workloadAnalysis: jsonb("workload_analysis").default({}),
+  performanceBaseline: jsonb("performance_baseline").default({}),
+  rollbackPlan: jsonb("rollback_plan").default({}),
+  progressPercentage: integer("progress_percentage").default(0),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// AI-Powered Provider Recommendations
+export const providerRecommendations = pgTable("provider_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  requestedBy: varchar("requested_by").notNull().references(() => users.id),
+  workloadCharacteristics: jsonb("workload_characteristics").notNull(),
+  requirements: jsonb("requirements").notNull(), // performance, cost, compliance, geographic
+  recommendations: jsonb("recommendations").default([]), // ranked list of providers with scores
+  reasoning: jsonb("reasoning").default({}), // AI explanation for recommendations
+  confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }),
+  alternativeOptions: jsonb("alternative_options").default([]),
+  costComparison: jsonb("cost_comparison").default({}),
+  performanceProjections: jsonb("performance_projections").default({}),
+  complianceMapping: jsonb("compliance_mapping").default({}),
+  status: text("status").default("active"), // "active", "accepted", "rejected", "superseded"
+  implementedProvider: varchar("implemented_provider").references(() => cloudProviders.id),
+  feedback: jsonb("feedback").default({}),
+  validUntil: timestamp("valid_until"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Cross-Cloud Resource Mapping
+export const resourceMappings = pgTable("resource_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceProvider: varchar("source_provider").notNull().references(() => cloudProviders.id),
+  targetProvider: varchar("target_provider").notNull().references(() => cloudProviders.id),
+  resourceType: text("resource_type").notNull(), // "compute", "storage", "database", "network"
+  sourceService: text("source_service").notNull(), // "EC2", "RDS", etc.
+  targetService: text("target_service").notNull(), // "Virtual Machines", "SQL Database", etc.
+  mappingType: text("mapping_type").notNull(), // "direct", "approximate", "complex", "unsupported"
+  conversionComplexity: text("conversion_complexity").default("medium"), // "low", "medium", "high"
+  automationSupported: boolean("automation_supported").default(false),
+  configurationMapping: jsonb("configuration_mapping").default({}),
+  limitations: jsonb("limitations").default([]),
+  bestPractices: jsonb("best_practices").default([]),
+  costImplications: jsonb("cost_implications").default({}),
+  performanceImpact: jsonb("performance_impact").default({}),
+  isRecommended: boolean("is_recommended").default(true),
+  lastVerified: timestamp("last_verified").defaultNow(),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Compliance and Security Profiles
+export const complianceProfiles = pgTable("compliance_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  requiredCertifications: jsonb("required_certifications").default([]), // SOC2, GDPR, HIPAA, PCI-DSS
+  dataResidencyRequirements: jsonb("data_residency_requirements").default({}),
+  encryptionRequirements: jsonb("encryption_requirements").default({}),
+  accessControlRequirements: jsonb("access_control_requirements").default({}),
+  auditingRequirements: jsonb("auditing_requirements").default({}),
+  networkSecurityRequirements: jsonb("network_security_requirements").default({}),
+  providerCompliance: jsonb("provider_compliance").default({}), // compliance mapping per provider
+  riskTolerance: text("risk_tolerance").default("medium"), // "low", "medium", "high"
+  isActive: boolean("is_active").default(true),
+  lastReviewed: timestamp("last_reviewed").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Cloud Resource State Tracking
+export const cloudResourceStates = pgTable("cloud_resource_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  resourceId: varchar("resource_id").notNull().references(() => infrastructureResources.id, { onDelete: "cascade" }),
+  providerId: varchar("provider_id").notNull().references(() => cloudProviders.id),
+  externalResourceId: text("external_resource_id").notNull(), // provider's resource ID
+  resourceArn: text("resource_arn"), // for AWS resources
+  currentState: text("current_state").notNull(), // "creating", "running", "stopped", "terminated", "error"
+  desiredState: text("desired_state").notNull(),
+  providerRegion: text("provider_region"),
+  providerZone: text("provider_zone"),
+  lastSyncAt: timestamp("last_sync_at").defaultNow(),
+  syncStatus: text("sync_status").default("synced"), // "synced", "drift", "error", "pending"
+  configurationDrift: jsonb("configuration_drift").default({}),
+  tags: jsonb("tags").default({}),
+  providerMetadata: jsonb("provider_metadata").default({}),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Enhanced Vibe Coding Engine Tables
 
 export const projectTemplates = pgTable("project_templates", {
@@ -498,10 +716,136 @@ export const agentTasksRelations = relations(agentTasks, ({ one }) => ({
   }),
 }));
 
-export const infrastructureResourcesRelations = relations(infrastructureResources, ({ one }) => ({
+export const infrastructureResourcesRelations = relations(infrastructureResources, ({ one, many }) => ({
   project: one(projects, {
     fields: [infrastructureResources.projectId],
     references: [projects.id],
+  }),
+  cloudResourceState: one(cloudResourceStates, {
+    fields: [infrastructureResources.id],
+    references: [cloudResourceStates.resourceId],
+  }),
+  costAnalytics: many(costAnalytics),
+}));
+
+// Cloud Provider Relations
+export const cloudProvidersRelations = relations(cloudProviders, ({ many }) => ({
+  credentials: many(cloudCredentials),
+  regions: many(cloudRegions),
+  capabilities: many(providerCapabilities),
+  costAnalytics: many(costAnalytics),
+  migrationProjectsAsSource: many(migrationProjects, { relationName: "sourceProviderRelation" }),
+  migrationProjectsAsTarget: many(migrationProjects, { relationName: "targetProviderRelation" }),
+  recommendations: many(providerRecommendations),
+  resourceMappingsAsSource: many(resourceMappings, { relationName: "sourceProviderMappingRelation" }),
+  resourceMappingsAsTarget: many(resourceMappings, { relationName: "targetProviderMappingRelation" }),
+  cloudResourceStates: many(cloudResourceStates),
+}));
+
+export const cloudCredentialsRelations = relations(cloudCredentials, ({ one }) => ({
+  user: one(users, {
+    fields: [cloudCredentials.userId],
+    references: [users.id],
+  }),
+  provider: one(cloudProviders, {
+    fields: [cloudCredentials.providerId],
+    references: [cloudProviders.id],
+  }),
+}));
+
+export const cloudRegionsRelations = relations(cloudRegions, ({ one }) => ({
+  provider: one(cloudProviders, {
+    fields: [cloudRegions.providerId],
+    references: [cloudProviders.id],
+  }),
+}));
+
+export const providerCapabilitiesRelations = relations(providerCapabilities, ({ one }) => ({
+  provider: one(cloudProviders, {
+    fields: [providerCapabilities.providerId],
+    references: [cloudProviders.id],
+  }),
+}));
+
+export const costAnalyticsRelations = relations(costAnalytics, ({ one }) => ({
+  project: one(projects, {
+    fields: [costAnalytics.projectId],
+    references: [projects.id],
+  }),
+  provider: one(cloudProviders, {
+    fields: [costAnalytics.providerId],
+    references: [cloudProviders.id],
+  }),
+  resource: one(infrastructureResources, {
+    fields: [costAnalytics.resourceId],
+    references: [infrastructureResources.id],
+  }),
+}));
+
+export const migrationProjectsRelations = relations(migrationProjects, ({ one }) => ({
+  project: one(projects, {
+    fields: [migrationProjects.projectId],
+    references: [projects.id],
+  }),
+  sourceProvider: one(cloudProviders, {
+    fields: [migrationProjects.sourceProvider],
+    references: [cloudProviders.id],
+    relationName: "sourceProviderRelation",
+  }),
+  targetProvider: one(cloudProviders, {
+    fields: [migrationProjects.targetProvider],
+    references: [cloudProviders.id],
+    relationName: "targetProviderRelation",
+  }),
+  assignedUser: one(users, {
+    fields: [migrationProjects.assignedTo],
+    references: [users.id],
+  }),
+}));
+
+export const providerRecommendationsRelations = relations(providerRecommendations, ({ one }) => ({
+  project: one(projects, {
+    fields: [providerRecommendations.projectId],
+    references: [projects.id],
+  }),
+  requestedByUser: one(users, {
+    fields: [providerRecommendations.requestedBy],
+    references: [users.id],
+  }),
+  implementedProvider: one(cloudProviders, {
+    fields: [providerRecommendations.implementedProvider],
+    references: [cloudProviders.id],
+  }),
+}));
+
+export const resourceMappingsRelations = relations(resourceMappings, ({ one }) => ({
+  sourceProvider: one(cloudProviders, {
+    fields: [resourceMappings.sourceProvider],
+    references: [cloudProviders.id],
+    relationName: "sourceProviderMappingRelation",
+  }),
+  targetProvider: one(cloudProviders, {
+    fields: [resourceMappings.targetProvider],
+    references: [cloudProviders.id],
+    relationName: "targetProviderMappingRelation",
+  }),
+}));
+
+export const complianceProfilesRelations = relations(complianceProfiles, ({ one }) => ({
+  project: one(projects, {
+    fields: [complianceProfiles.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const cloudResourceStatesRelations = relations(cloudResourceStates, ({ one }) => ({
+  resource: one(infrastructureResources, {
+    fields: [cloudResourceStates.resourceId],
+    references: [infrastructureResources.id],
+  }),
+  provider: one(cloudProviders, {
+    fields: [cloudResourceStates.providerId],
+    references: [cloudProviders.id],
   }),
 }));
 
@@ -654,6 +998,28 @@ export type InsertLoadBalancer = typeof loadBalancers.$inferInsert;
 export type AutoScalingPolicy = typeof autoScalingPolicies.$inferSelect;
 export type InsertAutoScalingPolicy = typeof autoScalingPolicies.$inferInsert;
 
+// Cloud Provider Types
+export type CloudProvider = typeof cloudProviders.$inferSelect;
+export type InsertCloudProvider = z.infer<typeof insertCloudProviderSchema>;
+export type CloudCredential = typeof cloudCredentials.$inferSelect;
+export type InsertCloudCredential = z.infer<typeof insertCloudCredentialSchema>;
+export type CloudRegion = typeof cloudRegions.$inferSelect;
+export type InsertCloudRegion = z.infer<typeof insertCloudRegionSchema>;
+export type ProviderCapability = typeof providerCapabilities.$inferSelect;
+export type InsertProviderCapability = z.infer<typeof insertProviderCapabilitySchema>;
+export type CostAnalytic = typeof costAnalytics.$inferSelect;
+export type InsertCostAnalytic = z.infer<typeof insertCostAnalyticSchema>;
+export type MigrationProject = typeof migrationProjects.$inferSelect;
+export type InsertMigrationProject = z.infer<typeof insertMigrationProjectSchema>;
+export type ProviderRecommendation = typeof providerRecommendations.$inferSelect;
+export type InsertProviderRecommendation = z.infer<typeof insertProviderRecommendationSchema>;
+export type ResourceMapping = typeof resourceMappings.$inferSelect;
+export type InsertResourceMapping = z.infer<typeof insertResourceMappingSchema>;
+export type ComplianceProfile = typeof complianceProfiles.$inferSelect;
+export type InsertComplianceProfile = z.infer<typeof insertComplianceProfileSchema>;
+export type CloudResourceState = typeof cloudResourceStates.$inferSelect;
+export type InsertCloudResourceState = z.infer<typeof insertCloudResourceStateSchema>;
+
 // New Infrastructure Schema Validations
 export const insertDeploymentEnvironmentSchema = createInsertSchema(deploymentEnvironments).pick({
   projectId: true,
@@ -699,4 +1065,167 @@ export const insertAutoScalingPolicySchema = createInsertSchema(autoScalingPolic
   metrics: true,
   cooldownPeriod: true,
   isEnabled: true,
+});
+
+// Cloud Provider Insert Schemas
+export const insertCloudProviderSchema = createInsertSchema(cloudProviders).pick({
+  name: true,
+  displayName: true,
+  type: true,
+  status: true,
+  apiEndpoint: true,
+  documentationUrl: true,
+  pricing: true,
+  features: true,
+  regions: true,
+  compliance: true,
+  supportTiers: true,
+  metadata: true,
+  isEnabled: true,
+});
+
+export const insertCloudCredentialSchema = createInsertSchema(cloudCredentials).pick({
+  userId: true,
+  providerId: true,
+  name: true,
+  credentialType: true,
+  encryptedCredentials: true,
+  region: true,
+  scope: true,
+  isDefault: true,
+  expiresAt: true,
+  rotationPolicy: true,
+  metadata: true,
+  isActive: true,
+});
+
+export const insertCloudRegionSchema = createInsertSchema(cloudRegions).pick({
+  providerId: true,
+  regionCode: true,
+  regionName: true,
+  country: true,
+  city: true,
+  latitude: true,
+  longitude: true,
+  availabilityZones: true,
+  services: true,
+  compliance: true,
+  costs: true,
+  latencyBenchmarks: true,
+  isActive: true,
+  metadata: true,
+});
+
+export const insertProviderCapabilitySchema = createInsertSchema(providerCapabilities).pick({
+  providerId: true,
+  serviceType: true,
+  serviceName: true,
+  capability: true,
+  isSupported: true,
+  limitations: true,
+  configuration: true,
+  pricing: true,
+  performance: true,
+  maturityLevel: true,
+  metadata: true,
+});
+
+export const insertCostAnalyticSchema = createInsertSchema(costAnalytics).pick({
+  projectId: true,
+  providerId: true,
+  resourceId: true,
+  period: true,
+  periodStart: true,
+  periodEnd: true,
+  actualCost: true,
+  estimatedCost: true,
+  currency: true,
+  costCategory: true,
+  usageMetrics: true,
+  optimizationOpportunities: true,
+  tags: true,
+  metadata: true,
+});
+
+export const insertMigrationProjectSchema = createInsertSchema(migrationProjects).pick({
+  projectId: true,
+  name: true,
+  description: true,
+  sourceProvider: true,
+  targetProvider: true,
+  migrationStrategy: true,
+  complexity: true,
+  estimatedDuration: true,
+  estimatedCost: true,
+  riskAssessment: true,
+  dependencies: true,
+  milestones: true,
+  workloadAnalysis: true,
+  performanceBaseline: true,
+  rollbackPlan: true,
+  assignedTo: true,
+});
+
+export const insertProviderRecommendationSchema = createInsertSchema(providerRecommendations).pick({
+  projectId: true,
+  requestedBy: true,
+  workloadCharacteristics: true,
+  requirements: true,
+  recommendations: true,
+  reasoning: true,
+  confidenceScore: true,
+  alternativeOptions: true,
+  costComparison: true,
+  performanceProjections: true,
+  complianceMapping: true,
+  validUntil: true,
+});
+
+export const insertResourceMappingSchema = createInsertSchema(resourceMappings).pick({
+  sourceProvider: true,
+  targetProvider: true,
+  resourceType: true,
+  sourceService: true,
+  targetService: true,
+  mappingType: true,
+  conversionComplexity: true,
+  automationSupported: true,
+  configurationMapping: true,
+  limitations: true,
+  bestPractices: true,
+  costImplications: true,
+  performanceImpact: true,
+  isRecommended: true,
+  metadata: true,
+});
+
+export const insertComplianceProfileSchema = createInsertSchema(complianceProfiles).pick({
+  projectId: true,
+  name: true,
+  description: true,
+  requiredCertifications: true,
+  dataResidencyRequirements: true,
+  encryptionRequirements: true,
+  accessControlRequirements: true,
+  auditingRequirements: true,
+  networkSecurityRequirements: true,
+  providerCompliance: true,
+  riskTolerance: true,
+  isActive: true,
+});
+
+export const insertCloudResourceStateSchema = createInsertSchema(cloudResourceStates).pick({
+  resourceId: true,
+  providerId: true,
+  externalResourceId: true,
+  resourceArn: true,
+  currentState: true,
+  desiredState: true,
+  providerRegion: true,
+  providerZone: true,
+  syncStatus: true,
+  configurationDrift: true,
+  tags: true,
+  providerMetadata: true,
+  errorMessage: true,
 });
