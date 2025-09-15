@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Eye, Trash2, Code, ArrowLeft } from "lucide-react";
+import { Plus, Eye, Trash2, Code, ArrowLeft, Activity, Shield, Zap, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -27,23 +27,27 @@ export default function Dashboard() {
   const createProjectMutation = useMutation({
     mutationFn: async (projectData: { name: string; description: string; framework: string }) => {
       const response = await apiRequest("POST", "/api/projects", projectData);
+      if (!response.ok) {
+        throw new Error(`Failed to create project: ${response.statusText}`);
+      }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
       setIsCreateDialogOpen(false);
       setProjectName("");
       setProjectDescription("");
       setFramework("");
       toast({
-        title: "Success",
-        description: "Project created successfully",
+        title: "Success", 
+        description: `Project "${data.name}" created successfully`,
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      console.error("Project creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create project",
+        description: error.message || "Failed to create project",
         variant: "destructive",
       });
     },
@@ -143,25 +147,26 @@ export default function Dashboard() {
                   New Project
                 </Button>
               </DialogTrigger>
-              <DialogContent data-testid="dialog-create-project">
+              <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" data-testid="dialog-create-project">
                 <DialogHeader>
                   <DialogTitle>Create New Project</DialogTitle>
                   <DialogDescription>
                     Start building your next application with AI assistance.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="project-name">Project Name</Label>
+                <div className="space-y-6 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="project-name">Project Name *</Label>
                     <Input
                       id="project-name"
                       value={projectName}
                       onChange={(e) => setProjectName(e.target.value)}
                       placeholder="My Awesome App"
                       data-testid="input-project-name"
+                      className="w-full"
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="project-description">Description (Optional)</Label>
                     <Textarea
                       id="project-description"
@@ -169,21 +174,23 @@ export default function Dashboard() {
                       onChange={(e) => setProjectDescription(e.target.value)}
                       placeholder="Describe what your app does..."
                       data-testid="textarea-project-description"
+                      className="w-full min-h-[80px]"
+                      rows={3}
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="framework">Framework</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="framework">Framework *</Label>
                     <Select value={framework} onValueChange={setFramework}>
-                      <SelectTrigger data-testid="select-framework">
+                      <SelectTrigger data-testid="select-framework" className="w-full">
                         <SelectValue placeholder="Choose a framework" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="react">React</SelectItem>
-                        <SelectItem value="vue">Vue.js</SelectItem>
-                        <SelectItem value="angular">Angular</SelectItem>
-                        <SelectItem value="next">Next.js</SelectItem>
-                        <SelectItem value="react-native">React Native</SelectItem>
-                        <SelectItem value="node">Node.js</SelectItem>
+                        <SelectItem value="react">⚛️ React</SelectItem>
+                        <SelectItem value="vue">💚 Vue.js</SelectItem>
+                        <SelectItem value="angular">🅰️ Angular</SelectItem>
+                        <SelectItem value="next">▲ Next.js</SelectItem>
+                        <SelectItem value="react-native">📱 React Native</SelectItem>
+                        <SelectItem value="node">🟢 Node.js</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -293,27 +300,49 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                  <div className="flex space-x-2">
-                    <Link href={`/editor/${project.id}`} className="flex-1">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="w-full"
-                        data-testid={`button-open-project-${index}`}
+                  <div className="space-y-2">
+                    <div className="flex space-x-2">
+                      <Link href={`/editor/${project.id}`} className="flex-1">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full"
+                          data-testid={`button-open-project-${index}`}
+                        >
+                          <Code className="mr-2 h-3 w-3" />
+                          Code Editor
+                        </Button>
+                      </Link>
+                      <Link href={`/devops/${project.id}`} className="flex-1">
+                        <Button 
+                          variant="default" 
+                          size="sm" 
+                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                          data-testid={`button-devops-project-${index}`}
+                        >
+                          <Activity className="mr-2 h-3 w-3" />
+                          AI DevOps
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-green-500 rounded-full" title="SRE Agent Active"></div>
+                        <div className="w-2 h-2 bg-blue-500 rounded-full" title="Security Agent Active"></div>
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full" title="Performance Agent Active"></div>
+                        <div className="w-2 h-2 bg-purple-500 rounded-full" title="Deployment Agent Active"></div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteProjectMutation.mutate(project.id)}
+                        disabled={deleteProjectMutation.isPending}
+                        className="text-destructive hover:text-destructive-foreground hover:bg-destructive h-6 w-6 p-0"
+                        data-testid={`button-delete-project-${index}`}
                       >
-                        Open
+                        <Trash2 className="h-3 w-3" />
                       </Button>
-                    </Link>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteProjectMutation.mutate(project.id)}
-                      disabled={deleteProjectMutation.isPending}
-                      className="text-destructive hover:text-destructive-foreground hover:bg-destructive"
-                      data-testid={`button-delete-project-${index}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

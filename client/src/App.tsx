@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Editor from "@/pages/editor";
+import DevOpsDashboard from "@/pages/devops-dashboard";
 
 function Router() {
   return (
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/editor/:projectId" component={Editor} />
+      <Route path="/devops/:projectId" component={DevOpsDashboard} />
       <Route component={NotFound} />
     </Switch>
   );
