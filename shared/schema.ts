@@ -88,18 +88,105 @@ export const aiAgents = pgTable("ai_agents", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Deployment Environments for Real Infrastructure Management
+export const deploymentEnvironments = pgTable("deployment_environments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // "development", "staging", "production", "preview"
+  type: text("type").notNull().default("staging"), // "development", "staging", "production", "preview"
+  status: text("status").notNull().default("inactive"), // "active", "inactive", "deploying", "error"
+  url: text("url"), // environment URL
+  branch: text("branch").default("main"), // Git branch for this environment
+  autoDeployBranch: text("auto_deploy_branch"), // branch that triggers auto-deployment
+  configuration: jsonb("configuration").default({}), // env vars, build settings
+  resourceLimits: jsonb("resource_limits").default({}), // CPU, memory, storage limits
+  secrets: jsonb("secrets").default({}), // encrypted environment secrets
+  lastDeployment: varchar("last_deployment").references(() => deployments.id),
+  isProtected: boolean("is_protected").default(false), // requires approval for deployments
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Health Checks for Real Infrastructure Monitoring
+export const healthChecks = pgTable("health_checks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  deploymentId: varchar("deployment_id").notNull().references(() => deployments.id, { onDelete: "cascade" }),
+  checkType: text("check_type").notNull(), // "http", "tcp", "command", "database"
+  endpoint: text("endpoint"), // URL or command to check
+  expectedResponse: text("expected_response"),
+  timeout: integer("timeout").default(30), // timeout in seconds
+  interval: integer("interval").default(60), // check interval in seconds
+  retries: integer("retries").default(3), // number of retries before marking as failed
+  status: text("status").default("unknown"), // "healthy", "unhealthy", "unknown"
+  lastCheck: timestamp("last_check"),
+  lastSuccessful: timestamp("last_successful"),
+  failureCount: integer("failure_count").default(0),
+  responseTime: integer("response_time"), // last response time in ms
+  errorMessage: text("error_message"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Load Balancers for Real Traffic Management
+export const loadBalancers = pgTable("load_balancers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type").notNull().default("application"), // "application", "network", "classic"
+  status: text("status").notNull().default("active"), // "active", "inactive", "provisioning", "error"
+  algorithm: text("algorithm").default("round-robin"), // "round-robin", "least-connections", "ip-hash"
+  healthCheckPath: text("health_check_path").default("/health"),
+  healthCheckInterval: integer("health_check_interval").default(30),
+  configuration: jsonb("configuration").default({}),
+  targets: jsonb("targets").default([]), // list of backend targets
+  metrics: jsonb("metrics").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Auto-scaling Configuration for Real Resource Management
+export const autoScalingPolicies = pgTable("auto_scaling_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  environmentId: varchar("environment_id").references(() => deploymentEnvironments.id),
+  name: text("name").notNull(),
+  targetType: text("target_type").notNull(), // "deployment", "container", "instance"
+  targetId: text("target_id").notNull(),
+  scaleDirection: text("scale_direction").notNull(), // "up", "down", "both"
+  minInstances: integer("min_instances").default(1),
+  maxInstances: integer("max_instances").default(10),
+  metrics: jsonb("metrics").notNull(), // scaling metrics and thresholds
+  cooldownPeriod: integer("cooldown_period").default(300), // seconds
+  isEnabled: boolean("is_enabled").default(true),
+  lastScalingAction: timestamp("last_scaling_action"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const deployments = pgTable("deployments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   agentId: varchar("agent_id").references(() => aiAgents.id),
+  environmentId: varchar("environment_id").references(() => deploymentEnvironments.id),
   version: text("version").notNull(),
   strategy: text("strategy").notNull().default("blue-green"), // "blue-green", "rolling", "canary"
   status: text("status").notNull().default("pending"), // "pending", "deploying", "deployed", "failed", "rolled-back"
   environment: text("environment").notNull().default("production"),
   deploymentUrl: text("deployment_url"),
   rollbackVersion: text("rollback_version"),
+  containerId: text("container_id"), // Docker container ID for real deployment
+  processId: text("process_id"), // Process ID for running application
+  port: integer("port").default(5000), // Port where app is running
+  healthCheckUrl: text("health_check_url"),
+  healthStatus: text("health_status").default("unknown"), // "healthy", "unhealthy", "unknown"
+  lastHealthCheck: timestamp("last_health_check"),
+  deploymentLogs: text("deployment_logs"),
+  errorLogs: text("error_logs"),
+  buildLogs: text("build_logs"),
   metadata: jsonb("metadata").default({}),
   deployedAt: timestamp("deployed_at"),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -164,14 +251,18 @@ export const agentTasks = pgTable("agent_tasks", {
 export const infrastructureResources = pgTable("infrastructure_resources", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
-  resourceType: text("resource_type").notNull(), // "server", "container", "database", "load-balancer"
+  environmentId: varchar("environment_id").references(() => deploymentEnvironments.id),
+  resourceType: text("resource_type").notNull(), // "server", "container", "database", "load-balancer", "auto-scaler"
   resourceId: text("resource_id").notNull(), // external resource identifier
   name: text("name").notNull(),
-  status: text("status").notNull().default("active"), // "active", "inactive", "maintenance", "error"
-  provider: text("provider").notNull(), // "aws", "gcp", "azure", "local"
+  status: text("status").notNull().default("active"), // "active", "inactive", "maintenance", "error", "scaling"
+  provider: text("provider").notNull(), // "aws", "gcp", "azure", "local", "replit"
   region: text("region"),
   configuration: jsonb("configuration").default({}),
   metrics: jsonb("metrics").default({}),
+  specs: jsonb("specs").default({}), // CPU, memory, disk, network specs
+  cost: jsonb("cost").default({}), // cost tracking per resource
+  autoScaling: jsonb("auto_scaling").default({}), // auto-scaling configuration
   lastHealthCheck: timestamp("last_health_check").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -552,3 +643,60 @@ export type InsertAgentTask = z.infer<typeof insertAgentTaskSchema>;
 export type AgentTask = typeof agentTasks.$inferSelect;
 export type InsertInfrastructureResource = z.infer<typeof insertInfrastructureResourceSchema>;
 export type InfrastructureResource = typeof infrastructureResources.$inferSelect;
+
+// New Enhanced Infrastructure Types
+export type DeploymentEnvironment = typeof deploymentEnvironments.$inferSelect;
+export type InsertDeploymentEnvironment = typeof deploymentEnvironments.$inferInsert;
+export type HealthCheck = typeof healthChecks.$inferSelect;
+export type InsertHealthCheck = typeof healthChecks.$inferInsert;
+export type LoadBalancer = typeof loadBalancers.$inferSelect;
+export type InsertLoadBalancer = typeof loadBalancers.$inferInsert;
+export type AutoScalingPolicy = typeof autoScalingPolicies.$inferSelect;
+export type InsertAutoScalingPolicy = typeof autoScalingPolicies.$inferInsert;
+
+// New Infrastructure Schema Validations
+export const insertDeploymentEnvironmentSchema = createInsertSchema(deploymentEnvironments).pick({
+  projectId: true,
+  name: true,
+  type: true,
+  branch: true,
+  autoDeployBranch: true,
+  configuration: true,
+  resourceLimits: true,
+  isProtected: true,
+});
+
+export const insertHealthCheckSchema = createInsertSchema(healthChecks).pick({
+  deploymentId: true,
+  checkType: true,
+  endpoint: true,
+  expectedResponse: true,
+  timeout: true,
+  interval: true,
+  retries: true,
+});
+
+export const insertLoadBalancerSchema = createInsertSchema(loadBalancers).pick({
+  projectId: true,
+  name: true,
+  type: true,
+  algorithm: true,
+  healthCheckPath: true,
+  healthCheckInterval: true,
+  configuration: true,
+  targets: true,
+});
+
+export const insertAutoScalingPolicySchema = createInsertSchema(autoScalingPolicies).pick({
+  projectId: true,
+  environmentId: true,
+  name: true,
+  targetType: true,
+  targetId: true,
+  scaleDirection: true,
+  minInstances: true,
+  maxInstances: true,
+  metrics: true,
+  cooldownPeriod: true,
+  isEnabled: true,
+});

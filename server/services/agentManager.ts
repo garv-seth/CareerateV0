@@ -277,13 +277,39 @@ export class AgentManager {
       metadata: { initiatedBy: "ai-agent", agentId: task.agentId }
     });
 
-    // Simulate deployment process
-    setTimeout(async () => {
+    // Real deployment process using deployment manager
+    const { deploymentManager } = await import("./deploymentManager");
+    
+    // Deploy using real deployment infrastructure
+    deploymentManager.deployProject({
+      projectId: task.projectId,
+      version: deploymentData.version,
+      strategy: deploymentData.strategy || "blue-green",
+      environment: deploymentData.environment || "production",
+      agentId: task.agentId
+    }).then(async (result) => {
+      if (result.status === "success") {
+        await storage.updateDeployment(deployment.id, {
+          status: "deployed",
+          deploymentUrl: result.url,
+          containerId: result.containerId,
+          processId: result.processId,
+          healthStatus: "healthy",
+          deployedAt: new Date()
+        });
+      } else {
+        await storage.updateDeployment(deployment.id, {
+          status: "failed",
+          errorLogs: result.error
+        });
+      }
+    }).catch(async (error) => {
+      console.error('Agent deployment failed:', error);
       await storage.updateDeployment(deployment.id, {
-        status: "deployed",
-        deployedAt: new Date()
+        status: "failed",
+        errorLogs: error.message
       });
-    }, 3000);
+    });
 
     return {
       deploymentId: deployment.id,
@@ -396,6 +422,386 @@ Based on the context and your role as a ${agent.type} agent, make an intelligent
       status: isHealthy ? "healthy" : "unhealthy",
       lastSeen: lastHeartbeat
     };
+  }
+
+  // Autonomous Infrastructure Management Integration
+  async performAutonomousManagement(agentId: string): Promise<void> {
+    const agent = await this.getAgent(agentId);
+    if (!agent) return;
+
+    try {
+      switch (agent.type) {
+        case "sre":
+          await this.performAutonomousSREManagement(agent);
+          break;
+        case "security":
+          await this.performAutonomousSecurityManagement(agent);
+          break;
+        case "performance":
+          await this.performAutonomousPerformanceManagement(agent);
+          break;
+        case "deployment":
+          await this.performAutonomousDeploymentManagement(agent);
+          break;
+      }
+    } catch (error) {
+      console.error(`Autonomous management failed for agent ${agentId}:`, error);
+    }
+  }
+
+  private async performAutonomousSREManagement(agent: AiAgent): Promise<void> {
+    // Get active deployments and monitor their health
+    const deployments = await storage.getProjectDeployments(agent.projectId);
+    const activeDeployments = deployments.filter(d => d.status === 'deployed');
+    
+    for (const deployment of activeDeployments) {
+      const { deploymentManager } = await import("./deploymentManager");
+      const status = await deploymentManager.getDeploymentStatus(deployment.id);
+      
+      // Check if deployment is unhealthy or not running
+      if (!status.isRunning || deployment.healthStatus === 'unhealthy') {
+        // Create incident
+        const incident = await storage.createIncident({
+          projectId: agent.projectId,
+          agentId: agent.id,
+          title: `Deployment Issue: ${deployment.id}`,
+          description: `Deployment showing unhealthy status or stopped running`,
+          severity: 'high',
+          category: 'infrastructure'
+        });
+
+        // Make intelligent decision for remediation
+        const decision = await this.makeIntelligentDecision(agent.id, {
+          deployment: deployment,
+          isRunning: status.isRunning,
+          healthStatus: deployment.healthStatus,
+          incident: incident
+        }, [
+          { action: "restart-deployment", description: "Restart the deployment process" },
+          { action: "rollback-deployment", description: "Roll back to previous stable version" },
+          { action: "scale-resources", description: "Increase resource allocation" },
+          { action: "create-new-deployment", description: "Create new deployment instance" }
+        ]);
+
+        // Execute autonomous remediation
+        await this.executeAutonomousRemediation(agent, deployment, decision);
+      }
+    }
+
+    // Monitor performance metrics and create incidents for anomalies
+    const recentMetrics = await storage.getProjectMetrics(agent.projectId);
+    const last5Minutes = recentMetrics.filter(m => 
+      new Date().getTime() - new Date(m.timestamp).getTime() < 5 * 60 * 1000
+    );
+
+    // Analyze for performance anomalies
+    if (last5Minutes.length > 0) {
+      const errorRateMetrics = last5Minutes.filter(m => m.metricType === 'error_rate');
+      const avgErrorRate = errorRateMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / errorRateMetrics.length;
+      
+      if (avgErrorRate > (agent.configuration?.incident_thresholds?.error_rate || 5)) {
+        await storage.createIncident({
+          projectId: agent.projectId,
+          agentId: agent.id,
+          title: 'High Error Rate Detected',
+          description: `Error rate of ${avgErrorRate.toFixed(2)}% exceeds threshold`,
+          severity: 'medium',
+          category: 'performance'
+        });
+      }
+    }
+  }
+
+  private async performAutonomousSecurityManagement(agent: AiAgent): Promise<void> {
+    // Run periodic security scans
+    const lastScan = await storage.getProjectSecurityScans(agent.projectId);
+    const mostRecent = lastScan.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    
+    const scanInterval = agent.configuration?.scan_frequency === 'daily' ? 24 : 168; // hours
+    
+    if (!mostRecent || new Date().getTime() - new Date(mostRecent.createdAt).getTime() > scanInterval * 60 * 60 * 1000) {
+      // Trigger automated security scan
+      await this.assignTask(agent.id, {
+        projectId: agent.projectId,
+        taskType: "vulnerability-scan",
+        priority: "medium",
+        description: "Automated periodic security scan",
+        input: { 
+          scanType: "comprehensive",
+          automated: true,
+          includeCompliance: true 
+        }
+      });
+    }
+
+    // Check for unresolved security findings
+    const unresolvedScans = lastScan.filter(scan => !scan.resolved && scan.severity === 'high');
+    if (unresolvedScans.length > 0) {
+      for (const scan of unresolvedScans.slice(0, 3)) { // Limit to 3 most recent
+        const decision = await this.makeIntelligentDecision(agent.id, {
+          securityScan: scan,
+          findings: scan.findings,
+          severity: scan.severity
+        }, [
+          { action: "auto-patch", description: "Apply automated security patches" },
+          { action: "isolate-resources", description: "Isolate affected infrastructure" },
+          { action: "update-dependencies", description: "Update vulnerable dependencies" },
+          { action: "create-incident", description: "Escalate to security incident" }
+        ]);
+
+        if (decision.action === "auto-patch" && agent.configuration?.auto_patch) {
+          await this.executeSecurityPatching(agent, scan);
+        }
+      }
+    }
+  }
+
+  private async performAutonomousPerformanceManagement(agent: AiAgent): Promise<void> {
+    const { deploymentManager } = await import("./deploymentManager");
+    
+    // Get recent performance metrics
+    const recentMetrics = await storage.getProjectMetrics(agent.projectId);
+    const last15Minutes = recentMetrics.filter(m => 
+      new Date().getTime() - new Date(m.timestamp).getTime() < 15 * 60 * 1000
+    );
+
+    if (last15Minutes.length === 0) return;
+
+    // Analyze performance trends
+    const cpuMetrics = last15Minutes.filter(m => m.metricType === 'cpu');
+    const memoryMetrics = last15Minutes.filter(m => m.metricType === 'memory');
+    const responseTimeMetrics = last15Minutes.filter(m => m.metricType === 'response_time');
+    
+    const avgCpu = cpuMetrics.length > 0 ? cpuMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / cpuMetrics.length : 0;
+    const avgMemory = memoryMetrics.length > 0 ? memoryMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / memoryMetrics.length : 0;
+    const avgResponseTime = responseTimeMetrics.length > 0 ? responseTimeMetrics.reduce((sum, m) => sum + parseFloat(m.value), 0) / responseTimeMetrics.length : 0;
+
+    const thresholds = agent.configuration?.performance_thresholds || { cpu: 80, memory: 85, response_time: 2000 };
+
+    // Autonomous scaling decisions
+    if (avgCpu > thresholds.cpu || avgMemory > thresholds.memory || avgResponseTime > thresholds.response_time) {
+      const decision = await this.makeIntelligentDecision(agent.id, {
+        cpuUsage: avgCpu,
+        memoryUsage: avgMemory,
+        responseTime: avgResponseTime,
+        thresholds: thresholds
+      }, [
+        { action: "scale-up", description: "Increase resource allocation" },
+        { action: "optimize-queries", description: "Optimize database queries" },
+        { action: "enable-caching", description: "Enable or increase caching" },
+        { action: "load-balance", description: "Distribute load across multiple instances" }
+      ]);
+
+      await this.executePerformanceOptimization(agent, decision);
+    }
+
+    // Predictive scaling based on patterns
+    await this.performPredictiveScaling(agent, last15Minutes);
+  }
+
+  private async performAutonomousDeploymentManagement(agent: AiAgent): Promise<void> {
+    const { deploymentManager } = await import("./deploymentManager");
+    
+    // Check for failed or stuck deployments
+    const deployments = await storage.getProjectDeployments(agent.projectId);
+    const problematicDeployments = deployments.filter(d => 
+      d.status === 'failed' || 
+      (d.status === 'deploying' && new Date().getTime() - new Date(d.startedAt || d.createdAt).getTime() > 10 * 60 * 1000)
+    );
+
+    for (const deployment of problematicDeployments) {
+      const decision = await this.makeIntelligentDecision(agent.id, {
+        deployment: deployment,
+        status: deployment.status,
+        duration: new Date().getTime() - new Date(deployment.startedAt || deployment.createdAt).getTime()
+      }, [
+        { action: "retry-deployment", description: "Retry failed deployment with same configuration" },
+        { action: "rollback", description: "Roll back to previous stable version" },
+        { action: "diagnose-and-fix", description: "Analyze logs and attempt automatic fixes" },
+        { action: "create-new-deployment", description: "Create fresh deployment with updated configuration" }
+      ]);
+
+      await this.executeDeploymentRemediation(agent, deployment, decision);
+    }
+
+    // Monitor deployment health and perform preventive actions
+    const activeDeployments = deployments.filter(d => d.status === 'deployed');
+    for (const deployment of activeDeployments) {
+      const status = await deploymentManager.getDeploymentStatus(deployment.id);
+      
+      if (deployment.healthStatus === 'unhealthy' && status.healthChecks.length > 0) {
+        const failedChecks = status.healthChecks.filter(check => check.status === 'unhealthy');
+        if (failedChecks.length > 0) {
+          // Attempt automatic recovery
+          await deploymentManager.rollbackDeployment(deployment.id);
+        }
+      }
+    }
+  }
+
+  // Execute autonomous actions based on AI decisions
+  private async executeAutonomousRemediation(agent: AiAgent, deployment: Deployment, decision: AgentDecision): Promise<void> {
+    const { deploymentManager } = await import("./deploymentManager");
+    
+    try {
+      switch (decision.action) {
+        case "restart-deployment":
+          await deploymentManager.stopDeployment(deployment.id);
+          // Restart deployment with same configuration
+          const project = await storage.getProject(deployment.projectId);
+          if (project) {
+            await deploymentManager.deployProject({
+              projectId: deployment.projectId,
+              version: deployment.version,
+              strategy: deployment.strategy as any,
+              environment: deployment.environment,
+              agentId: agent.id
+            });
+          }
+          break;
+          
+        case "rollback-deployment":
+          await deploymentManager.rollbackDeployment(deployment.id, deployment.rollbackVersion || undefined);
+          break;
+          
+        case "scale-resources":
+          // Update resource allocation (simplified - would integrate with cloud providers)
+          await storage.updateDeployment(deployment.id, {
+            metadata: {
+              ...deployment.metadata,
+              autoScaled: true,
+              scaledBy: agent.id,
+              scaledAt: new Date()
+            }
+          });
+          break;
+      }
+
+      // Log the autonomous action
+      await storage.createAgentTask({
+        agentId: agent.id,
+        projectId: deployment.projectId,
+        taskType: "autonomous-remediation",
+        priority: "high",
+        description: `Autonomous ${decision.action}: ${decision.reasoning}`,
+        input: { decision, deployment: deployment.id },
+        output: { success: true, action: decision.action }
+      });
+      
+    } catch (error) {
+      console.error(`Failed to execute autonomous remediation:`, error);
+    }
+  }
+
+  private async executeSecurityPatching(agent: AiAgent, scan: SecurityScan): Promise<void> {
+    // Implement automated security patching logic
+    await this.assignTask(agent.id, {
+      projectId: agent.projectId,
+      taskType: "security-patching",
+      priority: "high",
+      description: "Automated security patch application",
+      input: { scanId: scan.id, findings: scan.findings }
+    });
+  }
+
+  private async executePerformanceOptimization(agent: AiAgent, decision: AgentDecision): Promise<void> {
+    // Implement performance optimization actions
+    await this.assignTask(agent.id, {
+      projectId: agent.projectId,
+      taskType: "performance-optimization",
+      priority: "medium",
+      description: `Autonomous performance optimization: ${decision.action}`,
+      input: { action: decision.action, reasoning: decision.reasoning }
+    });
+  }
+
+  private async executeDeploymentRemediation(agent: AiAgent, deployment: Deployment, decision: AgentDecision): Promise<void> {
+    const { deploymentManager } = await import("./deploymentManager");
+    
+    try {
+      switch (decision.action) {
+        case "retry-deployment":
+          const project = await storage.getProject(deployment.projectId);
+          if (project) {
+            await deploymentManager.deployProject({
+              projectId: deployment.projectId,
+              version: deployment.version,
+              strategy: deployment.strategy as any,
+              environment: deployment.environment,
+              agentId: agent.id
+            });
+          }
+          break;
+          
+        case "rollback":
+          await deploymentManager.rollbackDeployment(deployment.id);
+          break;
+          
+        case "diagnose-and-fix":
+          // Analyze deployment logs and attempt fixes
+          await this.assignTask(agent.id, {
+            projectId: deployment.projectId,
+            taskType: "deployment-diagnosis",
+            priority: "high",
+            description: "Automated deployment diagnosis and repair",
+            input: { deploymentId: deployment.id, logs: deployment.deploymentLogs }
+          });
+          break;
+      }
+    } catch (error) {
+      console.error(`Failed to execute deployment remediation:`, error);
+    }
+  }
+
+  private async performPredictiveScaling(agent: AiAgent, metrics: PerformanceMetric[]): Promise<void> {
+    // Simple predictive scaling based on trends
+    if (metrics.length < 10) return; // Need sufficient data
+    
+    const cpuMetrics = metrics.filter(m => m.metricType === 'cpu').sort((a, b) => 
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+    
+    if (cpuMetrics.length < 5) return;
+    
+    // Calculate trend
+    const recentValues = cpuMetrics.slice(-5).map(m => parseFloat(m.value));
+    const trend = (recentValues[4] - recentValues[0]) / recentValues.length;
+    
+    // Predict if scaling will be needed in next 15 minutes
+    const currentValue = recentValues[4];
+    const predictedValue = currentValue + (trend * 3); // 3 periods ahead
+    
+    if (predictedValue > 85) { // Threshold for preemptive scaling
+      await this.assignTask(agent.id, {
+        projectId: agent.projectId,
+        taskType: "predictive-scaling",
+        priority: "medium",
+        description: `Predictive scaling: CPU expected to reach ${predictedValue.toFixed(1)}%`,
+        input: { 
+          currentCpu: currentValue, 
+          predictedCpu: predictedValue, 
+          trend: trend 
+        }
+      });
+    }
+  }
+
+  // Enhanced autonomous management startup
+  async startAutonomousManagement(): Promise<void> {
+    // Start autonomous management for all active agents
+    setInterval(async () => {
+      const activeAgents = Array.from(this.agents.values()).filter(agent => agent.status === 'active');
+      
+      for (const agent of activeAgents) {
+        try {
+          await this.performAutonomousManagement(agent.id);
+        } catch (error) {
+          console.error(`Autonomous management failed for agent ${agent.id}:`, error);
+        }
+      }
+    }, 2 * 60 * 1000); // Every 2 minutes
+    
+    console.log('Autonomous infrastructure management started');
   }
 }
 

@@ -237,13 +237,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isCurrent: true
         });
 
-        // Simulate deployment
-        setTimeout(async () => {
+        // Real deployment using deployment manager
+        const { deploymentManager } = await import("./services/deploymentManager");
+        
+        // Deploy the project using real deployment infrastructure
+        deploymentManager.deployProject({
+          projectId: data.projectId,
+          version: historyCount.length + 1,
+          strategy: "blue-green",
+          environment: "production",
+          buildCommand: "npm install",
+          startCommand: "npm start",
+          port: 5000 + Math.floor(Math.random() * 1000) // Allocate random port
+        }).then(async (result) => {
+          if (result.status === "success") {
+            await storage.updateProject(data.projectId, {
+              status: "deployed",
+              deploymentUrl: result.url || `https://${updatedProject?.name?.toLowerCase().replace(/\s+/g, '-')}.careerate.dev`
+            });
+          } else {
+            await storage.updateProject(data.projectId, {
+              status: "error"
+            });
+          }
+        }).catch(async (error) => {
+          console.error('Deployment failed:', error);
           await storage.updateProject(data.projectId, {
-            status: "deployed",
-            deploymentUrl: `https://${updatedProject?.name?.toLowerCase().replace(/\s+/g, '-')}.careerate.dev`
+            status: "error"
           });
-        }, 3000);
+        });
 
         res.json({ 
           success: true, 

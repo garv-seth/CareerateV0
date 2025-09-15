@@ -14,6 +14,10 @@ import {
   generationHistory,
   codeReviews,
   apiDocumentation,
+  deploymentEnvironments,
+  healthChecks,
+  loadBalancers,
+  autoScalingPolicies,
   type User, 
   type UpsertUser, 
   type Project, 
@@ -41,7 +45,15 @@ import {
   type GenerationHistory,
   type CodeReview,
   type InsertCodeReview,
-  type ApiDocumentation
+  type ApiDocumentation,
+  type DeploymentEnvironment,
+  type InsertDeploymentEnvironment,
+  type HealthCheck,
+  type InsertHealthCheck,
+  type LoadBalancer,
+  type InsertLoadBalancer,
+  type AutoScalingPolicy,
+  type InsertAutoScalingPolicy
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -137,6 +149,35 @@ export interface IStorage {
   // Enhanced code generation operations
   updateCodeGeneration(id: string, updates: Partial<CodeGeneration>): Promise<CodeGeneration | undefined>;
   getCodeGeneration(id: string): Promise<CodeGeneration | undefined>;
+
+  // Enhanced Infrastructure Operations
+  // Deployment Environment operations
+  createDeploymentEnvironment(env: InsertDeploymentEnvironment): Promise<DeploymentEnvironment>;
+  getDeploymentEnvironment(id: string): Promise<DeploymentEnvironment | undefined>;
+  getProjectEnvironments(projectId: string): Promise<DeploymentEnvironment[]>;
+  updateDeploymentEnvironment(id: string, updates: Partial<DeploymentEnvironment>): Promise<DeploymentEnvironment | undefined>;
+  deleteDeploymentEnvironment(id: string): Promise<boolean>;
+
+  // Health Check operations
+  createHealthCheck(check: InsertHealthCheck): Promise<HealthCheck>;
+  getHealthCheck(id: string): Promise<HealthCheck | undefined>;
+  getDeploymentHealthChecks(deploymentId: string): Promise<HealthCheck[]>;
+  updateHealthCheck(id: string, updates: Partial<HealthCheck>): Promise<HealthCheck | undefined>;
+  deleteHealthCheck(id: string): Promise<boolean>;
+
+  // Load Balancer operations
+  createLoadBalancer(lb: InsertLoadBalancer): Promise<LoadBalancer>;
+  getLoadBalancer(id: string): Promise<LoadBalancer | undefined>;
+  getProjectLoadBalancers(projectId: string): Promise<LoadBalancer[]>;
+  updateLoadBalancer(id: string, updates: Partial<LoadBalancer>): Promise<LoadBalancer | undefined>;
+  deleteLoadBalancer(id: string): Promise<boolean>;
+
+  // Auto Scaling Policy operations
+  createAutoScalingPolicy(policy: InsertAutoScalingPolicy): Promise<AutoScalingPolicy>;
+  getAutoScalingPolicy(id: string): Promise<AutoScalingPolicy | undefined>;
+  getProjectAutoScalingPolicies(projectId: string): Promise<AutoScalingPolicy[]>;
+  updateAutoScalingPolicy(id: string, updates: Partial<AutoScalingPolicy>): Promise<AutoScalingPolicy | undefined>;
+  deleteAutoScalingPolicy(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -592,6 +633,161 @@ export class DatabaseStorage implements IStorage {
   async getCodeGeneration(id: string): Promise<CodeGeneration | undefined> {
     const [generation] = await db.select().from(codeGenerations).where(eq(codeGenerations.id, id));
     return generation;
+  }
+
+  // Enhanced Infrastructure Operations Implementation
+  
+  // Deployment Environment operations
+  async createDeploymentEnvironment(env: InsertDeploymentEnvironment): Promise<DeploymentEnvironment> {
+    const [newEnv] = await db
+      .insert(deploymentEnvironments)
+      .values(env)
+      .returning();
+    return newEnv;
+  }
+
+  async getDeploymentEnvironment(id: string): Promise<DeploymentEnvironment | undefined> {
+    const [env] = await db.select().from(deploymentEnvironments).where(eq(deploymentEnvironments.id, id));
+    return env;
+  }
+
+  async getProjectEnvironments(projectId: string): Promise<DeploymentEnvironment[]> {
+    return await db.select().from(deploymentEnvironments)
+      .where(eq(deploymentEnvironments.projectId, projectId))
+      .orderBy(desc(deploymentEnvironments.createdAt));
+  }
+
+  async updateDeploymentEnvironment(id: string, updates: Partial<DeploymentEnvironment>): Promise<DeploymentEnvironment | undefined> {
+    const [updatedEnv] = await db
+      .update(deploymentEnvironments)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(deploymentEnvironments.id, id))
+      .returning();
+    return updatedEnv;
+  }
+
+  async deleteDeploymentEnvironment(id: string): Promise<boolean> {
+    const result = await db
+      .delete(deploymentEnvironments)
+      .where(eq(deploymentEnvironments.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Health Check operations
+  async createHealthCheck(check: InsertHealthCheck): Promise<HealthCheck> {
+    const [newCheck] = await db
+      .insert(healthChecks)
+      .values(check)
+      .returning();
+    return newCheck;
+  }
+
+  async getHealthCheck(id: string): Promise<HealthCheck | undefined> {
+    const [check] = await db.select().from(healthChecks).where(eq(healthChecks.id, id));
+    return check;
+  }
+
+  async getDeploymentHealthChecks(deploymentId: string): Promise<HealthCheck[]> {
+    return await db.select().from(healthChecks)
+      .where(eq(healthChecks.deploymentId, deploymentId))
+      .orderBy(desc(healthChecks.createdAt));
+  }
+
+  async updateHealthCheck(id: string, updates: Partial<HealthCheck>): Promise<HealthCheck | undefined> {
+    const [updatedCheck] = await db
+      .update(healthChecks)
+      .set(updates)
+      .where(eq(healthChecks.id, id))
+      .returning();
+    return updatedCheck;
+  }
+
+  async deleteHealthCheck(id: string): Promise<boolean> {
+    const result = await db
+      .delete(healthChecks)
+      .where(eq(healthChecks.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Load Balancer operations
+  async createLoadBalancer(lb: InsertLoadBalancer): Promise<LoadBalancer> {
+    const [newLb] = await db
+      .insert(loadBalancers)
+      .values(lb)
+      .returning();
+    return newLb;
+  }
+
+  async getLoadBalancer(id: string): Promise<LoadBalancer | undefined> {
+    const [lb] = await db.select().from(loadBalancers).where(eq(loadBalancers.id, id));
+    return lb;
+  }
+
+  async getProjectLoadBalancers(projectId: string): Promise<LoadBalancer[]> {
+    return await db.select().from(loadBalancers)
+      .where(eq(loadBalancers.projectId, projectId))
+      .orderBy(desc(loadBalancers.createdAt));
+  }
+
+  async updateLoadBalancer(id: string, updates: Partial<LoadBalancer>): Promise<LoadBalancer | undefined> {
+    const [updatedLb] = await db
+      .update(loadBalancers)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(loadBalancers.id, id))
+      .returning();
+    return updatedLb;
+  }
+
+  async deleteLoadBalancer(id: string): Promise<boolean> {
+    const result = await db
+      .delete(loadBalancers)
+      .where(eq(loadBalancers.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Auto Scaling Policy operations
+  async createAutoScalingPolicy(policy: InsertAutoScalingPolicy): Promise<AutoScalingPolicy> {
+    const [newPolicy] = await db
+      .insert(autoScalingPolicies)
+      .values(policy)
+      .returning();
+    return newPolicy;
+  }
+
+  async getAutoScalingPolicy(id: string): Promise<AutoScalingPolicy | undefined> {
+    const [policy] = await db.select().from(autoScalingPolicies).where(eq(autoScalingPolicies.id, id));
+    return policy;
+  }
+
+  async getProjectAutoScalingPolicies(projectId: string): Promise<AutoScalingPolicy[]> {
+    return await db.select().from(autoScalingPolicies)
+      .where(eq(autoScalingPolicies.projectId, projectId))
+      .orderBy(desc(autoScalingPolicies.createdAt));
+  }
+
+  async updateAutoScalingPolicy(id: string, updates: Partial<AutoScalingPolicy>): Promise<AutoScalingPolicy | undefined> {
+    const [updatedPolicy] = await db
+      .update(autoScalingPolicies)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(autoScalingPolicies.id, id))
+      .returning();
+    return updatedPolicy;
+  }
+
+  async deleteAutoScalingPolicy(id: string): Promise<boolean> {
+    const result = await db
+      .delete(autoScalingPolicies)
+      .where(eq(autoScalingPolicies.id, id));
+    return result.rowCount > 0;
   }
 }
 
