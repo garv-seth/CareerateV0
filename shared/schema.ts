@@ -1643,3 +1643,417 @@ export type MigrationAssessmentFinding = typeof migrationAssessmentFindings.$inf
 export type InsertMigrationAssessmentFinding = z.infer<typeof insertMigrationAssessmentFindingSchema>;
 export type MigrationCostAnalysis = typeof migrationCostAnalysis.$inferSelect;
 export type InsertMigrationCostAnalysis = z.infer<typeof insertMigrationCostAnalysisSchema>;
+
+// =====================================================
+// INTEGRATIONS HUB - Comprehensive External Service Management
+// =====================================================
+
+// Central Integration Management
+export const integrations = pgTable("integrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }), // optional project binding
+  name: text("name").notNull(), // user-friendly name
+  type: text("type").notNull(), // "cloud-provider", "repository", "api", "database", "monitoring", "payment", "communication"
+  service: text("service").notNull(), // "github", "stripe", "twilio", "sendgrid", "aws", "azure", "gcp"
+  category: text("category").notNull(), // "development", "deployment", "analytics", "payments", "communication"
+  status: text("status").notNull().default("inactive"), // "active", "inactive", "error", "configuring", "testing"
+  connectionType: text("connection_type").notNull(), // "oauth", "api-key", "service-account", "webhook"
+  configuration: jsonb("configuration").default({}), // service-specific config
+  endpoints: jsonb("endpoints").default({}), // API endpoints and URLs
+  permissions: jsonb("permissions").default([]), // granted scopes/permissions
+  rateLimits: jsonb("rate_limits").default({}), // rate limiting config
+  healthCheck: jsonb("health_check").default({}), // health check configuration
+  isEnabled: boolean("is_enabled").default(true),
+  autoRotate: boolean("auto_rotate").default(false), // automatic credential rotation
+  lastHealthCheck: timestamp("last_health_check"),
+  lastUsed: timestamp("last_used"),
+  expiresAt: timestamp("expires_at"), // for temporary connections
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Secure Secrets and Credentials Management
+export const integrationSecrets = pgTable("integration_secrets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").notNull().references(() => integrations.id, { onDelete: "cascade" }),
+  secretType: text("secret_type").notNull(), // "api-key", "oauth-token", "webhook-secret", "certificate", "private-key"
+  secretName: text("secret_name").notNull(), // name/identifier
+  encryptedValue: text("encrypted_value").notNull(), // AES-256 encrypted secret
+  encryptionAlgorithm: text("encryption_algorithm").default("AES-256-GCM"),
+  keyId: text("key_id"), // reference to encryption key
+  environment: text("environment").default("all"), // "development", "staging", "production", "all"
+  scope: jsonb("scope").default([]), // permissions/access scope
+  rotationPolicy: jsonb("rotation_policy").default({}), // auto-rotation settings
+  lastRotated: timestamp("last_rotated"),
+  expiresAt: timestamp("expires_at"),
+  isActive: boolean("is_active").default(true),
+  accessCount: integer("access_count").default(0),
+  lastAccessed: timestamp("last_accessed"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// GitHub/GitLab Repository Connections
+export const repositoryConnections = pgTable("repository_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").notNull().references(() => integrations.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(), // "github", "gitlab", "bitbucket", "azure-repos"
+  repositoryId: text("repository_id").notNull(), // external repository ID
+  repositoryName: text("repository_name").notNull(),
+  repositoryUrl: text("repository_url").notNull(),
+  ownerName: text("owner_name").notNull(),
+  ownerType: text("owner_type").notNull(), // "user", "organization"
+  defaultBranch: text("default_branch").default("main"),
+  syncBranches: text("sync_branches").array().default(["main"]), // branches to sync
+  webhookUrl: text("webhook_url"), // webhook endpoint
+  webhookSecret: text("webhook_secret"), // webhook verification secret
+  deployKeys: jsonb("deploy_keys").default([]), // deployment keys
+  permissions: jsonb("permissions").default({}), // repo permissions
+  autoSync: boolean("auto_sync").default(true),
+  lastSync: timestamp("last_sync"),
+  syncStatus: text("sync_status").default("pending"), // "synced", "pending", "error", "conflict"
+  conflictResolution: text("conflict_resolution").default("manual"), // "manual", "auto-theirs", "auto-ours"
+  metadata: jsonb("metadata").default({}),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Third-Party API Connections
+export const apiConnections = pgTable("api_connections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").notNull().references(() => integrations.id, { onDelete: "cascade" }),
+  apiName: text("api_name").notNull(), // "Stripe API", "Twilio API", etc.
+  baseUrl: text("base_url").notNull(), // API base URL
+  version: text("version"), // API version
+  authenticationType: text("authentication_type").notNull(), // "bearer", "api-key", "oauth", "basic", "custom"
+  authenticationConfig: jsonb("authentication_config").default({}),
+  endpoints: jsonb("endpoints").default([]), // available endpoints
+  rateLimitConfig: jsonb("rate_limit_config").default({}),
+  retryConfig: jsonb("retry_config").default({}), // retry policies
+  timeout: integer("timeout").default(30000), // request timeout in ms
+  customHeaders: jsonb("custom_headers").default({}),
+  transformations: jsonb("transformations").default({}), // request/response transformations
+  monitoring: jsonb("monitoring").default({}), // monitoring configuration
+  healthEndpoint: text("health_endpoint"), // health check endpoint
+  isActive: boolean("is_active").default(true),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Integration Health Monitoring
+export const integrationHealthChecks = pgTable("integration_health_checks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").notNull().references(() => integrations.id, { onDelete: "cascade" }),
+  checkType: text("check_type").notNull(), // "connectivity", "authentication", "api-health", "rate-limit", "webhook"
+  status: text("status").notNull().default("unknown"), // "healthy", "degraded", "unhealthy", "unknown"
+  responseTime: integer("response_time"), // response time in milliseconds
+  statusCode: integer("status_code"), // HTTP status code
+  errorMessage: text("error_message"),
+  checkDetails: jsonb("check_details").default({}),
+  consecutiveFailures: integer("consecutive_failures").default(0),
+  lastSuccessful: timestamp("last_successful"),
+  nextCheck: timestamp("next_check"),
+  alertsTriggered: jsonb("alerts_triggered").default([]),
+  metadata: jsonb("metadata").default({}),
+  checkedAt: timestamp("checked_at").defaultNow(),
+});
+
+// Integration Audit Logs for Security and Compliance
+export const integrationAuditLogs = pgTable("integration_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").references(() => integrations.id, { onDelete: "set null" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  action: text("action").notNull(), // "created", "updated", "deleted", "accessed", "rotated", "failed"
+  resourceType: text("resource_type").notNull(), // "integration", "secret", "connection", "webhook"
+  resourceId: text("resource_id"),
+  details: jsonb("details").default({}), // action-specific details
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  location: jsonb("location").default({}), // geo location if available
+  risk: text("risk").default("low"), // "low", "medium", "high", "critical"
+  complianceFlags: text("compliance_flags").array().default([]), // GDPR, SOC2, HIPAA etc
+  sessionId: text("session_id"),
+  requestId: text("request_id"),
+  metadata: jsonb("metadata").default({}),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// Webhook Configuration Management
+export const webhookConfigurations = pgTable("webhook_configurations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").notNull().references(() => integrations.id, { onDelete: "cascade" }),
+  repositoryId: varchar("repository_id").references(() => repositoryConnections.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  url: text("url").notNull(), // webhook URL
+  secret: text("secret"), // webhook verification secret
+  events: text("events").array().default([]), // subscribed events
+  active: boolean("active").default(true),
+  sslVerification: boolean("ssl_verification").default(true),
+  contentType: text("content_type").default("application/json"), // "application/json", "application/x-www-form-urlencoded"
+  deliveryAttempts: integer("delivery_attempts").default(0),
+  lastDelivery: timestamp("last_delivery"),
+  lastDeliveryStatus: text("last_delivery_status"), // "success", "failed", "pending"
+  lastDeliveryResponse: jsonb("last_delivery_response").default({}),
+  failedDeliveries: integer("failed_deliveries").default(0),
+  configuration: jsonb("configuration").default({}),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// API Rate Limiting and Usage Tracking
+export const apiRateLimits = pgTable("api_rate_limits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").notNull().references(() => integrations.id, { onDelete: "cascade" }),
+  apiConnectionId: varchar("api_connection_id").references(() => apiConnections.id, { onDelete: "cascade" }),
+  limitType: text("limit_type").notNull(), // "requests-per-minute", "requests-per-hour", "requests-per-day", "data-transfer"
+  limitValue: integer("limit_value").notNull(), // limit amount
+  currentUsage: integer("current_usage").default(0), // current usage
+  resetPeriod: text("reset_period").notNull(), // "minute", "hour", "day", "month"
+  resetAt: timestamp("reset_at").notNull(), // when usage counter resets
+  warningThreshold: integer("warning_threshold"), // warning threshold (percentage)
+  alertTriggered: boolean("alert_triggered").default(false),
+  isBlocked: boolean("is_blocked").default(false), // if limit exceeded and blocked
+  lastRequest: timestamp("last_request"),
+  requestsInWindow: integer("requests_in_window").default(0), // requests in current window
+  windowStart: timestamp("window_start"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// API Usage Analytics
+export const apiUsageAnalytics = pgTable("api_usage_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  integrationId: varchar("integration_id").notNull().references(() => integrations.id, { onDelete: "cascade" }),
+  apiConnectionId: varchar("api_connection_id").references(() => apiConnections.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull(),
+  method: text("method").notNull(), // "GET", "POST", "PUT", "DELETE"
+  requestCount: integer("request_count").default(1),
+  responseTimeMs: integer("response_time_ms"),
+  statusCode: integer("status_code"),
+  errorCount: integer("error_count").default(0),
+  dataTransferBytes: integer("data_transfer_bytes").default(0),
+  period: text("period").notNull(), // "hourly", "daily", "monthly"
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations for Integration Hub
+export const integrationsRelations = relations(integrations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [integrations.userId],
+    references: [users.id],
+  }),
+  project: one(projects, {
+    fields: [integrations.projectId],
+    references: [projects.id],
+  }),
+  secrets: many(integrationSecrets),
+  healthChecks: many(integrationHealthChecks),
+  auditLogs: many(integrationAuditLogs),
+  webhooks: many(webhookConfigurations),
+  rateLimits: many(apiRateLimits),
+  repositoryConnection: one(repositoryConnections),
+  apiConnection: one(apiConnections),
+}));
+
+export const integrationSecretsRelations = relations(integrationSecrets, ({ one }) => ({
+  integration: one(integrations, {
+    fields: [integrationSecrets.integrationId],
+    references: [integrations.id],
+  }),
+}));
+
+export const repositoryConnectionsRelations = relations(repositoryConnections, ({ one, many }) => ({
+  integration: one(integrations, {
+    fields: [repositoryConnections.integrationId],
+    references: [integrations.id],
+  }),
+  project: one(projects, {
+    fields: [repositoryConnections.projectId],
+    references: [projects.id],
+  }),
+  webhooks: many(webhookConfigurations),
+}));
+
+export const apiConnectionsRelations = relations(apiConnections, ({ one, many }) => ({
+  integration: one(integrations, {
+    fields: [apiConnections.integrationId],
+    references: [integrations.id],
+  }),
+  rateLimits: many(apiRateLimits),
+  usageAnalytics: many(apiUsageAnalytics),
+}));
+
+export const integrationHealthChecksRelations = relations(integrationHealthChecks, ({ one }) => ({
+  integration: one(integrations, {
+    fields: [integrationHealthChecks.integrationId],
+    references: [integrations.id],
+  }),
+}));
+
+export const integrationAuditLogsRelations = relations(integrationAuditLogs, ({ one }) => ({
+  integration: one(integrations, {
+    fields: [integrationAuditLogs.integrationId],
+    references: [integrations.id],
+  }),
+  user: one(users, {
+    fields: [integrationAuditLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+export const webhookConfigurationsRelations = relations(webhookConfigurations, ({ one }) => ({
+  integration: one(integrations, {
+    fields: [webhookConfigurations.integrationId],
+    references: [integrations.id],
+  }),
+  repository: one(repositoryConnections, {
+    fields: [webhookConfigurations.repositoryId],
+    references: [repositoryConnections.id],
+  }),
+}));
+
+export const apiRateLimitsRelations = relations(apiRateLimits, ({ one }) => ({
+  integration: one(integrations, {
+    fields: [apiRateLimits.integrationId],
+    references: [integrations.id],
+  }),
+  apiConnection: one(apiConnections, {
+    fields: [apiRateLimits.apiConnectionId],
+    references: [apiConnections.id],
+  }),
+}));
+
+export const apiUsageAnalyticsRelations = relations(apiUsageAnalytics, ({ one }) => ({
+  integration: one(integrations, {
+    fields: [apiUsageAnalytics.integrationId],
+    references: [integrations.id],
+  }),
+  apiConnection: one(apiConnections, {
+    fields: [apiUsageAnalytics.apiConnectionId],
+    references: [apiConnections.id],
+  }),
+}));
+
+// Insert Schemas for Integration Hub
+export const insertIntegrationSchema = createInsertSchema(integrations).pick({
+  userId: true,
+  projectId: true,
+  name: true,
+  type: true,
+  service: true,
+  category: true,
+  connectionType: true,
+  configuration: true,
+  endpoints: true,
+  permissions: true,
+  rateLimits: true,
+  healthCheck: true,
+  isEnabled: true,
+  autoRotate: true,
+  expiresAt: true,
+  metadata: true,
+});
+
+export const insertIntegrationSecretSchema = createInsertSchema(integrationSecrets).pick({
+  integrationId: true,
+  secretType: true,
+  secretName: true,
+  encryptedValue: true,
+  encryptionAlgorithm: true,
+  keyId: true,
+  environment: true,
+  scope: true,
+  rotationPolicy: true,
+  expiresAt: true,
+  metadata: true,
+});
+
+export const insertRepositoryConnectionSchema = createInsertSchema(repositoryConnections).pick({
+  integrationId: true,
+  projectId: true,
+  provider: true,
+  repositoryId: true,
+  repositoryName: true,
+  repositoryUrl: true,
+  ownerName: true,
+  ownerType: true,
+  defaultBranch: true,
+  syncBranches: true,
+  webhookUrl: true,
+  deployKeys: true,
+  permissions: true,
+  autoSync: true,
+  conflictResolution: true,
+  metadata: true,
+});
+
+export const insertApiConnectionSchema = createInsertSchema(apiConnections).pick({
+  integrationId: true,
+  apiName: true,
+  baseUrl: true,
+  version: true,
+  authenticationType: true,
+  authenticationConfig: true,
+  endpoints: true,
+  rateLimitConfig: true,
+  retryConfig: true,
+  timeout: true,
+  customHeaders: true,
+  transformations: true,
+  monitoring: true,
+  healthEndpoint: true,
+  metadata: true,
+});
+
+export const insertWebhookConfigurationSchema = createInsertSchema(webhookConfigurations).pick({
+  integrationId: true,
+  repositoryId: true,
+  name: true,
+  url: true,
+  secret: true,
+  events: true,
+  active: true,
+  sslVerification: true,
+  contentType: true,
+  configuration: true,
+  metadata: true,
+});
+
+export const insertApiRateLimitSchema = createInsertSchema(apiRateLimits).pick({
+  integrationId: true,
+  apiConnectionId: true,
+  limitType: true,
+  limitValue: true,
+  resetPeriod: true,
+  resetAt: true,
+  warningThreshold: true,
+  metadata: true,
+});
+
+// Type Definitions for Integration Hub
+export type Integration = typeof integrations.$inferSelect;
+export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
+export type IntegrationSecret = typeof integrationSecrets.$inferSelect;
+export type InsertIntegrationSecret = z.infer<typeof insertIntegrationSecretSchema>;
+export type RepositoryConnection = typeof repositoryConnections.$inferSelect;
+export type InsertRepositoryConnection = z.infer<typeof insertRepositoryConnectionSchema>;
+export type ApiConnection = typeof apiConnections.$inferSelect;
+export type InsertApiConnection = z.infer<typeof insertApiConnectionSchema>;
+export type IntegrationHealthCheck = typeof integrationHealthChecks.$inferSelect;
+export type IntegrationAuditLog = typeof integrationAuditLogs.$inferSelect;
+export type WebhookConfiguration = typeof webhookConfigurations.$inferSelect;
+export type InsertWebhookConfiguration = z.infer<typeof insertWebhookConfigurationSchema>;
+export type ApiRateLimit = typeof apiRateLimits.$inferSelect;
+export type InsertApiRateLimit = z.infer<typeof insertApiRateLimitSchema>;
+export type ApiUsageAnalytics = typeof apiUsageAnalytics.$inferSelect;

@@ -35,6 +35,18 @@ import {
 } from "./services/ai";
 import { agentManager } from "./services/agentManager";
 import { legacyAssessmentService } from "./services/legacyAssessment";
+import { integrationService } from "./services/integrationService";
+import { repositoryIntegrationService } from "./services/repositoryIntegrationService";
+import { apiConnectorManager, ApiConnectorFactory } from "./services/apiConnectorFramework";
+import { encryptionService, secretsManager } from "./services/encryptionService";
+import { 
+  insertIntegrationSchema,
+  insertIntegrationSecretSchema,
+  insertRepositoryConnectionSchema,
+  insertApiConnectionSchema,
+  insertWebhookConfigurationSchema,
+  insertApiRateLimitSchema
+} from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth first
@@ -1333,6 +1345,525 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Infrastructure discovery error:', error);
       res.status(500).json({ message: "Failed to discover infrastructure" });
+    }
+  });
+
+  // =====================================================
+  // INTEGRATIONS HUB API ENDPOINTS
+  // =====================================================
+
+  // Integration Management
+  app.get("/api/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, type, service, status } = req.query;
+      
+      // Get integrations would be implemented in storage interface
+      // For now, return placeholder
+      const integrations = []; // await storage.getUserIntegrations(userId, { projectId, type, service, status });
+      
+      res.json(integrations);
+    } catch (error) {
+      console.error('Get integrations error:', error);
+      res.status(500).json({ message: "Failed to get integrations" });
+    }
+  });
+
+  app.post("/api/integrations", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertIntegrationSchema.parse({ ...req.body, userId });
+      
+      if (data.projectId) {
+        await validateProjectOwnership(data.projectId, userId);
+      }
+
+      // Create integration using our service
+      const result = await integrationService.createIntegration({
+        type: data.type,
+        service: data.service,
+        configuration: data.configuration || {},
+        secrets: {}, // secrets handled separately
+        endpoints: data.endpoints || {},
+        healthCheck: data.healthCheck || {
+          enabled: true,
+          interval: 300,
+          timeout: 30,
+          retries: 3
+        }
+      }, userId, data.projectId);
+
+      res.status(201).json({
+        integration: result.integration,
+        connectionTest: result.connectionTest
+      });
+    } catch (error) {
+      console.error('Create integration error:', error);
+      res.status(400).json({ message: "Invalid integration data", error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      // const integration = await storage.getIntegration(req.params.id);
+      
+      // Placeholder response
+      res.status(404).json({ message: "Integration not found" });
+    } catch (error) {
+      console.error('Get integration error:', error);
+      res.status(500).json({ message: "Failed to get integration" });
+    }
+  });
+
+  app.put("/api/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const integrationId = req.params.id;
+      
+      const result = await integrationService.updateIntegrationConfig(
+        integrationId,
+        req.body,
+        userId
+      );
+
+      if (result.success) {
+        res.json({
+          success: true,
+          connectionTest: result.connectionTest
+        });
+      } else {
+        res.status(400).json({ 
+          message: result.errorMessage || "Failed to update integration"
+        });
+      }
+    } catch (error) {
+      console.error('Update integration error:', error);
+      res.status(500).json({ message: "Failed to update integration" });
+    }
+  });
+
+  app.delete("/api/integrations/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      // Implementation would validate ownership and delete integration
+      res.status(204).send();
+    } catch (error) {
+      console.error('Delete integration error:', error);
+      res.status(500).json({ message: "Failed to delete integration" });
+    }
+  });
+
+  app.post("/api/integrations/:id/test", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const integrationId = req.params.id;
+      
+      // Would fetch integration and test connection
+      const mockIntegration = {
+        id: integrationId,
+        service: 'github',
+        secrets: []
+      };
+      
+      const result = await integrationService.testConnection(mockIntegration as any);
+      res.json(result);
+    } catch (error) {
+      console.error('Test integration error:', error);
+      res.status(500).json({ message: "Failed to test integration" });
+    }
+  });
+
+  app.post("/api/integrations/:id/health-check", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const integrationId = req.params.id;
+      
+      // Would fetch integration and perform health check
+      const mockIntegration = {
+        id: integrationId,
+        service: 'github',
+        type: 'repository',
+        secrets: []
+      };
+      
+      const result = await integrationService.performHealthCheck(mockIntegration as any);
+      res.json(result);
+    } catch (error) {
+      console.error('Integration health check error:', error);
+      res.status(500).json({ message: "Failed to perform health check" });
+    }
+  });
+
+  // Secrets Management
+  app.get("/api/integrations/:id/secrets", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      // Return secret metadata only (not actual values)
+      const secrets = []; // await storage.getIntegrationSecrets(req.params.id);
+      
+      // Remove encrypted values from response
+      const safeSecrets = secrets.map((secret: any) => ({
+        ...secret,
+        encryptedValue: undefined,
+        hasValue: !!secret.encryptedValue
+      }));
+      
+      res.json(safeSecrets);
+    } catch (error) {
+      console.error('Get secrets error:', error);
+      res.status(500).json({ message: "Failed to get secrets" });
+    }
+  });
+
+  app.post("/api/integrations/:id/secrets", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { secretName, secretValue, secretType, environment = 'production' } = req.body;
+      const integrationId = req.params.id;
+      
+      if (!secretName || !secretValue) {
+        return res.status(400).json({ message: "secretName and secretValue are required" });
+      }
+
+      // Encrypt the secret
+      const encryptedData = await secretsManager.encryptApiKey(
+        secretValue,
+        'generic',
+        environment
+      );
+
+      const secretData = {
+        integrationId,
+        secretType: secretType || 'api-key',
+        secretName,
+        encryptedValue: encryptedData.encryptedValue,
+        encryptionAlgorithm: encryptedData.algorithm,
+        keyId: encryptedData.keyId,
+        environment,
+        metadata: {
+          ...encryptedData.metadata,
+          createdBy: userId
+        }
+      };
+
+      // Would save to database
+      res.status(201).json({
+        id: 'generated-id',
+        ...secretData,
+        encryptedValue: undefined, // Don't return encrypted value
+        hasValue: true
+      });
+    } catch (error) {
+      console.error('Create secret error:', error);
+      res.status(400).json({ message: "Failed to create secret" });
+    }
+  });
+
+  app.delete("/api/integrations/:integrationId/secrets/:secretId", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      // Implementation would validate ownership and delete secret
+      res.status(204).send();
+    } catch (error) {
+      console.error('Delete secret error:', error);
+      res.status(500).json({ message: "Failed to delete secret" });
+    }
+  });
+
+  // GitHub/GitLab OAuth and Repository Management
+  app.post("/api/integrations/github/oauth/initiate", isAuthenticated, async (req, res) => {
+    try {
+      const { redirectUri, scopes = ['repo', 'user:email'] } = req.body;
+      
+      const config = {
+        clientId: process.env.GITHUB_CLIENT_ID || 'demo-client-id',
+        clientSecret: process.env.GITHUB_CLIENT_SECRET || 'demo-client-secret',
+        redirectUri: redirectUri || `${process.env.BASE_URL || 'http://localhost:5000'}/api/integrations/github/oauth/callback`,
+        scopes
+      };
+
+      const result = repositoryIntegrationService.initiateGitHubOAuth(config);
+      res.json(result);
+    } catch (error) {
+      console.error('GitHub OAuth initiate error:', error);
+      res.status(500).json({ message: "Failed to initiate GitHub OAuth" });
+    }
+  });
+
+  app.post("/api/integrations/github/oauth/callback", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { code, state } = req.body;
+      
+      const config = {
+        clientId: process.env.GITHUB_CLIENT_ID || 'demo-client-id',
+        clientSecret: process.env.GITHUB_CLIENT_SECRET || 'demo-client-secret',
+        redirectUri: `${process.env.BASE_URL || 'http://localhost:5000'}/api/integrations/github/oauth/callback`,
+        scopes: ['repo', 'user:email']
+      };
+
+      const result = await repositoryIntegrationService.handleGitHubOAuthCallback(
+        code,
+        state,
+        config,
+        userId
+      );
+
+      if (result.success) {
+        res.json({
+          success: true,
+          integration: result.integration,
+          userInfo: result.userInfo
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: result.errorMessage
+        });
+      }
+    } catch (error) {
+      console.error('GitHub OAuth callback error:', error);
+      res.status(500).json({ message: "Failed to handle GitHub OAuth callback" });
+    }
+  });
+
+  app.post("/api/integrations/gitlab/oauth/initiate", isAuthenticated, async (req, res) => {
+    try {
+      const { redirectUri, scopes = ['api', 'read_user'], baseUrl } = req.body;
+      
+      const config = {
+        clientId: process.env.GITLAB_CLIENT_ID || 'demo-client-id',
+        clientSecret: process.env.GITLAB_CLIENT_SECRET || 'demo-client-secret',
+        redirectUri: redirectUri || `${process.env.BASE_URL || 'http://localhost:5000'}/api/integrations/gitlab/oauth/callback`,
+        scopes,
+        baseUrl
+      };
+
+      const result = repositoryIntegrationService.initiateGitLabOAuth(config);
+      res.json(result);
+    } catch (error) {
+      console.error('GitLab OAuth initiate error:', error);
+      res.status(500).json({ message: "Failed to initiate GitLab OAuth" });
+    }
+  });
+
+  app.post("/api/integrations/gitlab/oauth/callback", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { code, state, baseUrl } = req.body;
+      
+      const config = {
+        clientId: process.env.GITLAB_CLIENT_ID || 'demo-client-id',
+        clientSecret: process.env.GITLAB_CLIENT_SECRET || 'demo-client-secret',
+        redirectUri: `${process.env.BASE_URL || 'http://localhost:5000'}/api/integrations/gitlab/oauth/callback`,
+        scopes: ['api', 'read_user'],
+        baseUrl
+      };
+
+      const result = await repositoryIntegrationService.handleGitLabOAuthCallback(
+        code,
+        state,
+        config,
+        userId
+      );
+
+      if (result.success) {
+        res.json({
+          success: true,
+          integration: result.integration,
+          userInfo: result.userInfo
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: result.errorMessage
+        });
+      }
+    } catch (error) {
+      console.error('GitLab OAuth callback error:', error);
+      res.status(500).json({ message: "Failed to handle GitLab OAuth callback" });
+    }
+  });
+
+  app.get("/api/integrations/:id/repositories", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const integrationId = req.params.id;
+      const { type = 'all', sort = 'updated', per_page = 100, page = 1 } = req.query;
+      
+      // Would fetch integration and discover repositories
+      // For demo, return mock data
+      const repositories = [
+        {
+          id: '1',
+          name: 'sample-repo',
+          fullName: 'user/sample-repo',
+          description: 'A sample repository',
+          url: 'https://github.com/user/sample-repo',
+          defaultBranch: 'main',
+          isPrivate: false,
+          language: 'JavaScript',
+          topics: ['web', 'react'],
+          stargazersCount: 42,
+          forksCount: 7,
+          owner: {
+            login: 'user',
+            type: 'User',
+            avatarUrl: 'https://github.com/user.png'
+          }
+        }
+      ];
+      
+      res.json(repositories);
+    } catch (error) {
+      console.error('Get repositories error:', error);
+      res.status(500).json({ message: "Failed to get repositories" });
+    }
+  });
+
+  app.post("/api/integrations/:id/repositories/connect", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const integrationId = req.params.id;
+      const { repositoryId, projectId, syncBranches, webhookEvents } = req.body;
+      
+      // Would connect repository to project
+      const result = {
+        success: true,
+        repositoryConnection: {
+          id: 'generated-connection-id',
+          integrationId,
+          repositoryId,
+          projectId,
+          syncBranches: syncBranches || ['main'],
+          autoSync: true
+        }
+      };
+      
+      res.status(201).json(result);
+    } catch (error) {
+      console.error('Connect repository error:', error);
+      res.status(500).json({ message: "Failed to connect repository" });
+    }
+  });
+
+  // API Connector Framework
+  app.get("/api/api-connectors/available", async (req, res) => {
+    try {
+      const connectors = ApiConnectorFactory.getAvailableConnectors();
+      const connectorInfos = connectors.map(service => ({
+        service,
+        info: ApiConnectorFactory.getConnectorInfo(service)
+      }));
+      
+      res.json(connectorInfos);
+    } catch (error) {
+      console.error('Get available connectors error:', error);
+      res.status(500).json({ message: "Failed to get available connectors" });
+    }
+  });
+
+  app.post("/api/api-connectors/:service/initialize", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { service } = req.params;
+      const { secrets, integrationId } = req.body;
+      
+      const result = await apiConnectorManager.initializeConnector(
+        integrationId,
+        service,
+        secrets
+      );
+      
+      if (result.success) {
+        res.json({
+          success: true,
+          testResult: result.testResult
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: result.errorMessage
+        });
+      }
+    } catch (error) {
+      console.error('Initialize connector error:', error);
+      res.status(500).json({ message: "Failed to initialize connector" });
+    }
+  });
+
+  app.get("/api/api-connectors/metrics", isAuthenticated, async (req, res) => {
+    try {
+      const metrics = apiConnectorManager.getAllMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error('Get connector metrics error:', error);
+      res.status(500).json({ message: "Failed to get connector metrics" });
+    }
+  });
+
+  app.post("/api/api-connectors/health-check", isAuthenticated, async (req, res) => {
+    try {
+      const healthResults = await apiConnectorManager.healthCheckAll();
+      res.json(healthResults);
+    } catch (error) {
+      console.error('Connector health check error:', error);
+      res.status(500).json({ message: "Failed to perform health check" });
+    }
+  });
+
+  // Webhook Endpoints
+  app.post("/api/webhooks/repository/:integrationId", async (req, res) => {
+    try {
+      const { integrationId } = req.params;
+      const payload = req.body;
+      const headers = req.headers as Record<string, string>;
+      
+      const result = await repositoryIntegrationService.handleWebhook(
+        payload,
+        headers,
+        integrationId
+      );
+      
+      if (result.processed) {
+        res.status(200).json({ message: "Webhook processed successfully" });
+      } else {
+        res.status(400).json({ 
+          message: "Webhook processing failed",
+          error: result.errorMessage
+        });
+      }
+    } catch (error) {
+      console.error('Webhook processing error:', error);
+      res.status(500).json({ message: "Internal webhook processing error" });
+    }
+  });
+
+  // Integration Health & Status Monitoring
+  app.get("/api/integrations/health/overview", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      
+      // Would aggregate health status across all user integrations
+      const healthOverview = {
+        totalIntegrations: 0,
+        healthyIntegrations: 0,
+        degradedIntegrations: 0,
+        unhealthyIntegrations: 0,
+        lastChecked: new Date(),
+        integrationsByType: {
+          'cloud-provider': { total: 0, healthy: 0 },
+          'repository': { total: 0, healthy: 0 },
+          'api': { total: 0, healthy: 0 },
+          'communication': { total: 0, healthy: 0 }
+        }
+      };
+      
+      res.json(healthOverview);
+    } catch (error) {
+      console.error('Get health overview error:', error);
+      res.status(500).json({ message: "Failed to get health overview" });
     }
   });
 

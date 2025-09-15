@@ -74,7 +74,31 @@ import {
   type MigrationAssessmentFinding,
   type InsertMigrationAssessmentFinding,
   type MigrationCostAnalysis,
-  type InsertMigrationCostAnalysis
+  type InsertMigrationCostAnalysis,
+  integrations,
+  integrationSecrets,
+  repositoryConnections,
+  apiConnections,
+  integrationHealthChecks,
+  integrationAuditLogs,
+  webhookConfigurations,
+  apiRateLimits,
+  type Integration,
+  type InsertIntegration,
+  type IntegrationSecret,
+  type InsertIntegrationSecret,
+  type RepositoryConnection,
+  type InsertRepositoryConnection,
+  type ApiConnection,
+  type InsertApiConnection,
+  type IntegrationHealthCheck,
+  type InsertIntegrationHealthCheck,
+  type IntegrationAuditLog,
+  type InsertIntegrationAuditLog,
+  type WebhookConfiguration,
+  type InsertWebhookConfiguration,
+  type ApiRateLimit,
+  type InsertApiRateLimit
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -266,6 +290,81 @@ export interface IStorage {
   getMigrationProjectsByStatus(status: string): Promise<MigrationProject[]>;
   updateMigrationProject(id: string, updates: Partial<MigrationProject>): Promise<MigrationProject | undefined>;
   deleteMigrationProject(id: string): Promise<boolean>;
+
+  // =====================================================
+  // INTEGRATIONS HUB OPERATIONS
+  // =====================================================
+
+  // Integration operations
+  createIntegration(integration: InsertIntegration): Promise<Integration>;
+  getIntegration(id: string): Promise<Integration | undefined>;
+  getUserIntegrations(userId: string, filters?: {
+    projectId?: string;
+    type?: string;
+    service?: string;
+    status?: string;
+  }): Promise<Integration[]>;
+  getProjectIntegrations(projectId: string): Promise<Integration[]>;
+  updateIntegration(id: string, updates: Partial<Integration>): Promise<Integration | undefined>;
+  deleteIntegration(id: string): Promise<boolean>;
+  getIntegrationsByService(service: string): Promise<Integration[]>;
+  getIntegrationsByType(type: string): Promise<Integration[]>;
+
+  // Integration Secrets operations
+  createIntegrationSecret(secret: InsertIntegrationSecret): Promise<IntegrationSecret>;
+  getIntegrationSecret(id: string): Promise<IntegrationSecret | undefined>;
+  getIntegrationSecrets(integrationId: string): Promise<IntegrationSecret[]>;
+  updateIntegrationSecret(id: string, updates: Partial<IntegrationSecret>): Promise<IntegrationSecret | undefined>;
+  deleteIntegrationSecret(id: string): Promise<boolean>;
+  getSecretByName(integrationId: string, secretName: string): Promise<IntegrationSecret | undefined>;
+
+  // Repository Connection operations
+  createRepositoryConnection(connection: InsertRepositoryConnection): Promise<RepositoryConnection>;
+  getRepositoryConnection(id: string): Promise<RepositoryConnection | undefined>;
+  getIntegrationRepositoryConnections(integrationId: string): Promise<RepositoryConnection[]>;
+  getProjectRepositoryConnections(projectId: string): Promise<RepositoryConnection[]>;
+  updateRepositoryConnection(id: string, updates: Partial<RepositoryConnection>): Promise<RepositoryConnection | undefined>;
+  deleteRepositoryConnection(id: string): Promise<boolean>;
+  getRepositoryConnectionByRepo(integrationId: string, repositoryId: string): Promise<RepositoryConnection | undefined>;
+
+  // API Connection operations
+  createApiConnection(connection: InsertApiConnection): Promise<ApiConnection>;
+  getApiConnection(id: string): Promise<ApiConnection | undefined>;
+  getIntegrationApiConnections(integrationId: string): Promise<ApiConnection[]>;
+  updateApiConnection(id: string, updates: Partial<ApiConnection>): Promise<ApiConnection | undefined>;
+  deleteApiConnection(id: string): Promise<boolean>;
+  getApiConnectionsByService(service: string): Promise<ApiConnection[]>;
+
+  // Integration Health Check operations
+  createIntegrationHealthCheck(healthCheck: InsertIntegrationHealthCheck): Promise<IntegrationHealthCheck>;
+  getIntegrationHealthCheck(id: string): Promise<IntegrationHealthCheck | undefined>;
+  getIntegrationHealthChecks(integrationId: string): Promise<IntegrationHealthCheck[]>;
+  getLatestHealthCheck(integrationId: string): Promise<IntegrationHealthCheck | undefined>;
+  updateIntegrationHealthCheck(id: string, updates: Partial<IntegrationHealthCheck>): Promise<IntegrationHealthCheck | undefined>;
+  getHealthyIntegrations(): Promise<Integration[]>;
+  getUnhealthyIntegrations(): Promise<Integration[]>;
+
+  // Integration Audit Log operations
+  createIntegrationAuditLog(log: InsertIntegrationAuditLog): Promise<IntegrationAuditLog>;
+  getIntegrationAuditLogs(integrationId: string, limit?: number): Promise<IntegrationAuditLog[]>;
+  getUserAuditLogs(userId: string, limit?: number): Promise<IntegrationAuditLog[]>;
+  getAuditLogsByAction(action: string, limit?: number): Promise<IntegrationAuditLog[]>;
+
+  // Webhook Configuration operations
+  createWebhookConfiguration(webhook: InsertWebhookConfiguration): Promise<WebhookConfiguration>;
+  getWebhookConfiguration(id: string): Promise<WebhookConfiguration | undefined>;
+  getIntegrationWebhooks(integrationId: string): Promise<WebhookConfiguration[]>;
+  updateWebhookConfiguration(id: string, updates: Partial<WebhookConfiguration>): Promise<WebhookConfiguration | undefined>;
+  deleteWebhookConfiguration(id: string): Promise<boolean>;
+  getActiveWebhooks(): Promise<WebhookConfiguration[]>;
+
+  // API Rate Limit operations
+  createApiRateLimit(rateLimit: InsertApiRateLimit): Promise<ApiRateLimit>;
+  getApiRateLimit(id: string): Promise<ApiRateLimit | undefined>;
+  getIntegrationRateLimits(integrationId: string): Promise<ApiRateLimit[]>;
+  updateApiRateLimit(id: string, updates: Partial<ApiRateLimit>): Promise<ApiRateLimit | undefined>;
+  deleteApiRateLimit(id: string): Promise<boolean>;
+  getRateLimitsByService(service: string): Promise<ApiRateLimit[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1266,6 +1365,401 @@ export class DatabaseStorage implements IStorage {
       .delete(migrationProjects)
       .where(eq(migrationProjects.id, id));
     return result.rowCount > 0;
+  }
+
+  // =====================================================
+  // INTEGRATIONS HUB OPERATIONS IMPLEMENTATION
+  // =====================================================
+
+  // Integration operations
+  async createIntegration(integration: InsertIntegration): Promise<Integration> {
+    const [newIntegration] = await db
+      .insert(integrations)
+      .values(integration)
+      .returning();
+    return newIntegration;
+  }
+
+  async getIntegration(id: string): Promise<Integration | undefined> {
+    const [integration] = await db.select().from(integrations)
+      .where(eq(integrations.id, id));
+    return integration;
+  }
+
+  async getUserIntegrations(userId: string, filters?: {
+    projectId?: string;
+    type?: string;
+    service?: string;
+    status?: string;
+  }): Promise<Integration[]> {
+    const conditions = [eq(integrations.userId, userId)];
+    
+    if (filters?.projectId) {
+      conditions.push(eq(integrations.projectId, filters.projectId));
+    }
+    if (filters?.type) {
+      conditions.push(eq(integrations.type, filters.type));
+    }
+    if (filters?.service) {
+      conditions.push(eq(integrations.service, filters.service));
+    }
+    if (filters?.status) {
+      conditions.push(eq(integrations.status, filters.status));
+    }
+
+    return await db.select().from(integrations)
+      .where(and(...conditions))
+      .orderBy(desc(integrations.createdAt));
+  }
+
+  async getProjectIntegrations(projectId: string): Promise<Integration[]> {
+    return await db.select().from(integrations)
+      .where(eq(integrations.projectId, projectId))
+      .orderBy(desc(integrations.createdAt));
+  }
+
+  async updateIntegration(id: string, updates: Partial<Integration>): Promise<Integration | undefined> {
+    const [updatedIntegration] = await db
+      .update(integrations)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(integrations.id, id))
+      .returning();
+    return updatedIntegration;
+  }
+
+  async deleteIntegration(id: string): Promise<boolean> {
+    const result = await db.delete(integrations).where(eq(integrations.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getIntegrationsByService(service: string): Promise<Integration[]> {
+    return await db.select().from(integrations)
+      .where(eq(integrations.service, service))
+      .orderBy(desc(integrations.createdAt));
+  }
+
+  async getIntegrationsByType(type: string): Promise<Integration[]> {
+    return await db.select().from(integrations)
+      .where(eq(integrations.type, type))
+      .orderBy(desc(integrations.createdAt));
+  }
+
+  // Integration Secrets operations
+  async createIntegrationSecret(secret: InsertIntegrationSecret): Promise<IntegrationSecret> {
+    const [newSecret] = await db
+      .insert(integrationSecrets)
+      .values(secret)
+      .returning();
+    return newSecret;
+  }
+
+  async getIntegrationSecret(id: string): Promise<IntegrationSecret | undefined> {
+    const [secret] = await db.select().from(integrationSecrets)
+      .where(eq(integrationSecrets.id, id));
+    return secret;
+  }
+
+  async getIntegrationSecrets(integrationId: string): Promise<IntegrationSecret[]> {
+    return await db.select().from(integrationSecrets)
+      .where(eq(integrationSecrets.integrationId, integrationId))
+      .orderBy(desc(integrationSecrets.createdAt));
+  }
+
+  async updateIntegrationSecret(id: string, updates: Partial<IntegrationSecret>): Promise<IntegrationSecret | undefined> {
+    const [updatedSecret] = await db
+      .update(integrationSecrets)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(integrationSecrets.id, id))
+      .returning();
+    return updatedSecret;
+  }
+
+  async deleteIntegrationSecret(id: string): Promise<boolean> {
+    const result = await db.delete(integrationSecrets).where(eq(integrationSecrets.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getSecretByName(integrationId: string, secretName: string): Promise<IntegrationSecret | undefined> {
+    const [secret] = await db.select().from(integrationSecrets)
+      .where(and(
+        eq(integrationSecrets.integrationId, integrationId),
+        eq(integrationSecrets.secretName, secretName)
+      ));
+    return secret;
+  }
+
+  // Repository Connection operations
+  async createRepositoryConnection(connection: InsertRepositoryConnection): Promise<RepositoryConnection> {
+    const [newConnection] = await db
+      .insert(repositoryConnections)
+      .values(connection)
+      .returning();
+    return newConnection;
+  }
+
+  async getRepositoryConnection(id: string): Promise<RepositoryConnection | undefined> {
+    const [connection] = await db.select().from(repositoryConnections)
+      .where(eq(repositoryConnections.id, id));
+    return connection;
+  }
+
+  async getIntegrationRepositoryConnections(integrationId: string): Promise<RepositoryConnection[]> {
+    return await db.select().from(repositoryConnections)
+      .where(eq(repositoryConnections.integrationId, integrationId))
+      .orderBy(desc(repositoryConnections.createdAt));
+  }
+
+  async getProjectRepositoryConnections(projectId: string): Promise<RepositoryConnection[]> {
+    return await db.select().from(repositoryConnections)
+      .where(eq(repositoryConnections.projectId, projectId))
+      .orderBy(desc(repositoryConnections.createdAt));
+  }
+
+  async updateRepositoryConnection(id: string, updates: Partial<RepositoryConnection>): Promise<RepositoryConnection | undefined> {
+    const [updatedConnection] = await db
+      .update(repositoryConnections)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(repositoryConnections.id, id))
+      .returning();
+    return updatedConnection;
+  }
+
+  async deleteRepositoryConnection(id: string): Promise<boolean> {
+    const result = await db.delete(repositoryConnections).where(eq(repositoryConnections.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getRepositoryConnectionByRepo(integrationId: string, repositoryId: string): Promise<RepositoryConnection | undefined> {
+    const [connection] = await db.select().from(repositoryConnections)
+      .where(and(
+        eq(repositoryConnections.integrationId, integrationId),
+        eq(repositoryConnections.repositoryId, repositoryId)
+      ));
+    return connection;
+  }
+
+  // API Connection operations
+  async createApiConnection(connection: InsertApiConnection): Promise<ApiConnection> {
+    const [newConnection] = await db
+      .insert(apiConnections)
+      .values(connection)
+      .returning();
+    return newConnection;
+  }
+
+  async getApiConnection(id: string): Promise<ApiConnection | undefined> {
+    const [connection] = await db.select().from(apiConnections)
+      .where(eq(apiConnections.id, id));
+    return connection;
+  }
+
+  async getIntegrationApiConnections(integrationId: string): Promise<ApiConnection[]> {
+    return await db.select().from(apiConnections)
+      .where(eq(apiConnections.integrationId, integrationId))
+      .orderBy(desc(apiConnections.createdAt));
+  }
+
+  async updateApiConnection(id: string, updates: Partial<ApiConnection>): Promise<ApiConnection | undefined> {
+    const [updatedConnection] = await db
+      .update(apiConnections)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(apiConnections.id, id))
+      .returning();
+    return updatedConnection;
+  }
+
+  async deleteApiConnection(id: string): Promise<boolean> {
+    const result = await db.delete(apiConnections).where(eq(apiConnections.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getApiConnectionsByService(service: string): Promise<ApiConnection[]> {
+    return await db.select().from(apiConnections)
+      .where(eq(apiConnections.service, service))
+      .orderBy(desc(apiConnections.createdAt));
+  }
+
+  // Integration Health Check operations
+  async createIntegrationHealthCheck(healthCheck: InsertIntegrationHealthCheck): Promise<IntegrationHealthCheck> {
+    const [newHealthCheck] = await db
+      .insert(integrationHealthChecks)
+      .values(healthCheck)
+      .returning();
+    return newHealthCheck;
+  }
+
+  async getIntegrationHealthCheck(id: string): Promise<IntegrationHealthCheck | undefined> {
+    const [healthCheck] = await db.select().from(integrationHealthChecks)
+      .where(eq(integrationHealthChecks.id, id));
+    return healthCheck;
+  }
+
+  async getIntegrationHealthChecks(integrationId: string): Promise<IntegrationHealthCheck[]> {
+    return await db.select().from(integrationHealthChecks)
+      .where(eq(integrationHealthChecks.integrationId, integrationId))
+      .orderBy(desc(integrationHealthChecks.checkedAt));
+  }
+
+  async getLatestHealthCheck(integrationId: string): Promise<IntegrationHealthCheck | undefined> {
+    const [healthCheck] = await db.select().from(integrationHealthChecks)
+      .where(eq(integrationHealthChecks.integrationId, integrationId))
+      .orderBy(desc(integrationHealthChecks.checkedAt))
+      .limit(1);
+    return healthCheck;
+  }
+
+  async updateIntegrationHealthCheck(id: string, updates: Partial<IntegrationHealthCheck>): Promise<IntegrationHealthCheck | undefined> {
+    const [updatedHealthCheck] = await db
+      .update(integrationHealthChecks)
+      .set(updates)
+      .where(eq(integrationHealthChecks.id, id))
+      .returning();
+    return updatedHealthCheck;
+  }
+
+  async getHealthyIntegrations(): Promise<Integration[]> {
+    // This would require a JOIN query to get integrations with healthy status
+    // For now, return all active integrations - would need proper health check join
+    return await db.select().from(integrations)
+      .where(eq(integrations.status, 'active'))
+      .orderBy(desc(integrations.updatedAt));
+  }
+
+  async getUnhealthyIntegrations(): Promise<Integration[]> {
+    // Similar to above - would need proper health check join
+    return await db.select().from(integrations)
+      .where(eq(integrations.status, 'error'))
+      .orderBy(desc(integrations.updatedAt));
+  }
+
+  // Integration Audit Log operations
+  async createIntegrationAuditLog(log: InsertIntegrationAuditLog): Promise<IntegrationAuditLog> {
+    const [newLog] = await db
+      .insert(integrationAuditLogs)
+      .values(log)
+      .returning();
+    return newLog;
+  }
+
+  async getIntegrationAuditLogs(integrationId: string, limit: number = 100): Promise<IntegrationAuditLog[]> {
+    return await db.select().from(integrationAuditLogs)
+      .where(eq(integrationAuditLogs.integrationId, integrationId))
+      .orderBy(desc(integrationAuditLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getUserAuditLogs(userId: string, limit: number = 100): Promise<IntegrationAuditLog[]> {
+    return await db.select().from(integrationAuditLogs)
+      .where(eq(integrationAuditLogs.userId, userId))
+      .orderBy(desc(integrationAuditLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getAuditLogsByAction(action: string, limit: number = 100): Promise<IntegrationAuditLog[]> {
+    return await db.select().from(integrationAuditLogs)
+      .where(eq(integrationAuditLogs.action, action))
+      .orderBy(desc(integrationAuditLogs.createdAt))
+      .limit(limit);
+  }
+
+  // Webhook Configuration operations
+  async createWebhookConfiguration(webhook: InsertWebhookConfiguration): Promise<WebhookConfiguration> {
+    const [newWebhook] = await db
+      .insert(webhookConfigurations)
+      .values(webhook)
+      .returning();
+    return newWebhook;
+  }
+
+  async getWebhookConfiguration(id: string): Promise<WebhookConfiguration | undefined> {
+    const [webhook] = await db.select().from(webhookConfigurations)
+      .where(eq(webhookConfigurations.id, id));
+    return webhook;
+  }
+
+  async getIntegrationWebhooks(integrationId: string): Promise<WebhookConfiguration[]> {
+    return await db.select().from(webhookConfigurations)
+      .where(eq(webhookConfigurations.integrationId, integrationId))
+      .orderBy(desc(webhookConfigurations.createdAt));
+  }
+
+  async updateWebhookConfiguration(id: string, updates: Partial<WebhookConfiguration>): Promise<WebhookConfiguration | undefined> {
+    const [updatedWebhook] = await db
+      .update(webhookConfigurations)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(webhookConfigurations.id, id))
+      .returning();
+    return updatedWebhook;
+  }
+
+  async deleteWebhookConfiguration(id: string): Promise<boolean> {
+    const result = await db.delete(webhookConfigurations).where(eq(webhookConfigurations.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getActiveWebhooks(): Promise<WebhookConfiguration[]> {
+    return await db.select().from(webhookConfigurations)
+      .where(eq(webhookConfigurations.active, true))
+      .orderBy(desc(webhookConfigurations.updatedAt));
+  }
+
+  // API Rate Limit operations
+  async createApiRateLimit(rateLimit: InsertApiRateLimit): Promise<ApiRateLimit> {
+    const [newRateLimit] = await db
+      .insert(apiRateLimits)
+      .values(rateLimit)
+      .returning();
+    return newRateLimit;
+  }
+
+  async getApiRateLimit(id: string): Promise<ApiRateLimit | undefined> {
+    const [rateLimit] = await db.select().from(apiRateLimits)
+      .where(eq(apiRateLimits.id, id));
+    return rateLimit;
+  }
+
+  async getIntegrationRateLimits(integrationId: string): Promise<ApiRateLimit[]> {
+    return await db.select().from(apiRateLimits)
+      .where(eq(apiRateLimits.integrationId, integrationId))
+      .orderBy(desc(apiRateLimits.createdAt));
+  }
+
+  async updateApiRateLimit(id: string, updates: Partial<ApiRateLimit>): Promise<ApiRateLimit | undefined> {
+    const [updatedRateLimit] = await db
+      .update(apiRateLimits)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(apiRateLimits.id, id))
+      .returning();
+    return updatedRateLimit;
+  }
+
+  async deleteApiRateLimit(id: string): Promise<boolean> {
+    const result = await db.delete(apiRateLimits).where(eq(apiRateLimits.id, id));
+    return result.rowCount > 0;
+  }
+
+  async getRateLimitsByService(service: string): Promise<ApiRateLimit[]> {
+    return await db.select().from(apiRateLimits)
+      .where(eq(apiRateLimits.service, service))
+      .orderBy(desc(apiRateLimits.createdAt));
   }
 }
 

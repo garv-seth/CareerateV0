@@ -8,6 +8,7 @@ import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import Editor from "@/pages/editor";
 import DevOpsDashboard from "@/pages/devops-dashboard";
+import IntegrationsPage from "@/pages/IntegrationsPage";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/editor/:projectId" component={Editor} />
       <Route path="/devops/:projectId" component={DevOpsDashboard} />
+      <Route path="/integrations" component={IntegrationsPage} />
       <Route component={NotFound} />
     </Switch>
   );
