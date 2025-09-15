@@ -18,6 +18,13 @@ import {
   healthChecks,
   loadBalancers,
   autoScalingPolicies,
+  migrationProjects,
+  legacySystemAssessments,
+  codeModernizationTasks,
+  customAiModels,
+  migrationExecutionLogs,
+  migrationAssessmentFindings,
+  migrationCostAnalysis,
   type User, 
   type UpsertUser, 
   type Project, 
@@ -53,7 +60,21 @@ import {
   type LoadBalancer,
   type InsertLoadBalancer,
   type AutoScalingPolicy,
-  type InsertAutoScalingPolicy
+  type InsertAutoScalingPolicy,
+  type MigrationProject,
+  type InsertMigrationProject,
+  type LegacySystemAssessment,
+  type InsertLegacySystemAssessment,
+  type CodeModernizationTask,
+  type InsertCodeModernizationTask,
+  type CustomAiModel,
+  type InsertCustomAiModel,
+  type MigrationExecutionLog,
+  type InsertMigrationExecutionLog,
+  type MigrationAssessmentFinding,
+  type InsertMigrationAssessmentFinding,
+  type MigrationCostAnalysis,
+  type InsertMigrationCostAnalysis
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -178,6 +199,73 @@ export interface IStorage {
   getProjectAutoScalingPolicies(projectId: string): Promise<AutoScalingPolicy[]>;
   updateAutoScalingPolicy(id: string, updates: Partial<AutoScalingPolicy>): Promise<AutoScalingPolicy | undefined>;
   deleteAutoScalingPolicy(id: string): Promise<boolean>;
+
+  // =====================================================
+  // Enterprise Migration System Operations
+  // =====================================================
+
+  // Legacy System Assessment operations
+  createLegacySystemAssessment(assessment: InsertLegacySystemAssessment): Promise<LegacySystemAssessment>;
+  getLegacySystemAssessment(id: string): Promise<LegacySystemAssessment | undefined>;
+  getProjectLegacyAssessments(projectId: string): Promise<LegacySystemAssessment[]>;
+  getMigrationProjectAssessments(migrationProjectId: string): Promise<LegacySystemAssessment[]>;
+  updateLegacySystemAssessment(id: string, updates: Partial<LegacySystemAssessment>): Promise<LegacySystemAssessment | undefined>;
+  deleteLegacySystemAssessment(id: string): Promise<boolean>;
+
+  // Code Modernization Task operations
+  createCodeModernizationTask(task: InsertCodeModernizationTask): Promise<CodeModernizationTask>;
+  getCodeModernizationTask(id: string): Promise<CodeModernizationTask | undefined>;
+  getProjectModernizationTasks(projectId: string): Promise<CodeModernizationTask[]>;
+  getMigrationProjectTasks(migrationProjectId: string): Promise<CodeModernizationTask[]>;
+  getLegacySystemTasks(legacySystemId: string): Promise<CodeModernizationTask[]>;
+  getUserAssignedTasks(userId: string): Promise<CodeModernizationTask[]>;
+  updateCodeModernizationTask(id: string, updates: Partial<CodeModernizationTask>): Promise<CodeModernizationTask | undefined>;
+  deleteCodeModernizationTask(id: string): Promise<boolean>;
+
+  // Custom AI Model operations
+  createCustomAiModel(model: InsertCustomAiModel): Promise<CustomAiModel>;
+  getCustomAiModel(id: string): Promise<CustomAiModel | undefined>;
+  getProjectCustomModels(projectId: string): Promise<CustomAiModel[]>;
+  getActiveCustomModels(projectId: string): Promise<CustomAiModel[]>;
+  getCustomModelsByType(projectId: string, modelType: string): Promise<CustomAiModel[]>;
+  updateCustomAiModel(id: string, updates: Partial<CustomAiModel>): Promise<CustomAiModel | undefined>;
+  deleteCustomAiModel(id: string): Promise<boolean>;
+
+  // Migration Execution Log operations
+  createMigrationExecutionLog(log: InsertMigrationExecutionLog): Promise<MigrationExecutionLog>;
+  getMigrationExecutionLog(id: string): Promise<MigrationExecutionLog | undefined>;
+  getMigrationProjectLogs(migrationProjectId: string): Promise<MigrationExecutionLog[]>;
+  getMigrationLogsByPhase(migrationProjectId: string, phase: string): Promise<MigrationExecutionLog[]>;
+  getMigrationLogsByStatus(migrationProjectId: string, status: string): Promise<MigrationExecutionLog[]>;
+  updateMigrationExecutionLog(id: string, updates: Partial<MigrationExecutionLog>): Promise<MigrationExecutionLog | undefined>;
+
+  // Migration Assessment Finding operations
+  createMigrationAssessmentFinding(finding: InsertMigrationAssessmentFinding): Promise<MigrationAssessmentFinding>;
+  getMigrationAssessmentFinding(id: string): Promise<MigrationAssessmentFinding | undefined>;
+  getAssessmentFindings(assessmentId: string): Promise<MigrationAssessmentFinding[]>;
+  getFindingsBySeverity(assessmentId: string, severity: string): Promise<MigrationAssessmentFinding[]>;
+  getFindingsByType(assessmentId: string, findingType: string): Promise<MigrationAssessmentFinding[]>;
+  getOpenFindings(assessmentId: string): Promise<MigrationAssessmentFinding[]>;
+  updateMigrationAssessmentFinding(id: string, updates: Partial<MigrationAssessmentFinding>): Promise<MigrationAssessmentFinding | undefined>;
+  deleteMigrationAssessmentFinding(id: string): Promise<boolean>;
+
+  // Migration Cost Analysis operations
+  createMigrationCostAnalysis(analysis: InsertMigrationCostAnalysis): Promise<MigrationCostAnalysis>;
+  getMigrationCostAnalysis(id: string): Promise<MigrationCostAnalysis | undefined>;
+  getMigrationProjectCostAnalyses(migrationProjectId: string): Promise<MigrationCostAnalysis[]>;
+  getLatestCostAnalysis(migrationProjectId: string): Promise<MigrationCostAnalysis | undefined>;
+  getCostAnalysesByType(migrationProjectId: string, analysisType: string): Promise<MigrationCostAnalysis[]>;
+  updateMigrationCostAnalysis(id: string, updates: Partial<MigrationCostAnalysis>): Promise<MigrationCostAnalysis | undefined>;
+  deleteMigrationCostAnalysis(id: string): Promise<boolean>;
+
+  // Enhanced Migration Project operations
+  createMigrationProject(migrationProject: InsertMigrationProject): Promise<MigrationProject>;
+  getMigrationProject(id: string): Promise<MigrationProject | undefined>;
+  getProjectMigrationProjects(projectId: string): Promise<MigrationProject[]>;
+  getUserMigrationProjects(userId: string): Promise<MigrationProject[]>;
+  getMigrationProjectsByStatus(status: string): Promise<MigrationProject[]>;
+  updateMigrationProject(id: string, updates: Partial<MigrationProject>): Promise<MigrationProject | undefined>;
+  deleteMigrationProject(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -787,6 +875,396 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(autoScalingPolicies)
       .where(eq(autoScalingPolicies.id, id));
+    return result.rowCount > 0;
+  }
+
+  // =====================================================
+  // Enterprise Migration System Operations Implementation
+  // =====================================================
+
+  // Legacy System Assessment operations
+  async createLegacySystemAssessment(assessment: InsertLegacySystemAssessment): Promise<LegacySystemAssessment> {
+    const [newAssessment] = await db
+      .insert(legacySystemAssessments)
+      .values(assessment)
+      .returning();
+    return newAssessment;
+  }
+
+  async getLegacySystemAssessment(id: string): Promise<LegacySystemAssessment | undefined> {
+    const [assessment] = await db.select().from(legacySystemAssessments)
+      .where(eq(legacySystemAssessments.id, id));
+    return assessment;
+  }
+
+  async getProjectLegacyAssessments(projectId: string): Promise<LegacySystemAssessment[]> {
+    return await db.select().from(legacySystemAssessments)
+      .where(eq(legacySystemAssessments.projectId, projectId))
+      .orderBy(desc(legacySystemAssessments.createdAt));
+  }
+
+  async getMigrationProjectAssessments(migrationProjectId: string): Promise<LegacySystemAssessment[]> {
+    return await db.select().from(legacySystemAssessments)
+      .where(eq(legacySystemAssessments.migrationProjectId, migrationProjectId))
+      .orderBy(desc(legacySystemAssessments.createdAt));
+  }
+
+  async updateLegacySystemAssessment(id: string, updates: Partial<LegacySystemAssessment>): Promise<LegacySystemAssessment | undefined> {
+    const [updatedAssessment] = await db
+      .update(legacySystemAssessments)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(legacySystemAssessments.id, id))
+      .returning();
+    return updatedAssessment;
+  }
+
+  async deleteLegacySystemAssessment(id: string): Promise<boolean> {
+    const result = await db
+      .delete(legacySystemAssessments)
+      .where(eq(legacySystemAssessments.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Code Modernization Task operations
+  async createCodeModernizationTask(task: InsertCodeModernizationTask): Promise<CodeModernizationTask> {
+    const [newTask] = await db
+      .insert(codeModernizationTasks)
+      .values(task)
+      .returning();
+    return newTask;
+  }
+
+  async getCodeModernizationTask(id: string): Promise<CodeModernizationTask | undefined> {
+    const [task] = await db.select().from(codeModernizationTasks)
+      .where(eq(codeModernizationTasks.id, id));
+    return task;
+  }
+
+  async getProjectModernizationTasks(projectId: string): Promise<CodeModernizationTask[]> {
+    return await db.select().from(codeModernizationTasks)
+      .where(eq(codeModernizationTasks.projectId, projectId))
+      .orderBy(desc(codeModernizationTasks.createdAt));
+  }
+
+  async getMigrationProjectTasks(migrationProjectId: string): Promise<CodeModernizationTask[]> {
+    return await db.select().from(codeModernizationTasks)
+      .where(eq(codeModernizationTasks.migrationProjectId, migrationProjectId))
+      .orderBy(desc(codeModernizationTasks.createdAt));
+  }
+
+  async getLegacySystemTasks(legacySystemId: string): Promise<CodeModernizationTask[]> {
+    return await db.select().from(codeModernizationTasks)
+      .where(eq(codeModernizationTasks.legacySystemId, legacySystemId))
+      .orderBy(desc(codeModernizationTasks.createdAt));
+  }
+
+  async getUserAssignedTasks(userId: string): Promise<CodeModernizationTask[]> {
+    return await db.select().from(codeModernizationTasks)
+      .where(eq(codeModernizationTasks.assignedTo, userId))
+      .orderBy(desc(codeModernizationTasks.createdAt));
+  }
+
+  async updateCodeModernizationTask(id: string, updates: Partial<CodeModernizationTask>): Promise<CodeModernizationTask | undefined> {
+    const [updatedTask] = await db
+      .update(codeModernizationTasks)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(codeModernizationTasks.id, id))
+      .returning();
+    return updatedTask;
+  }
+
+  async deleteCodeModernizationTask(id: string): Promise<boolean> {
+    const result = await db
+      .delete(codeModernizationTasks)
+      .where(eq(codeModernizationTasks.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Custom AI Model operations
+  async createCustomAiModel(model: InsertCustomAiModel): Promise<CustomAiModel> {
+    const [newModel] = await db
+      .insert(customAiModels)
+      .values(model)
+      .returning();
+    return newModel;
+  }
+
+  async getCustomAiModel(id: string): Promise<CustomAiModel | undefined> {
+    const [model] = await db.select().from(customAiModels)
+      .where(eq(customAiModels.id, id));
+    return model;
+  }
+
+  async getProjectCustomModels(projectId: string): Promise<CustomAiModel[]> {
+    return await db.select().from(customAiModels)
+      .where(eq(customAiModels.projectId, projectId))
+      .orderBy(desc(customAiModels.createdAt));
+  }
+
+  async getActiveCustomModels(projectId: string): Promise<CustomAiModel[]> {
+    return await db.select().from(customAiModels)
+      .where(and(
+        eq(customAiModels.projectId, projectId),
+        eq(customAiModels.isActive, true)
+      ))
+      .orderBy(desc(customAiModels.createdAt));
+  }
+
+  async getCustomModelsByType(projectId: string, modelType: string): Promise<CustomAiModel[]> {
+    return await db.select().from(customAiModels)
+      .where(and(
+        eq(customAiModels.projectId, projectId),
+        eq(customAiModels.modelType, modelType)
+      ))
+      .orderBy(desc(customAiModels.createdAt));
+  }
+
+  async updateCustomAiModel(id: string, updates: Partial<CustomAiModel>): Promise<CustomAiModel | undefined> {
+    const [updatedModel] = await db
+      .update(customAiModels)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(customAiModels.id, id))
+      .returning();
+    return updatedModel;
+  }
+
+  async deleteCustomAiModel(id: string): Promise<boolean> {
+    const result = await db
+      .delete(customAiModels)
+      .where(eq(customAiModels.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Migration Execution Log operations
+  async createMigrationExecutionLog(log: InsertMigrationExecutionLog): Promise<MigrationExecutionLog> {
+    const [newLog] = await db
+      .insert(migrationExecutionLogs)
+      .values(log)
+      .returning();
+    return newLog;
+  }
+
+  async getMigrationExecutionLog(id: string): Promise<MigrationExecutionLog | undefined> {
+    const [log] = await db.select().from(migrationExecutionLogs)
+      .where(eq(migrationExecutionLogs.id, id));
+    return log;
+  }
+
+  async getMigrationProjectLogs(migrationProjectId: string): Promise<MigrationExecutionLog[]> {
+    return await db.select().from(migrationExecutionLogs)
+      .where(eq(migrationExecutionLogs.migrationProjectId, migrationProjectId))
+      .orderBy(desc(migrationExecutionLogs.createdAt));
+  }
+
+  async getMigrationLogsByPhase(migrationProjectId: string, phase: string): Promise<MigrationExecutionLog[]> {
+    return await db.select().from(migrationExecutionLogs)
+      .where(and(
+        eq(migrationExecutionLogs.migrationProjectId, migrationProjectId),
+        eq(migrationExecutionLogs.executionPhase, phase)
+      ))
+      .orderBy(desc(migrationExecutionLogs.createdAt));
+  }
+
+  async getMigrationLogsByStatus(migrationProjectId: string, status: string): Promise<MigrationExecutionLog[]> {
+    return await db.select().from(migrationExecutionLogs)
+      .where(and(
+        eq(migrationExecutionLogs.migrationProjectId, migrationProjectId),
+        eq(migrationExecutionLogs.status, status)
+      ))
+      .orderBy(desc(migrationExecutionLogs.createdAt));
+  }
+
+  async updateMigrationExecutionLog(id: string, updates: Partial<MigrationExecutionLog>): Promise<MigrationExecutionLog | undefined> {
+    const [updatedLog] = await db
+      .update(migrationExecutionLogs)
+      .set(updates)
+      .where(eq(migrationExecutionLogs.id, id))
+      .returning();
+    return updatedLog;
+  }
+
+  // Migration Assessment Finding operations
+  async createMigrationAssessmentFinding(finding: InsertMigrationAssessmentFinding): Promise<MigrationAssessmentFinding> {
+    const [newFinding] = await db
+      .insert(migrationAssessmentFindings)
+      .values(finding)
+      .returning();
+    return newFinding;
+  }
+
+  async getMigrationAssessmentFinding(id: string): Promise<MigrationAssessmentFinding | undefined> {
+    const [finding] = await db.select().from(migrationAssessmentFindings)
+      .where(eq(migrationAssessmentFindings.id, id));
+    return finding;
+  }
+
+  async getAssessmentFindings(assessmentId: string): Promise<MigrationAssessmentFinding[]> {
+    return await db.select().from(migrationAssessmentFindings)
+      .where(eq(migrationAssessmentFindings.assessmentId, assessmentId))
+      .orderBy(desc(migrationAssessmentFindings.createdAt));
+  }
+
+  async getFindingsBySeverity(assessmentId: string, severity: string): Promise<MigrationAssessmentFinding[]> {
+    return await db.select().from(migrationAssessmentFindings)
+      .where(and(
+        eq(migrationAssessmentFindings.assessmentId, assessmentId),
+        eq(migrationAssessmentFindings.severity, severity)
+      ))
+      .orderBy(desc(migrationAssessmentFindings.createdAt));
+  }
+
+  async getFindingsByType(assessmentId: string, findingType: string): Promise<MigrationAssessmentFinding[]> {
+    return await db.select().from(migrationAssessmentFindings)
+      .where(and(
+        eq(migrationAssessmentFindings.assessmentId, assessmentId),
+        eq(migrationAssessmentFindings.findingType, findingType)
+      ))
+      .orderBy(desc(migrationAssessmentFindings.createdAt));
+  }
+
+  async getOpenFindings(assessmentId: string): Promise<MigrationAssessmentFinding[]> {
+    return await db.select().from(migrationAssessmentFindings)
+      .where(and(
+        eq(migrationAssessmentFindings.assessmentId, assessmentId),
+        eq(migrationAssessmentFindings.status, "open")
+      ))
+      .orderBy(desc(migrationAssessmentFindings.createdAt));
+  }
+
+  async updateMigrationAssessmentFinding(id: string, updates: Partial<MigrationAssessmentFinding>): Promise<MigrationAssessmentFinding | undefined> {
+    const [updatedFinding] = await db
+      .update(migrationAssessmentFindings)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(migrationAssessmentFindings.id, id))
+      .returning();
+    return updatedFinding;
+  }
+
+  async deleteMigrationAssessmentFinding(id: string): Promise<boolean> {
+    const result = await db
+      .delete(migrationAssessmentFindings)
+      .where(eq(migrationAssessmentFindings.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Migration Cost Analysis operations
+  async createMigrationCostAnalysis(analysis: InsertMigrationCostAnalysis): Promise<MigrationCostAnalysis> {
+    const [newAnalysis] = await db
+      .insert(migrationCostAnalysis)
+      .values(analysis)
+      .returning();
+    return newAnalysis;
+  }
+
+  async getMigrationCostAnalysis(id: string): Promise<MigrationCostAnalysis | undefined> {
+    const [analysis] = await db.select().from(migrationCostAnalysis)
+      .where(eq(migrationCostAnalysis.id, id));
+    return analysis;
+  }
+
+  async getMigrationProjectCostAnalyses(migrationProjectId: string): Promise<MigrationCostAnalysis[]> {
+    return await db.select().from(migrationCostAnalysis)
+      .where(eq(migrationCostAnalysis.migrationProjectId, migrationProjectId))
+      .orderBy(desc(migrationCostAnalysis.createdAt));
+  }
+
+  async getLatestCostAnalysis(migrationProjectId: string): Promise<MigrationCostAnalysis | undefined> {
+    const [analysis] = await db.select().from(migrationCostAnalysis)
+      .where(eq(migrationCostAnalysis.migrationProjectId, migrationProjectId))
+      .orderBy(desc(migrationCostAnalysis.analyzedAt))
+      .limit(1);
+    return analysis;
+  }
+
+  async getCostAnalysesByType(migrationProjectId: string, analysisType: string): Promise<MigrationCostAnalysis[]> {
+    return await db.select().from(migrationCostAnalysis)
+      .where(and(
+        eq(migrationCostAnalysis.migrationProjectId, migrationProjectId),
+        eq(migrationCostAnalysis.analysisType, analysisType)
+      ))
+      .orderBy(desc(migrationCostAnalysis.createdAt));
+  }
+
+  async updateMigrationCostAnalysis(id: string, updates: Partial<MigrationCostAnalysis>): Promise<MigrationCostAnalysis | undefined> {
+    const [updatedAnalysis] = await db
+      .update(migrationCostAnalysis)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(migrationCostAnalysis.id, id))
+      .returning();
+    return updatedAnalysis;
+  }
+
+  async deleteMigrationCostAnalysis(id: string): Promise<boolean> {
+    const result = await db
+      .delete(migrationCostAnalysis)
+      .where(eq(migrationCostAnalysis.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Enhanced Migration Project operations
+  async createMigrationProject(migrationProject: InsertMigrationProject): Promise<MigrationProject> {
+    const [newMigrationProject] = await db
+      .insert(migrationProjects)
+      .values(migrationProject)
+      .returning();
+    return newMigrationProject;
+  }
+
+  async getMigrationProject(id: string): Promise<MigrationProject | undefined> {
+    const [migrationProject] = await db.select().from(migrationProjects)
+      .where(eq(migrationProjects.id, id));
+    return migrationProject;
+  }
+
+  async getProjectMigrationProjects(projectId: string): Promise<MigrationProject[]> {
+    return await db.select().from(migrationProjects)
+      .where(eq(migrationProjects.projectId, projectId))
+      .orderBy(desc(migrationProjects.createdAt));
+  }
+
+  async getUserMigrationProjects(userId: string): Promise<MigrationProject[]> {
+    return await db.select().from(migrationProjects)
+      .where(eq(migrationProjects.assignedTo, userId))
+      .orderBy(desc(migrationProjects.createdAt));
+  }
+
+  async getMigrationProjectsByStatus(status: string): Promise<MigrationProject[]> {
+    return await db.select().from(migrationProjects)
+      .where(eq(migrationProjects.status, status))
+      .orderBy(desc(migrationProjects.createdAt));
+  }
+
+  async updateMigrationProject(id: string, updates: Partial<MigrationProject>): Promise<MigrationProject | undefined> {
+    const [updatedMigrationProject] = await db
+      .update(migrationProjects)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(migrationProjects.id, id))
+      .returning();
+    return updatedMigrationProject;
+  }
+
+  async deleteMigrationProject(id: string): Promise<boolean> {
+    const result = await db
+      .delete(migrationProjects)
+      .where(eq(migrationProjects.id, id));
     return result.rowCount > 0;
   }
 }

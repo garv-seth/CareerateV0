@@ -14,7 +14,14 @@ import {
   insertInfrastructureResourceSchema,
   insertProjectTemplateSchema,
   insertCodeAnalysisSchema,
-  insertCodeReviewSchema
+  insertCodeReviewSchema,
+  insertMigrationProjectSchema,
+  insertLegacySystemAssessmentSchema,
+  insertCodeModernizationTaskSchema,
+  insertCustomAiModelSchema,
+  insertMigrationExecutionLogSchema,
+  insertMigrationAssessmentFindingSchema,
+  insertMigrationCostAnalysisSchema
 } from "@shared/schema";
 import { 
   generateCodeFromPrompt, 
@@ -27,6 +34,7 @@ import {
   type StreamingUpdate
 } from "./services/ai";
 import { agentManager } from "./services/agentManager";
+import { legacyAssessmentService } from "./services/legacyAssessment";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth first
@@ -805,6 +813,529 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =====================================================
+  // Enterprise Migration System API Endpoints
+  // =====================================================
+
+  // Helper function to validate migration project ownership
+  const validateMigrationProjectOwnership = async (migrationProjectId: string, userId: string) => {
+    const migrationProject = await storage.getMigrationProject(migrationProjectId);
+    if (!migrationProject) {
+      throw new Error('Migration project not found');
+    }
+    const project = await storage.getProject(migrationProject.projectId);
+    if (!project || project.userId !== userId) {
+      throw new Error('Migration project not found or access denied');
+    }
+    return migrationProject;
+  };
+
+  // Migration Projects CRUD
+  app.get("/api/migration-projects", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { status } = req.query;
+      
+      let migrationProjects;
+      if (status) {
+        migrationProjects = await storage.getMigrationProjectsByStatus(status as string);
+        // Filter by user ownership
+        const userProjects = await Promise.all(
+          migrationProjects.map(async (mp) => {
+            const project = await storage.getProject(mp.projectId);
+            return project?.userId === userId ? mp : null;
+          })
+        );
+        migrationProjects = userProjects.filter(Boolean);
+      } else {
+        migrationProjects = await storage.getUserMigrationProjects(userId);
+      }
+      
+      res.json(migrationProjects);
+    } catch (error) {
+      console.error('Get migration projects error:', error);
+      res.status(500).json({ message: "Failed to get migration projects" });
+    }
+  });
+
+  app.get("/api/migration-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const migrationProject = await validateMigrationProjectOwnership(req.params.id, userId);
+      res.json(migrationProject);
+    } catch (error) {
+      console.error('Get migration project error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(404).json({ message: "Migration project not found" });
+    }
+  });
+
+  app.post("/api/migration-projects", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertMigrationProjectSchema.parse(req.body);
+      
+      // Validate project ownership
+      await validateProjectOwnership(data.projectId, userId);
+      
+      const migrationProject = await storage.createMigrationProject(data);
+      res.status(201).json(migrationProject);
+    } catch (error) {
+      console.error('Create migration project error:', error);
+      res.status(400).json({ message: "Invalid migration project data", error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/migration-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      await validateMigrationProjectOwnership(req.params.id, userId);
+      const migrationProject = await storage.updateMigrationProject(req.params.id, req.body);
+      if (!migrationProject) {
+        return res.status(404).json({ message: "Migration project not found" });
+      }
+      res.json(migrationProject);
+    } catch (error) {
+      console.error('Update migration project error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(500).json({ message: "Failed to update migration project" });
+    }
+  });
+
+  app.delete("/api/migration-projects/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      await validateMigrationProjectOwnership(req.params.id, userId);
+      const deleted = await storage.deleteMigrationProject(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Migration project not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error('Delete migration project error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(500).json({ message: "Failed to delete migration project" });
+    }
+  });
+
+  // Legacy System Assessments CRUD
+  app.get("/api/legacy-assessments", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, migrationProjectId } = req.query;
+      
+      let assessments;
+      if (projectId) {
+        await validateProjectOwnership(projectId as string, userId);
+        assessments = await storage.getProjectLegacyAssessments(projectId as string);
+      } else if (migrationProjectId) {
+        await validateMigrationProjectOwnership(migrationProjectId as string, userId);
+        assessments = await storage.getMigrationProjectAssessments(migrationProjectId as string);
+      } else {
+        return res.status(400).json({ message: "projectId or migrationProjectId is required" });
+      }
+      
+      res.json(assessments);
+    } catch (error) {
+      console.error('Get legacy assessments error:', error);
+      res.status(500).json({ message: "Failed to get legacy assessments" });
+    }
+  });
+
+  app.get("/api/legacy-assessments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const assessment = await storage.getLegacySystemAssessment(req.params.id);
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      await validateProjectOwnership(assessment.projectId, userId);
+      res.json(assessment);
+    } catch (error) {
+      console.error('Get legacy assessment error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(404).json({ message: "Assessment not found" });
+    }
+  });
+
+  app.post("/api/legacy-assessments", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertLegacySystemAssessmentSchema.parse(req.body);
+      
+      // Validate project ownership
+      await validateProjectOwnership(data.projectId, userId);
+      
+      const assessment = await storage.createLegacySystemAssessment(data);
+      res.status(201).json(assessment);
+    } catch (error) {
+      console.error('Create legacy assessment error:', error);
+      res.status(400).json({ message: "Invalid assessment data", error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/legacy-assessments/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const assessment = await storage.getLegacySystemAssessment(req.params.id);
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      await validateProjectOwnership(assessment.projectId, userId);
+      
+      const updatedAssessment = await storage.updateLegacySystemAssessment(req.params.id, req.body);
+      res.json(updatedAssessment);
+    } catch (error) {
+      console.error('Update legacy assessment error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(500).json({ message: "Failed to update assessment" });
+    }
+  });
+
+  // Code Modernization Tasks CRUD
+  app.get("/api/modernization-tasks", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, migrationProjectId, legacySystemId, assignedTo } = req.query;
+      
+      let tasks;
+      if (assignedTo === 'me') {
+        tasks = await storage.getUserAssignedTasks(userId);
+      } else if (projectId) {
+        await validateProjectOwnership(projectId as string, userId);
+        tasks = await storage.getProjectModernizationTasks(projectId as string);
+      } else if (migrationProjectId) {
+        await validateMigrationProjectOwnership(migrationProjectId as string, userId);
+        tasks = await storage.getMigrationProjectTasks(migrationProjectId as string);
+      } else if (legacySystemId) {
+        const assessment = await storage.getLegacySystemAssessment(legacySystemId as string);
+        if (!assessment) {
+          return res.status(404).json({ message: "Legacy system not found" });
+        }
+        await validateProjectOwnership(assessment.projectId, userId);
+        tasks = await storage.getLegacySystemTasks(legacySystemId as string);
+      } else {
+        return res.status(400).json({ message: "Filter parameter is required" });
+      }
+      
+      res.json(tasks);
+    } catch (error) {
+      console.error('Get modernization tasks error:', error);
+      res.status(500).json({ message: "Failed to get modernization tasks" });
+    }
+  });
+
+  app.post("/api/modernization-tasks", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertCodeModernizationTaskSchema.parse(req.body);
+      
+      // Validate project ownership
+      await validateProjectOwnership(data.projectId, userId);
+      
+      const task = await storage.createCodeModernizationTask(data);
+      res.status(201).json(task);
+    } catch (error) {
+      console.error('Create modernization task error:', error);
+      res.status(400).json({ message: "Invalid task data", error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/modernization-tasks/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const task = await storage.getCodeModernizationTask(req.params.id);
+      if (!task) {
+        return res.status(404).json({ message: "Task not found" });
+      }
+      await validateProjectOwnership(task.projectId, userId);
+      
+      const updatedTask = await storage.updateCodeModernizationTask(req.params.id, req.body);
+      res.json(updatedTask);
+    } catch (error) {
+      console.error('Update modernization task error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(500).json({ message: "Failed to update task" });
+    }
+  });
+
+  // Custom AI Models CRUD
+  app.get("/api/custom-ai-models", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, modelType, active } = req.query;
+      
+      if (!projectId) {
+        return res.status(400).json({ message: "projectId is required" });
+      }
+      
+      await validateProjectOwnership(projectId as string, userId);
+      
+      let models;
+      if (active === 'true') {
+        models = await storage.getActiveCustomModels(projectId as string);
+      } else if (modelType) {
+        models = await storage.getCustomModelsByType(projectId as string, modelType as string);
+      } else {
+        models = await storage.getProjectCustomModels(projectId as string);
+      }
+      
+      res.json(models);
+    } catch (error) {
+      console.error('Get custom AI models error:', error);
+      res.status(500).json({ message: "Failed to get custom AI models" });
+    }
+  });
+
+  app.post("/api/custom-ai-models", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertCustomAiModelSchema.parse(req.body);
+      
+      // Validate project ownership
+      await validateProjectOwnership(data.projectId, userId);
+      
+      const model = await storage.createCustomAiModel(data);
+      res.status(201).json(model);
+    } catch (error) {
+      console.error('Create custom AI model error:', error);
+      res.status(400).json({ message: "Invalid model data", error: (error as Error).message });
+    }
+  });
+
+  app.patch("/api/custom-ai-models/:id", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const model = await storage.getCustomAiModel(req.params.id);
+      if (!model) {
+        return res.status(404).json({ message: "Model not found" });
+      }
+      await validateProjectOwnership(model.projectId, userId);
+      
+      const updatedModel = await storage.updateCustomAiModel(req.params.id, req.body);
+      res.json(updatedModel);
+    } catch (error) {
+      console.error('Update custom AI model error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(500).json({ message: "Failed to update model" });
+    }
+  });
+
+  // Migration Execution Logs
+  app.get("/api/migration-logs", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { migrationProjectId, phase, status } = req.query;
+      
+      if (!migrationProjectId) {
+        return res.status(400).json({ message: "migrationProjectId is required" });
+      }
+      
+      await validateMigrationProjectOwnership(migrationProjectId as string, userId);
+      
+      let logs;
+      if (phase) {
+        logs = await storage.getMigrationLogsByPhase(migrationProjectId as string, phase as string);
+      } else if (status) {
+        logs = await storage.getMigrationLogsByStatus(migrationProjectId as string, status as string);
+      } else {
+        logs = await storage.getMigrationProjectLogs(migrationProjectId as string);
+      }
+      
+      res.json(logs);
+    } catch (error) {
+      console.error('Get migration logs error:', error);
+      res.status(500).json({ message: "Failed to get migration logs" });
+    }
+  });
+
+  app.post("/api/migration-logs", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertMigrationExecutionLogSchema.parse(req.body);
+      
+      // Validate migration project ownership
+      await validateMigrationProjectOwnership(data.migrationProjectId, userId);
+      
+      const log = await storage.createMigrationExecutionLog(data);
+      res.status(201).json(log);
+    } catch (error) {
+      console.error('Create migration log error:', error);
+      res.status(400).json({ message: "Invalid log data", error: (error as Error).message });
+    }
+  });
+
+  // Assessment Findings
+  app.get("/api/assessment-findings", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { assessmentId, severity, findingType, status } = req.query;
+      
+      if (!assessmentId) {
+        return res.status(400).json({ message: "assessmentId is required" });
+      }
+      
+      const assessment = await storage.getLegacySystemAssessment(assessmentId as string);
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      await validateProjectOwnership(assessment.projectId, userId);
+      
+      let findings;
+      if (status === 'open') {
+        findings = await storage.getOpenFindings(assessmentId as string);
+      } else if (severity) {
+        findings = await storage.getFindingsBySeverity(assessmentId as string, severity as string);
+      } else if (findingType) {
+        findings = await storage.getFindingsByType(assessmentId as string, findingType as string);
+      } else {
+        findings = await storage.getAssessmentFindings(assessmentId as string);
+      }
+      
+      res.json(findings);
+    } catch (error) {
+      console.error('Get assessment findings error:', error);
+      res.status(500).json({ message: "Failed to get assessment findings" });
+    }
+  });
+
+  app.post("/api/assessment-findings", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertMigrationAssessmentFindingSchema.parse(req.body);
+      
+      // Validate assessment ownership
+      const assessment = await storage.getLegacySystemAssessment(data.assessmentId);
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      await validateProjectOwnership(assessment.projectId, userId);
+      
+      const finding = await storage.createMigrationAssessmentFinding(data);
+      res.status(201).json(finding);
+    } catch (error) {
+      console.error('Create assessment finding error:', error);
+      res.status(400).json({ message: "Invalid finding data", error: (error as Error).message });
+    }
+  });
+
+  // Migration Cost Analysis
+  app.get("/api/migration-cost-analysis", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { migrationProjectId, analysisType, latest } = req.query;
+      
+      if (!migrationProjectId) {
+        return res.status(400).json({ message: "migrationProjectId is required" });
+      }
+      
+      await validateMigrationProjectOwnership(migrationProjectId as string, userId);
+      
+      let analyses;
+      if (latest === 'true') {
+        const analysis = await storage.getLatestCostAnalysis(migrationProjectId as string);
+        analyses = analysis ? [analysis] : [];
+      } else if (analysisType) {
+        analyses = await storage.getCostAnalysesByType(migrationProjectId as string, analysisType as string);
+      } else {
+        analyses = await storage.getMigrationProjectCostAnalyses(migrationProjectId as string);
+      }
+      
+      res.json(analyses);
+    } catch (error) {
+      console.error('Get migration cost analysis error:', error);
+      res.status(500).json({ message: "Failed to get cost analysis" });
+    }
+  });
+
+  app.post("/api/migration-cost-analysis", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertMigrationCostAnalysisSchema.parse(req.body);
+      
+      // Validate migration project ownership
+      await validateMigrationProjectOwnership(data.migrationProjectId, userId);
+      
+      const analysis = await storage.createMigrationCostAnalysis(data);
+      res.status(201).json(analysis);
+    } catch (error) {
+      console.error('Create migration cost analysis error:', error);
+      res.status(400).json({ message: "Invalid analysis data", error: (error as Error).message });
+    }
+  });
+
+  // Legacy Assessment Service Endpoints
+  app.post("/api/legacy-assessments/run-assessment", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, systemName, discoveryInput, assignedTo } = req.body;
+      
+      // Validate project ownership
+      await validateProjectOwnership(projectId, userId);
+      
+      const assessment = await legacyAssessmentService.runCompleteAssessment(
+        projectId,
+        systemName,
+        discoveryInput,
+        assignedTo
+      );
+      
+      res.status(201).json(assessment);
+    } catch (error) {
+      console.error('Run legacy assessment error:', error);
+      res.status(500).json({ message: "Failed to run assessment", error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/legacy-assessments/:id/summary", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const assessment = await storage.getLegacySystemAssessment(req.params.id);
+      if (!assessment) {
+        return res.status(404).json({ message: "Assessment not found" });
+      }
+      
+      // Validate project ownership
+      await validateProjectOwnership(assessment.projectId, userId);
+      
+      const summary = await legacyAssessmentService.getAssessmentSummary(req.params.id);
+      res.json(summary);
+    } catch (error) {
+      console.error('Get assessment summary error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(500).json({ message: "Failed to get assessment summary" });
+    }
+  });
+
+  app.post("/api/infrastructure/discover", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const discoveryInput = req.body;
+      
+      const discoveredInfra = await legacyAssessmentService.discoverInfrastructure(discoveryInput);
+      res.json(discoveredInfra);
+    } catch (error) {
+      console.error('Infrastructure discovery error:', error);
+      res.status(500).json({ message: "Failed to discover infrastructure" });
+    }
+  });
+
   // System Health Check
   app.get("/api/system/health", async (req, res) => {
     try {
@@ -823,6 +1354,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pending: 0,
           deployed: 0,
           failed: 0
+        },
+        migration: {
+          projects: 0,
+          assessments: 0,
+          tasksInProgress: 0,
+          modelsTraining: 0
         }
       };
 
@@ -831,6 +1368,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       stats.agents = { total: 12, active: 10, inactive: 2 };
       stats.incidents = { open: 3, resolved: 47 };
       stats.deployments = { pending: 1, deployed: 23, failed: 2 };
+      stats.migration = { projects: 8, assessments: 15, tasksInProgress: 12, modelsTraining: 3 };
 
       res.json(stats);
     } catch (error) {

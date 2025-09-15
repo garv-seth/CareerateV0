@@ -1229,3 +1229,417 @@ export const insertCloudResourceStateSchema = createInsertSchema(cloudResourceSt
   providerMetadata: true,
   errorMessage: true,
 });
+
+// =====================================================
+// Enterprise Migration System Tables
+// =====================================================
+
+// Legacy System Inventory and Assessment
+export const legacySystemAssessments = pgTable("legacy_system_assessments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  migrationProjectId: varchar("migration_project_id").references(() => migrationProjects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  systemType: text("system_type").notNull(), // "web-app", "database", "microservice", "monolith", "legacy-app"
+  technologyStack: jsonb("technology_stack").default({}), // languages, frameworks, databases, etc.
+  architecture: text("architecture"), // "monolith", "microservices", "soa", "n-tier"
+  infrastructure: jsonb("infrastructure").default({}), // servers, containers, cloud resources
+  dependencies: jsonb("dependencies").default([]), // internal and external dependencies
+  dataVolume: jsonb("data_volume").default({}), // database sizes, file storage, etc.
+  performanceMetrics: jsonb("performance_metrics").default({}), // current performance baseline
+  securityProfiles: jsonb("security_profiles").default({}), // security configurations and vulnerabilities
+  complianceRequirements: jsonb("compliance_requirements").default([]), // regulatory requirements
+  businessCriticality: text("business_criticality").default("medium"), // "low", "medium", "high", "critical"
+  userBase: jsonb("user_base").default({}), // number of users, geographic distribution
+  operatingCosts: decimal("operating_costs", { precision: 12, scale: 4 }),
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  assessmentStatus: text("assessment_status").default("pending"), // "pending", "in-progress", "completed", "failed"
+  assessmentFindings: jsonb("assessment_findings").default([]),
+  migrationReadiness: text("migration_readiness").default("unknown"), // "ready", "needs-work", "complex", "high-risk"
+  riskFactors: jsonb("risk_factors").default([]),
+  recommendedStrategy: text("recommended_strategy"), // "lift-and-shift", "re-platform", "refactor", "retire"
+  automationPotential: integer("automation_potential").default(0), // 0-100 percentage
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Code Modernization Tracking
+export const codeModernizationTasks = pgTable("code_modernization_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  migrationProjectId: varchar("migration_project_id").references(() => migrationProjects.id, { onDelete: "cascade" }),
+  legacySystemId: varchar("legacy_system_id").references(() => legacySystemAssessments.id, { onDelete: "cascade" }),
+  taskName: text("task_name").notNull(),
+  taskType: text("task_type").notNull(), // "framework-migration", "database-migration", "api-modernization", "security-hardening"
+  priority: text("priority").default("medium"), // "low", "medium", "high", "critical"
+  status: text("status").default("pending"), // "pending", "in-progress", "completed", "blocked", "failed"
+  sourceFramework: text("source_framework"),
+  targetFramework: text("target_framework"),
+  codebaseSize: integer("codebase_size"), // lines of code
+  complexityScore: integer("complexity_score").default(0), // 0-100
+  automationLevel: text("automation_level").default("manual"), // "manual", "semi-automated", "fully-automated"
+  estimatedEffort: integer("estimated_effort"), // hours
+  actualEffort: integer("actual_effort"), // hours
+  findings: jsonb("findings").default([]), // code analysis findings
+  recommendations: jsonb("recommendations").default([]), // modernization recommendations
+  dependencies: jsonb("dependencies").default([]), // other tasks or systems this depends on
+  riskAssessment: jsonb("risk_assessment").default({}),
+  testingStrategy: jsonb("testing_strategy").default({}),
+  rollbackPlan: jsonb("rollback_plan").default({}),
+  progress: integer("progress").default(0), // 0-100 percentage
+  blockers: jsonb("blockers").default([]),
+  assignedTo: varchar("assigned_to").references(() => users.id),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Custom AI Model Training Records
+export const customAiModels = pgTable("custom_ai_models", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  modelType: text("model_type").notNull(), // "code-generation", "code-review", "security-analysis", "performance-optimization"
+  baseModel: text("base_model").notNull(), // "gpt-5", "claude-3", "custom"
+  domain: text("domain"), // "fintech", "healthcare", "e-commerce", "government", etc.
+  trainingData: jsonb("training_data").default({}), // metadata about training datasets
+  customPrompts: jsonb("custom_prompts").default([]), // organization-specific prompts
+  terminology: jsonb("terminology").default({}), // domain-specific terminology
+  complianceRules: jsonb("compliance_rules").default([]), // regulatory and compliance rules
+  qualityMetrics: jsonb("quality_metrics").default({}), // model performance metrics
+  trainingStatus: text("training_status").default("pending"), // "pending", "training", "completed", "failed", "deployed"
+  trainingProgress: integer("training_progress").default(0), // 0-100 percentage
+  epochs: integer("epochs").default(1),
+  learningRate: decimal("learning_rate", { precision: 10, scale: 8 }),
+  batchSize: integer("batch_size"),
+  validationAccuracy: decimal("validation_accuracy", { precision: 5, scale: 4 }),
+  trainingCost: decimal("training_cost", { precision: 12, scale: 4 }),
+  deploymentUrl: text("deployment_url"),
+  apiEndpoint: text("api_endpoint"),
+  modelVersion: text("model_version").default("1.0.0"),
+  isActive: boolean("is_active").default(false),
+  usageStats: jsonb("usage_stats").default({}),
+  feedback: jsonb("feedback").default([]),
+  trainingStartedAt: timestamp("training_started_at"),
+  trainingCompletedAt: timestamp("training_completed_at"),
+  deployedAt: timestamp("deployed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Migration Execution Logs
+export const migrationExecutionLogs = pgTable("migration_execution_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  migrationProjectId: varchar("migration_project_id").notNull().references(() => migrationProjects.id, { onDelete: "cascade" }),
+  executionPhase: text("execution_phase").notNull(), // "discovery", "planning", "execution", "testing", "cutover", "validation"
+  stepName: text("step_name").notNull(),
+  stepType: text("step_type").notNull(), // "infrastructure", "database", "application", "network", "security", "testing"
+  status: text("status").notNull(), // "pending", "running", "completed", "failed", "skipped", "rolled-back"
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  duration: integer("duration"), // seconds
+  details: jsonb("details").default({}), // step-specific details
+  logs: text("logs"), // execution logs
+  errorMessage: text("error_message"),
+  rollbackPossible: boolean("rollback_possible").default(false),
+  rollbackExecuted: boolean("rollback_executed").default(false),
+  resourcesCreated: jsonb("resources_created").default([]), // infrastructure resources created
+  resourcesModified: jsonb("resources_modified").default([]), // existing resources modified
+  resourcesDeleted: jsonb("resources_deleted").default([]), // resources cleaned up
+  dataTransferred: jsonb("data_transferred").default({}), // data migration details
+  performanceMetrics: jsonb("performance_metrics").default({}), // execution performance
+  securityChecks: jsonb("security_checks").default([]), // security validations performed
+  complianceChecks: jsonb("compliance_checks").default([]), // compliance validations
+  automationLevel: text("automation_level").default("manual"), // "manual", "semi-automated", "fully-automated"
+  executedBy: varchar("executed_by").references(() => users.id), // user or agent
+  agentId: varchar("agent_id").references(() => aiAgents.id), // AI agent if automated
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Migration Assessment Findings
+export const migrationAssessmentFindings = pgTable("migration_assessment_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: varchar("assessment_id").notNull().references(() => legacySystemAssessments.id, { onDelete: "cascade" }),
+  findingType: text("finding_type").notNull(), // "security", "performance", "compatibility", "compliance", "architecture"
+  severity: text("severity").notNull(), // "info", "low", "medium", "high", "critical"
+  category: text("category").notNull(), // "vulnerability", "bottleneck", "dependency", "technical-debt", "compliance-gap"
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  location: text("location"), // file path, configuration section, database table, etc.
+  evidence: jsonb("evidence").default({}), // supporting evidence and data
+  impact: text("impact"), // business or technical impact
+  recommendation: text("recommendation"), // how to address this finding
+  effort: text("effort").default("medium"), // "low", "medium", "high" - effort to resolve
+  automationPossible: boolean("automation_possible").default(false),
+  priority: integer("priority").default(50), // 1-100 priority score
+  businessRisk: text("business_risk").default("medium"), // "low", "medium", "high", "critical"
+  technicalRisk: text("technical_risk").default("medium"), // "low", "medium", "high", "critical"
+  dependencies: jsonb("dependencies").default([]), // what this finding depends on
+  tags: text("tags").array().default([]),
+  status: text("status").default("open"), // "open", "acknowledged", "resolved", "deferred", "false-positive"
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionDetails: text("resolution_details"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Migration Cost Analysis
+export const migrationCostAnalysis = pgTable("migration_cost_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  migrationProjectId: varchar("migration_project_id").notNull().references(() => migrationProjects.id, { onDelete: "cascade" }),
+  analysisType: text("analysis_type").notNull(), // "current-state", "target-state", "migration-costs", "roi-analysis"
+  period: text("period").notNull(), // "monthly", "quarterly", "annually"
+  currency: text("currency").default("USD"),
+  
+  // Current State Costs
+  currentInfrastructureCost: decimal("current_infrastructure_cost", { precision: 12, scale: 4 }).default("0"),
+  currentOperationalCost: decimal("current_operational_cost", { precision: 12, scale: 4 }).default("0"),
+  currentMaintenanceCost: decimal("current_maintenance_cost", { precision: 12, scale: 4 }).default("0"),
+  currentLicenseCost: decimal("current_license_cost", { precision: 12, scale: 4 }).default("0"),
+  currentTotalCost: decimal("current_total_cost", { precision: 12, scale: 4 }).default("0"),
+  
+  // Target State Costs
+  targetInfrastructureCost: decimal("target_infrastructure_cost", { precision: 12, scale: 4 }).default("0"),
+  targetOperationalCost: decimal("target_operational_cost", { precision: 12, scale: 4 }).default("0"),
+  targetMaintenanceCost: decimal("target_maintenance_cost", { precision: 12, scale: 4 }).default("0"),
+  targetLicenseCost: decimal("target_license_cost", { precision: 12, scale: 4 }).default("0"),
+  targetTotalCost: decimal("target_total_cost", { precision: 12, scale: 4 }).default("0"),
+  
+  // Migration Costs
+  planningCost: decimal("planning_cost", { precision: 12, scale: 4 }).default("0"),
+  executionCost: decimal("execution_cost", { precision: 12, scale: 4 }).default("0"),
+  trainingCost: decimal("training_cost", { precision: 12, scale: 4 }).default("0"),
+  riskMitigationCost: decimal("risk_mitigation_cost", { precision: 12, scale: 4 }).default("0"),
+  totalMigrationCost: decimal("total_migration_cost", { precision: 12, scale: 4 }).default("0"),
+  
+  // ROI Analysis
+  monthlySavings: decimal("monthly_savings", { precision: 12, scale: 4 }).default("0"),
+  paybackPeriod: integer("payback_period"), // months
+  roi: decimal("roi", { precision: 5, scale: 2 }).default("0"), // percentage
+  netPresentValue: decimal("net_present_value", { precision: 12, scale: 4 }).default("0"),
+  
+  // Additional Benefits
+  performanceImprovements: jsonb("performance_improvements").default({}),
+  scalabilityBenefits: jsonb("scalability_benefits").default({}),
+  securityImprovements: jsonb("security_improvements").default({}),
+  complianceBenefits: jsonb("compliance_benefits").default({}),
+  operationalBenefits: jsonb("operational_benefits").default({}),
+  
+  assumptions: jsonb("assumptions").default([]),
+  riskFactors: jsonb("risk_factors").default([]),
+  metadata: jsonb("metadata").default({}),
+  analyzedAt: timestamp("analyzed_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations for new migration tables
+export const legacySystemAssessmentsRelations = relations(legacySystemAssessments, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [legacySystemAssessments.projectId],
+    references: [projects.id],
+  }),
+  migrationProject: one(migrationProjects, {
+    fields: [legacySystemAssessments.migrationProjectId],
+    references: [migrationProjects.id],
+  }),
+  modernizationTasks: many(codeModernizationTasks),
+  findings: many(migrationAssessmentFindings),
+}));
+
+export const codeModernizationTasksRelations = relations(codeModernizationTasks, ({ one }) => ({
+  project: one(projects, {
+    fields: [codeModernizationTasks.projectId],
+    references: [projects.id],
+  }),
+  migrationProject: one(migrationProjects, {
+    fields: [codeModernizationTasks.migrationProjectId],
+    references: [migrationProjects.id],
+  }),
+  legacySystem: one(legacySystemAssessments, {
+    fields: [codeModernizationTasks.legacySystemId],
+    references: [legacySystemAssessments.id],
+  }),
+  assignedUser: one(users, {
+    fields: [codeModernizationTasks.assignedTo],
+    references: [users.id],
+  }),
+}));
+
+export const customAiModelsRelations = relations(customAiModels, ({ one }) => ({
+  project: one(projects, {
+    fields: [customAiModels.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const migrationExecutionLogsRelations = relations(migrationExecutionLogs, ({ one }) => ({
+  migrationProject: one(migrationProjects, {
+    fields: [migrationExecutionLogs.migrationProjectId],
+    references: [migrationProjects.id],
+  }),
+  executedByUser: one(users, {
+    fields: [migrationExecutionLogs.executedBy],
+    references: [users.id],
+  }),
+  agent: one(aiAgents, {
+    fields: [migrationExecutionLogs.agentId],
+    references: [aiAgents.id],
+  }),
+}));
+
+export const migrationAssessmentFindingsRelations = relations(migrationAssessmentFindings, ({ one }) => ({
+  assessment: one(legacySystemAssessments, {
+    fields: [migrationAssessmentFindings.assessmentId],
+    references: [legacySystemAssessments.id],
+  }),
+  resolvedByUser: one(users, {
+    fields: [migrationAssessmentFindings.resolvedBy],
+    references: [users.id],
+  }),
+}));
+
+export const migrationCostAnalysisRelations = relations(migrationCostAnalysis, ({ one }) => ({
+  migrationProject: one(migrationProjects, {
+    fields: [migrationCostAnalysis.migrationProjectId],
+    references: [migrationProjects.id],
+  }),
+}));
+
+// Insert schemas for new migration tables
+export const insertLegacySystemAssessmentSchema = createInsertSchema(legacySystemAssessments).pick({
+  projectId: true,
+  migrationProjectId: true,
+  name: true,
+  description: true,
+  systemType: true,
+  technologyStack: true,
+  architecture: true,
+  infrastructure: true,
+  dependencies: true,
+  dataVolume: true,
+  performanceMetrics: true,
+  securityProfiles: true,
+  complianceRequirements: true,
+  businessCriticality: true,
+  userBase: true,
+  operatingCosts: true,
+});
+
+export const insertCodeModernizationTaskSchema = createInsertSchema(codeModernizationTasks).pick({
+  projectId: true,
+  migrationProjectId: true,
+  legacySystemId: true,
+  taskName: true,
+  taskType: true,
+  priority: true,
+  sourceFramework: true,
+  targetFramework: true,
+  codebaseSize: true,
+  complexityScore: true,
+  automationLevel: true,
+  estimatedEffort: true,
+  recommendations: true,
+  dependencies: true,
+  riskAssessment: true,
+  testingStrategy: true,
+  rollbackPlan: true,
+  assignedTo: true,
+});
+
+export const insertCustomAiModelSchema = createInsertSchema(customAiModels).pick({
+  projectId: true,
+  name: true,
+  description: true,
+  modelType: true,
+  baseModel: true,
+  domain: true,
+  trainingData: true,
+  customPrompts: true,
+  terminology: true,
+  complianceRules: true,
+  epochs: true,
+  learningRate: true,
+  batchSize: true,
+});
+
+export const insertMigrationExecutionLogSchema = createInsertSchema(migrationExecutionLogs).pick({
+  migrationProjectId: true,
+  executionPhase: true,
+  stepName: true,
+  stepType: true,
+  status: true,
+  startedAt: true,
+  details: true,
+  logs: true,
+  errorMessage: true,
+  rollbackPossible: true,
+  resourcesCreated: true,
+  resourcesModified: true,
+  dataTransferred: true,
+  automationLevel: true,
+  executedBy: true,
+  agentId: true,
+  metadata: true,
+});
+
+export const insertMigrationAssessmentFindingSchema = createInsertSchema(migrationAssessmentFindings).pick({
+  assessmentId: true,
+  findingType: true,
+  severity: true,
+  category: true,
+  title: true,
+  description: true,
+  location: true,
+  evidence: true,
+  impact: true,
+  recommendation: true,
+  effort: true,
+  automationPossible: true,
+  priority: true,
+  businessRisk: true,
+  technicalRisk: true,
+  dependencies: true,
+  tags: true,
+});
+
+export const insertMigrationCostAnalysisSchema = createInsertSchema(migrationCostAnalysis).pick({
+  migrationProjectId: true,
+  analysisType: true,
+  period: true,
+  currency: true,
+  currentInfrastructureCost: true,
+  currentOperationalCost: true,
+  currentMaintenanceCost: true,
+  currentLicenseCost: true,
+  targetInfrastructureCost: true,
+  targetOperationalCost: true,
+  targetMaintenanceCost: true,
+  targetLicenseCost: true,
+  planningCost: true,
+  executionCost: true,
+  trainingCost: true,
+  riskMitigationCost: true,
+  assumptions: true,
+  riskFactors: true,
+  metadata: true,
+});
+
+// Type definitions for new migration tables
+export type LegacySystemAssessment = typeof legacySystemAssessments.$inferSelect;
+export type InsertLegacySystemAssessment = z.infer<typeof insertLegacySystemAssessmentSchema>;
+export type CodeModernizationTask = typeof codeModernizationTasks.$inferSelect;
+export type InsertCodeModernizationTask = z.infer<typeof insertCodeModernizationTaskSchema>;
+export type CustomAiModel = typeof customAiModels.$inferSelect;
+export type InsertCustomAiModel = z.infer<typeof insertCustomAiModelSchema>;
+export type MigrationExecutionLog = typeof migrationExecutionLogs.$inferSelect;
+export type InsertMigrationExecutionLog = z.infer<typeof insertMigrationExecutionLogSchema>;
+export type MigrationAssessmentFinding = typeof migrationAssessmentFindings.$inferSelect;
+export type InsertMigrationAssessmentFinding = z.infer<typeof insertMigrationAssessmentFindingSchema>;
+export type MigrationCostAnalysis = typeof migrationCostAnalysis.$inferSelect;
+export type InsertMigrationCostAnalysis = z.infer<typeof insertMigrationCostAnalysisSchema>;
