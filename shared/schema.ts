@@ -31,9 +31,178 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// =====================================================
+// Enterprise User Management System
+// =====================================================
+
+// Organizations for enterprise team management
+export const organizations = pgTable("organizations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  slug: varchar("slug").unique().notNull(), // URL-friendly identifier
+  description: text("description"),
+  logoUrl: varchar("logo_url"),
+  website: varchar("website"),
+  industry: text("industry"),
+  companySize: text("company_size"), // "startup", "small", "medium", "large", "enterprise"
+  plan: text("plan").notNull().default("free"), // "free", "team", "business", "enterprise"
+  billingEmail: varchar("billing_email"),
+  settings: jsonb("settings").default({}), // org-wide settings
+  metadata: jsonb("metadata").default({}),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Organization members with roles
+export const organizationMembers = pgTable("organization_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("member"), // "owner", "admin", "member", "viewer"
+  permissions: jsonb("permissions").default([]), // specific permissions
+  invitedBy: varchar("invited_by").references(() => users.id),
+  invitedAt: timestamp("invited_at"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  lastActive: timestamp("last_active").defaultNow(),
+  metadata: jsonb("metadata").default({}),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_org_members_org_user").on(table.organizationId, table.userId),
+  index("idx_org_members_role").on(table.role),
+]);
+
+// Teams within organizations
+export const teams = pgTable("teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  slug: varchar("slug").notNull(), // URL-friendly identifier within org
+  teamType: text("team_type").default("development"), // "development", "devops", "security", "design"
+  leaderId: varchar("leader_id").references(() => users.id),
+  settings: jsonb("settings").default({}),
+  metadata: jsonb("metadata").default({}),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_teams_org_slug").on(table.organizationId, table.slug),
+]);
+
+// Team members with specific roles
+export const teamMembers = pgTable("team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: varchar("team_id").notNull().references(() => teams.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("member"), // "lead", "senior", "member", "intern"
+  permissions: jsonb("permissions").default([]), // team-specific permissions
+  addedBy: varchar("added_by").references(() => users.id),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  lastContribution: timestamp("last_contribution"),
+  metadata: jsonb("metadata").default({}),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_team_members_team_user").on(table.teamId, table.userId),
+]);
+
+// Role-based access control system
+export const roles = pgTable("roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  scope: text("scope").notNull(), // "system", "organization", "team", "project"
+  permissions: jsonb("permissions").notNull().default([]), // array of permission strings
+  isDefault: boolean("is_default").default(false),
+  isSystemRole: boolean("is_system_role").default(false), // system-defined roles
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Permission definitions
+export const permissions = pgTable("permissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // "projects", "deployments", "agents", "billing", "users"
+  resource: text("resource"), // specific resource type
+  actions: jsonb("actions").notNull().default([]), // ["read", "write", "delete", "deploy"]
+  isSystemPermission: boolean("is_system_permission").default(false),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User role assignments
+export const userRoles = pgTable("user_roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  roleId: varchar("role_id").notNull().references(() => roles.id, { onDelete: "cascade" }),
+  scope: text("scope").notNull(), // "system", "organization", "team", "project"
+  scopeId: varchar("scope_id"), // ID of organization, team, or project
+  grantedBy: varchar("granted_by").references(() => users.id),
+  grantedAt: timestamp("granted_at").defaultNow(),
+  expiresAt: timestamp("expires_at"), // for temporary roles
+  metadata: jsonb("metadata").default({}),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_user_roles_user_scope").on(table.userId, table.scope, table.scopeId),
+  index("idx_user_roles_role").on(table.roleId),
+]);
+
+// Project collaborators and access control
+export const projectCollaborators = pgTable("project_collaborators", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "cascade" }),
+  teamId: varchar("team_id").references(() => teams.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("viewer"), // "owner", "editor", "viewer", "deployer"
+  permissions: jsonb("permissions").default([]), // specific permissions
+  accessType: text("access_type").notNull(), // "direct", "team", "organization"
+  invitedBy: varchar("invited_by").references(() => users.id),
+  invitedAt: timestamp("invited_at"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  lastAccess: timestamp("last_access"),
+  metadata: jsonb("metadata").default({}),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_project_collaborators_project").on(table.projectId),
+  index("idx_project_collaborators_user").on(table.userId),
+  index("idx_project_collaborators_team").on(table.teamId),
+]);
+
+// Audit log for enterprise compliance
+export const auditLogs = pgTable("audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: "set null" }),
+  action: text("action").notNull(), // "create", "read", "update", "delete", "deploy", "invite"
+  resource: text("resource").notNull(), // "project", "user", "team", "deployment", "agent"
+  resourceId: varchar("resource_id"),
+  details: jsonb("details").default({}),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  sessionId: varchar("session_id"),
+  severity: text("severity").default("info"), // "info", "warning", "error", "critical"
+  metadata: jsonb("metadata").default({}),
+  timestamp: timestamp("timestamp").defaultNow(),
+}, (table) => [
+  index("idx_audit_logs_org_time").on(table.organizationId, table.timestamp),
+  index("idx_audit_logs_user_action").on(table.userId, table.action),
+  index("idx_audit_logs_resource").on(table.resource, table.resourceId),
+]);
+
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+  teamId: varchar("team_id").references(() => teams.id, { onDelete: "set null" }),
   name: text("name").notNull(),
   description: text("description"),
   framework: text("framework").notNull(),
@@ -2828,3 +2997,140 @@ export type InsertWebhookConfiguration = z.infer<typeof insertWebhookConfigurati
 export type ApiRateLimit = typeof apiRateLimits.$inferSelect;
 export type InsertApiRateLimit = z.infer<typeof insertApiRateLimitSchema>;
 export type ApiUsageAnalytics = typeof apiUsageAnalytics.$inferSelect;
+
+// =====================================================
+// Enterprise User Management Zod Schemas
+// =====================================================
+
+// Organization schemas
+export const insertOrganizationSchema = createInsertSchema(organizations).pick({
+  name: true,
+  slug: true,
+  description: true,
+  logoUrl: true,
+  website: true,
+  industry: true,
+  companySize: true,
+  plan: true,
+  billingEmail: true,
+  settings: true,
+  metadata: true,
+  isActive: true,
+});
+
+export const insertOrganizationMemberSchema = createInsertSchema(organizationMembers).pick({
+  organizationId: true,
+  userId: true,
+  role: true,
+  permissions: true,
+  invitedBy: true,
+  invitedAt: true,
+  metadata: true,
+  isActive: true,
+});
+
+// Team schemas
+export const insertTeamSchema = createInsertSchema(teams).pick({
+  organizationId: true,
+  name: true,
+  description: true,
+  slug: true,
+  teamType: true,
+  leaderId: true,
+  settings: true,
+  metadata: true,
+  isActive: true,
+});
+
+export const insertTeamMemberSchema = createInsertSchema(teamMembers).pick({
+  teamId: true,
+  userId: true,
+  role: true,
+  permissions: true,
+  addedBy: true,
+  metadata: true,
+  isActive: true,
+});
+
+// Role and permission schemas
+export const insertRoleSchema = createInsertSchema(roles).pick({
+  name: true,
+  displayName: true,
+  description: true,
+  scope: true,
+  permissions: true,
+  isDefault: true,
+  isSystemRole: true,
+  metadata: true,
+});
+
+export const insertPermissionSchema = createInsertSchema(permissions).pick({
+  name: true,
+  displayName: true,
+  description: true,
+  category: true,
+  resource: true,
+  actions: true,
+  isSystemPermission: true,
+  metadata: true,
+});
+
+export const insertUserRoleSchema = createInsertSchema(userRoles).pick({
+  userId: true,
+  roleId: true,
+  scope: true,
+  scopeId: true,
+  grantedBy: true,
+  expiresAt: true,
+  metadata: true,
+  isActive: true,
+});
+
+// Project collaboration schemas
+export const insertProjectCollaboratorSchema = createInsertSchema(projectCollaborators).pick({
+  projectId: true,
+  userId: true,
+  teamId: true,
+  role: true,
+  permissions: true,
+  accessType: true,
+  invitedBy: true,
+  invitedAt: true,
+  metadata: true,
+  isActive: true,
+});
+
+// Audit log schema
+export const insertAuditLogSchema = createInsertSchema(auditLogs).pick({
+  organizationId: true,
+  userId: true,
+  action: true,
+  resource: true,
+  resourceId: true,
+  details: true,
+  ipAddress: true,
+  userAgent: true,
+  sessionId: true,
+  severity: true,
+  metadata: true,
+});
+
+// Type definitions for enterprise management
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type OrganizationMember = typeof organizationMembers.$inferSelect;
+export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
+export type Team = typeof teams.$inferSelect;
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type Role = typeof roles.$inferSelect;
+export type InsertRole = z.infer<typeof insertRoleSchema>;
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = z.infer<typeof insertPermissionSchema>;
+export type UserRole = typeof userRoles.$inferSelect;
+export type InsertUserRole = z.infer<typeof insertUserRoleSchema>;
+export type ProjectCollaborator = typeof projectCollaborators.$inferSelect;
+export type InsertProjectCollaborator = z.infer<typeof insertProjectCollaboratorSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;

@@ -116,7 +116,34 @@ import {
   type WebhookConfiguration,
   type InsertWebhookConfiguration,
   type ApiRateLimit,
-  type InsertApiRateLimit
+  type InsertApiRateLimit,
+  organizations,
+  organizationMembers,
+  teams,
+  teamMembers,
+  roles,
+  permissions,
+  userRoles,
+  projectCollaborators,
+  auditLogs,
+  type Organization,
+  type InsertOrganization,
+  type OrganizationMember,
+  type InsertOrganizationMember,
+  type Team,
+  type InsertTeam,
+  type TeamMember,
+  type InsertTeamMember,
+  type Role,
+  type InsertRole,
+  type Permission,
+  type InsertPermission,
+  type UserRole,
+  type InsertUserRole,
+  type ProjectCollaborator,
+  type InsertProjectCollaborator,
+  type AuditLog,
+  type InsertAuditLog
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -396,6 +423,80 @@ export interface IStorage {
   createPerformanceBaseline(baseline: InsertPerformanceBaseline): Promise<PerformanceBaseline>;
   getPerformanceBaselines(projectId: string): Promise<PerformanceBaseline[]>;
   createLogEntry(logEntry: InsertLogEntry): Promise<LogEntry>;
+
+  // =====================================================
+  // Enterprise User Management Operations
+  // =====================================================
+
+  // Organization operations
+  createOrganization(org: InsertOrganization): Promise<Organization>;
+  getOrganization(id: string): Promise<Organization | undefined>;
+  getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
+  getUserOrganizations(userId: string): Promise<Organization[]>;
+  updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization | undefined>;
+  deleteOrganization(id: string): Promise<boolean>;
+
+  // Organization member operations
+  addOrganizationMember(member: InsertOrganizationMember): Promise<OrganizationMember>;
+  getOrganizationMember(organizationId: string, userId: string): Promise<OrganizationMember | undefined>;
+  getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]>;
+  updateOrganizationMember(id: string, updates: Partial<OrganizationMember>): Promise<OrganizationMember | undefined>;
+  removeOrganizationMember(organizationId: string, userId: string): Promise<boolean>;
+
+  // Team operations
+  createTeam(team: InsertTeam): Promise<Team>;
+  getTeam(id: string): Promise<Team | undefined>;
+  getTeamBySlug(organizationId: string, slug: string): Promise<Team | undefined>;
+  getOrganizationTeams(organizationId: string): Promise<Team[]>;
+  getUserTeams(userId: string): Promise<Team[]>;
+  updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined>;
+  deleteTeam(id: string): Promise<boolean>;
+
+  // Team member operations
+  addTeamMember(member: InsertTeamMember): Promise<TeamMember>;
+  getTeamMember(teamId: string, userId: string): Promise<TeamMember | undefined>;
+  getTeamMembers(teamId: string): Promise<TeamMember[]>;
+  updateTeamMember(id: string, updates: Partial<TeamMember>): Promise<TeamMember | undefined>;
+  removeTeamMember(teamId: string, userId: string): Promise<boolean>;
+
+  // Role and permission operations
+  createRole(role: InsertRole): Promise<Role>;
+  getRole(id: string): Promise<Role | undefined>;
+  getRoleByName(name: string): Promise<Role | undefined>;
+  getRoles(scope?: string): Promise<Role[]>;
+  updateRole(id: string, updates: Partial<Role>): Promise<Role | undefined>;
+  deleteRole(id: string): Promise<boolean>;
+
+  createPermission(permission: InsertPermission): Promise<Permission>;
+  getPermission(id: string): Promise<Permission | undefined>;
+  getPermissionByName(name: string): Promise<Permission | undefined>;
+  getPermissions(category?: string): Promise<Permission[]>;
+  updatePermission(id: string, updates: Partial<Permission>): Promise<Permission | undefined>;
+  deletePermission(id: string): Promise<boolean>;
+
+  // User role assignment operations
+  assignUserRole(assignment: InsertUserRole): Promise<UserRole>;
+  getUserRole(userId: string, roleId: string, scope: string, scopeId?: string): Promise<UserRole | undefined>;
+  getUserRoles(userId: string, scope?: string, scopeId?: string): Promise<UserRole[]>;
+  revokeUserRole(userId: string, roleId: string, scope: string, scopeId?: string): Promise<boolean>;
+
+  // Project collaboration operations
+  addProjectCollaborator(collaborator: InsertProjectCollaborator): Promise<ProjectCollaborator>;
+  getProjectCollaborator(projectId: string, userId: string): Promise<ProjectCollaborator | undefined>;
+  getProjectCollaborators(projectId: string): Promise<ProjectCollaborator[]>;
+  getUserProjectCollaborations(userId: string): Promise<ProjectCollaborator[]>;
+  updateProjectCollaborator(id: string, updates: Partial<ProjectCollaborator>): Promise<ProjectCollaborator | undefined>;
+  removeProjectCollaborator(projectId: string, userId: string): Promise<boolean>;
+
+  // Audit log operations
+  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(organizationId?: string, userId?: string, limit?: number): Promise<AuditLog[]>;
+  getAuditLogsByResource(resource: string, resourceId?: string, limit?: number): Promise<AuditLog[]>;
+
+  // Authorization helper methods
+  hasPermission(userId: string, permission: string, scope: string, scopeId?: string): Promise<boolean>;
+  canAccessProject(userId: string, projectId: string): Promise<boolean>;
+  getUserPermissions(userId: string, scope: string, scopeId?: string): Promise<string[]>;
 }
 
 export class DatabaseStorage implements IStorage {
