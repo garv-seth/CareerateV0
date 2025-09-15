@@ -9,6 +9,11 @@ import {
   securityScans,
   agentTasks,
   infrastructureResources,
+  projectTemplates,
+  codeAnalysis,
+  generationHistory,
+  codeReviews,
+  apiDocumentation,
   type User, 
   type UpsertUser, 
   type Project, 
@@ -28,7 +33,15 @@ import {
   type AgentTask,
   type InsertAgentTask,
   type InfrastructureResource,
-  type InsertInfrastructureResource
+  type InsertInfrastructureResource,
+  type ProjectTemplate,
+  type InsertProjectTemplate,
+  type CodeAnalysis,
+  type InsertCodeAnalysis,
+  type GenerationHistory,
+  type CodeReview,
+  type InsertCodeReview,
+  type ApiDocumentation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and } from "drizzle-orm";
@@ -49,6 +62,8 @@ export interface IStorage {
   // Code generation operations
   createCodeGeneration(generation: InsertCodeGeneration): Promise<CodeGeneration>;
   getCodeGenerationsByProjectId(projectId: string): Promise<CodeGeneration[]>;
+  updateCodeGeneration(id: string, updates: Partial<CodeGeneration>): Promise<CodeGeneration | undefined>;
+  getCodeGeneration(id: string): Promise<CodeGeneration | undefined>;
 
   // AI Agent operations
   createAiAgent(agent: InsertAiAgent): Promise<AiAgent>;
@@ -89,6 +104,39 @@ export interface IStorage {
   createInfrastructureResource(resource: InsertInfrastructureResource): Promise<InfrastructureResource>;
   getProjectResources(projectId: string): Promise<InfrastructureResource[]>;
   updateInfrastructureResource(id: string, updates: Partial<InfrastructureResource>): Promise<InfrastructureResource | undefined>;
+
+  // Enhanced Vibe Coding operations
+  // Project Template operations
+  createProjectTemplate(template: InsertProjectTemplate): Promise<ProjectTemplate>;
+  getProjectTemplate(id: string): Promise<ProjectTemplate | undefined>;
+  getProjectTemplates(category?: string): Promise<ProjectTemplate[]>;
+  updateProjectTemplate(id: string, updates: Partial<ProjectTemplate>): Promise<ProjectTemplate | undefined>;
+  deleteProjectTemplate(id: string): Promise<boolean>;
+
+  // Code Analysis operations
+  createCodeAnalysis(analysis: InsertCodeAnalysis): Promise<CodeAnalysis>;
+  getCodeAnalysis(id: string): Promise<CodeAnalysis | undefined>;
+  getProjectCodeAnalysis(projectId: string): Promise<CodeAnalysis[]>;
+  updateCodeAnalysis(id: string, updates: Partial<CodeAnalysis>): Promise<CodeAnalysis | undefined>;
+
+  // Generation History operations
+  createGenerationHistory(history: Omit<GenerationHistory, 'id' | 'createdAt'>): Promise<GenerationHistory>;
+  getGenerationHistory(projectId: string): Promise<GenerationHistory[]>;
+  getCurrentVersion(projectId: string): Promise<GenerationHistory | undefined>;
+
+  // Code Review operations
+  createCodeReview(review: InsertCodeReview): Promise<CodeReview>;
+  getCodeReviews(projectId: string): Promise<CodeReview[]>;
+  updateCodeReview(id: string, updates: Partial<CodeReview>): Promise<CodeReview | undefined>;
+
+  // API Documentation operations
+  createApiDocumentation(doc: Omit<ApiDocumentation, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiDocumentation>;
+  getApiDocumentation(projectId: string): Promise<ApiDocumentation | undefined>;
+  updateApiDocumentation(id: string, updates: Partial<ApiDocumentation>): Promise<ApiDocumentation | undefined>;
+
+  // Enhanced code generation operations
+  updateCodeGeneration(id: string, updates: Partial<CodeGeneration>): Promise<CodeGeneration | undefined>;
+  getCodeGeneration(id: string): Promise<CodeGeneration | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -378,6 +426,172 @@ export class DatabaseStorage implements IStorage {
       .where(eq(infrastructureResources.id, id))
       .returning();
     return updatedResource;
+  }
+
+  // Enhanced Vibe Coding operations
+  
+  // Project Template operations
+  async createProjectTemplate(template: InsertProjectTemplate): Promise<ProjectTemplate> {
+    const [newTemplate] = await db
+      .insert(projectTemplates)
+      .values(template)
+      .returning();
+    return newTemplate;
+  }
+
+  async getProjectTemplate(id: string): Promise<ProjectTemplate | undefined> {
+    const [template] = await db.select().from(projectTemplates).where(eq(projectTemplates.id, id));
+    return template;
+  }
+
+  async getProjectTemplates(category?: string): Promise<ProjectTemplate[]> {
+    let query = db.select().from(projectTemplates).where(eq(projectTemplates.isPublic, true));
+    
+    if (category) {
+      query = query.where(eq(projectTemplates.category, category));
+    }
+    
+    return await query.orderBy(desc(projectTemplates.downloads), desc(projectTemplates.rating));
+  }
+
+  async updateProjectTemplate(id: string, updates: Partial<ProjectTemplate>): Promise<ProjectTemplate | undefined> {
+    const [updatedTemplate] = await db
+      .update(projectTemplates)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(projectTemplates.id, id))
+      .returning();
+    return updatedTemplate;
+  }
+
+  async deleteProjectTemplate(id: string): Promise<boolean> {
+    const result = await db.delete(projectTemplates).where(eq(projectTemplates.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Code Analysis operations
+  async createCodeAnalysis(analysis: InsertCodeAnalysis): Promise<CodeAnalysis> {
+    const [newAnalysis] = await db
+      .insert(codeAnalysis)
+      .values(analysis)
+      .returning();
+    return newAnalysis;
+  }
+
+  async getCodeAnalysis(id: string): Promise<CodeAnalysis | undefined> {
+    const [analysis] = await db.select().from(codeAnalysis).where(eq(codeAnalysis.id, id));
+    return analysis;
+  }
+
+  async getProjectCodeAnalysis(projectId: string): Promise<CodeAnalysis[]> {
+    return await db.select().from(codeAnalysis)
+      .where(eq(codeAnalysis.projectId, projectId))
+      .orderBy(desc(codeAnalysis.createdAt));
+  }
+
+  async updateCodeAnalysis(id: string, updates: Partial<CodeAnalysis>): Promise<CodeAnalysis | undefined> {
+    const [updatedAnalysis] = await db
+      .update(codeAnalysis)
+      .set(updates)
+      .where(eq(codeAnalysis.id, id))
+      .returning();
+    return updatedAnalysis;
+  }
+
+  // Generation History operations
+  async createGenerationHistory(history: Omit<GenerationHistory, 'id' | 'createdAt'>): Promise<GenerationHistory> {
+    const [newHistory] = await db
+      .insert(generationHistory)
+      .values(history)
+      .returning();
+    return newHistory;
+  }
+
+  async getGenerationHistory(projectId: string): Promise<GenerationHistory[]> {
+    return await db.select().from(generationHistory)
+      .where(eq(generationHistory.projectId, projectId))
+      .orderBy(desc(generationHistory.version));
+  }
+
+  async getCurrentVersion(projectId: string): Promise<GenerationHistory | undefined> {
+    const [current] = await db.select().from(generationHistory)
+      .where(and(
+        eq(generationHistory.projectId, projectId),
+        eq(generationHistory.isCurrent, true)
+      ));
+    return current;
+  }
+
+  // Code Review operations
+  async createCodeReview(review: InsertCodeReview): Promise<CodeReview> {
+    const [newReview] = await db
+      .insert(codeReviews)
+      .values(review)
+      .returning();
+    return newReview;
+  }
+
+  async getCodeReviews(projectId: string): Promise<CodeReview[]> {
+    return await db.select().from(codeReviews)
+      .where(eq(codeReviews.projectId, projectId))
+      .orderBy(desc(codeReviews.createdAt));
+  }
+
+  async updateCodeReview(id: string, updates: Partial<CodeReview>): Promise<CodeReview | undefined> {
+    const [updatedReview] = await db
+      .update(codeReviews)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(codeReviews.id, id))
+      .returning();
+    return updatedReview;
+  }
+
+  // API Documentation operations
+  async createApiDocumentation(doc: Omit<ApiDocumentation, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiDocumentation> {
+    const [newDoc] = await db
+      .insert(apiDocumentation)
+      .values(doc)
+      .returning();
+    return newDoc;
+  }
+
+  async getApiDocumentation(projectId: string): Promise<ApiDocumentation | undefined> {
+    const [doc] = await db.select().from(apiDocumentation)
+      .where(eq(apiDocumentation.projectId, projectId))
+      .orderBy(desc(apiDocumentation.updatedAt));
+    return doc;
+  }
+
+  async updateApiDocumentation(id: string, updates: Partial<ApiDocumentation>): Promise<ApiDocumentation | undefined> {
+    const [updatedDoc] = await db
+      .update(apiDocumentation)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(apiDocumentation.id, id))
+      .returning();
+    return updatedDoc;
+  }
+
+  // Enhanced code generation operations
+  async updateCodeGeneration(id: string, updates: Partial<CodeGeneration>): Promise<CodeGeneration | undefined> {
+    const [updatedGeneration] = await db
+      .update(codeGenerations)
+      .set(updates)
+      .where(eq(codeGenerations.id, id))
+      .returning();
+    return updatedGeneration;
+  }
+
+  async getCodeGeneration(id: string): Promise<CodeGeneration | undefined> {
+    const [generation] = await db.select().from(codeGenerations).where(eq(codeGenerations.id, id));
+    return generation;
   }
 }
 

@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   insertProjectSchema, 
   insertCodeGenerationSchema,
@@ -10,56 +11,93 @@ import {
   insertPerformanceMetricSchema,
   insertSecurityScanSchema,
   insertAgentTaskSchema,
-  insertInfrastructureResourceSchema
+  insertInfrastructureResourceSchema,
+  insertProjectTemplateSchema,
+  insertCodeAnalysisSchema,
+  insertCodeReviewSchema
 } from "@shared/schema";
-import { generateCodeFromPrompt } from "./services/ai";
+import { 
+  generateCodeFromPrompt, 
+  generateCodeStreamFromPrompt,
+  improveCode,
+  analyzeCode,
+  generateTests,
+  optimizeCode,
+  type GenerationContext,
+  type StreamingUpdate
+} from "./services/ai";
 import { agentManager } from "./services/agentManager";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get current user (demo user for now)
-  app.get("/api/user", async (req, res) => {
+  // Setup Replit Auth first
+  await setupAuth(app);
+
+  // Helper function to get authenticated user ID
+  const getUserId = (req: any): string => {
+    const user = req.user as any;
+    return user?.claims?.sub || user?.id;
+  };
+
+  // Helper function to validate project ownership
+  const validateProjectOwnership = async (projectId: string, userId: string) => {
+    const project = await storage.getProject(projectId);
+    if (!project || project.userId !== userId) {
+      throw new Error('Project not found or access denied');
+    }
+    return project;
+  };
+  // Get current authenticated user
+  app.get("/api/user", isAuthenticated, async (req, res) => {
     try {
-      const user = await storage.getUser("demo-user-1");
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
-      const { password, ...userWithoutPassword } = user;
+      // Remove password from response (if it exists)
+      const { password, ...userWithoutPassword } = user as any;
       res.json(userWithoutPassword);
     } catch (error) {
+      console.error('Get user error:', error);
       res.status(500).json({ message: "Failed to get user" });
     }
   });
 
-  // Get user projects
-  app.get("/api/projects", async (req, res) => {
+  // Get authenticated user's projects
+  app.get("/api/projects", isAuthenticated, async (req, res) => {
     try {
-      const projects = await storage.getProjectsByUserId("demo-user-1");
+      const userId = getUserId(req);
+      const projects = await storage.getProjectsByUserId(userId);
       res.json(projects);
     } catch (error) {
+      console.error('Get projects error:', error);
       res.status(500).json({ message: "Failed to get projects" });
     }
   });
 
-  // Get single project
-  app.get("/api/projects/:id", async (req, res) => {
+  // Get single project with ownership validation
+  app.get("/api/projects/:id", isAuthenticated, async (req, res) => {
     try {
-      const project = await storage.getProject(req.params.id);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
+      const userId = getUserId(req);
+      const project = await validateProjectOwnership(req.params.id, userId);
       res.json(project);
     } catch (error) {
-      res.status(500).json({ message: "Failed to get project" });
+      console.error('Get project error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      res.status(404).json({ message: "Project not found" });
     }
   });
 
-  // Create new project
-  app.post("/api/projects", async (req, res) => {
+  // Create new project for authenticated user
+  app.post("/api/projects", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
       const data = insertProjectSchema.parse(req.body);
       const project = await storage.createProject({
         ...data,
-        userId: "demo-user-1"
+        userId
       });
       res.status(201).json(project);
     } catch (error) {
@@ -67,75 +105,341 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update project
-  app.patch("/api/projects/:id", async (req, res) => {
+  // Update project with ownership validation
+  app.patch("/api/projects/:id", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
+      await validateProjectOwnership(req.params.id, userId);
       const project = await storage.updateProject(req.params.id, req.body);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
       res.json(project);
     } catch (error) {
+      console.error('Update project error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.status(500).json({ message: "Failed to update project" });
     }
   });
 
-  // Delete project
-  app.delete("/api/projects/:id", async (req, res) => {
+  // Delete project with ownership validation
+  app.delete("/api/projects/:id", isAuthenticated, async (req, res) => {
     try {
+      const userId = getUserId(req);
+      await validateProjectOwnership(req.params.id, userId);
       const deleted = await storage.deleteProject(req.params.id);
       if (!deleted) {
         return res.status(404).json({ message: "Project not found" });
       }
       res.status(204).send();
     } catch (error) {
+      console.error('Delete project error:', error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.status(500).json({ message: "Failed to delete project" });
     }
   });
 
-  // Generate code from prompt
-  app.post("/api/generate-code", async (req, res) => {
+  // =====================================================
+  // Enhanced Vibe Coding Engine API Endpoints
+  // =====================================================
+
+  // Project Templates
+  app.get("/api/templates", async (req, res) => {
     try {
+      const { category } = req.query;
+      const templates = await storage.getProjectTemplates(category as string);
+      res.json(templates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get templates" });
+    }
+  });
+
+  app.post("/api/templates", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertProjectTemplateSchema.parse({
+        ...req.body,
+        createdBy: userId
+      });
+      const template = await storage.createProjectTemplate(data);
+      res.status(201).json(template);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid template data" });
+    }
+  });
+
+  // Enhanced code generation with streaming support
+  app.post("/api/generate-code", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
       const data = insertCodeGenerationSchema.parse(req.body);
       
+      // Validate project ownership
+      await validateProjectOwnership(data.projectId, userId);
+      
       // Create code generation record
-      const generation = await storage.createCodeGeneration(data);
+      const generation = await storage.createCodeGeneration({
+        ...data,
+        status: "pending",
+        progress: 0
+      });
+      
+      // Get existing project context
+      const project = await storage.getProject(data.projectId);
+      
+      const context: GenerationContext = {
+        type: data.generationType || 'full-app',
+        framework: data.framework || project?.framework,
+        existingCode: project?.files as Record<string, string> || {}
+      };
       
       try {
-        // Generate code using AI
-        const generatedCode = await generateCodeFromPrompt(data.prompt);
+        // Generate code using enhanced AI service
+        const generatedCode = await generateCodeFromPrompt(data.prompt, context);
         
-        // Update the project with generated code
-        const project = await storage.updateProject(data.projectId, {
+        // Update generation record
+        await storage.updateCodeGeneration(generation.id, {
+          status: "completed",
+          progress: 100,
+          generatedCode: generatedCode,
+          success: true,
+          tokensUsed: generatedCode.metadata?.tokensUsed || 0,
+          completedAt: new Date()
+        });
+        
+        // Update project
+        const updatedProject = await storage.updateProject(data.projectId, {
           files: generatedCode.files,
           framework: generatedCode.framework,
           description: generatedCode.description,
+          dependencies: generatedCode.dependencies,
+          databaseSchema: generatedCode.databaseSchema,
+          apiEndpoints: generatedCode.apiEndpoints,
           status: "building"
         });
 
-        // Simulate deployment process
+        // Create generation history
+        const historyCount = await storage.getGenerationHistory(data.projectId);
+        await storage.createGenerationHistory({
+          projectId: data.projectId,
+          generationId: generation.id,
+          version: historyCount.length + 1,
+          snapshot: {
+            files: generatedCode.files,
+            dependencies: generatedCode.dependencies
+          },
+          prompt: data.prompt,
+          parentVersion: historyCount.length,
+          isCurrent: true
+        });
+
+        // Simulate deployment
         setTimeout(async () => {
           await storage.updateProject(data.projectId, {
             status: "deployed",
-            deploymentUrl: `https://${project?.name?.toLowerCase().replace(/\s+/g, '-')}.careerate.dev`
+            deploymentUrl: `https://${updatedProject?.name?.toLowerCase().replace(/\s+/g, '-')}.careerate.dev`
           });
         }, 3000);
 
         res.json({ 
           success: true, 
-          project,
-          generatedCode 
+          project: updatedProject,
+          generatedCode,
+          generationId: generation.id
         });
       } catch (aiError) {
+        await storage.updateCodeGeneration(generation.id, {
+          status: "failed",
+          success: false,
+          errorMessage: (aiError as Error).message
+        });
         await storage.updateProject(data.projectId, { status: "error" });
         throw aiError;
       }
     } catch (error) {
       console.error("Code generation error:", error);
+      if (error.message.includes('access denied')) {
+        return res.status(403).json({ message: "Access denied" });
+      }
       res.status(500).json({ 
         message: "Failed to generate code",
         error: (error as Error).message 
       });
+    }
+  });
+
+  // Streaming code generation
+  app.post("/api/generate-code/stream", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const data = insertCodeGenerationSchema.parse(req.body);
+      
+      // Validate project ownership
+      await validateProjectOwnership(data.projectId, userId);
+      
+      // Set up SSE headers
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*'
+      });
+      
+      const generation = await storage.createCodeGeneration({
+        ...data,
+        status: "streaming",
+        progress: 0
+      });
+      
+      const project = await storage.getProject(data.projectId);
+      const context: GenerationContext = {
+        type: data.generationType || 'full-app',
+        framework: data.framework || project?.framework,
+        existingCode: project?.files as Record<string, string> || {}
+      };
+      
+      // Stream generation with progress updates
+      const streamGenerator = generateCodeStreamFromPrompt(
+        data.prompt, 
+        context, 
+        async (update: StreamingUpdate) => {
+          res.write(`data: ${JSON.stringify(update)}\n\n`);
+          
+          if (update.progress) {
+            await storage.updateCodeGeneration(generation.id, {
+              progress: update.progress,
+              status: update.type === 'complete' ? 'completed' : 'streaming'
+            });
+          }
+        }
+      );
+      
+      for await (const update of streamGenerator) {
+        if (update.type === 'complete') {
+          // Update generation and project
+          await storage.updateCodeGeneration(generation.id, {
+            status: "completed",
+            progress: 100,
+            generatedCode: update.data,
+            success: true,
+            completedAt: new Date()
+          });
+          
+          await storage.updateProject(data.projectId, {
+            files: update.data.files,
+            framework: update.data.framework,
+            description: update.data.description,
+            status: "building"
+          });
+          
+          break;
+        }
+      }
+      
+      res.write(`data: ${JSON.stringify({ type: 'end' })}\n\n`);
+      res.end();
+      
+    } catch (error) {
+      res.write(`data: ${JSON.stringify({ 
+        type: 'error', 
+        data: (error as Error).message 
+      })}\n\n`);
+      res.end();
+    }
+  });
+
+  // Code Analysis
+  app.post("/api/projects/:projectId/analyze", async (req, res) => {
+    try {
+      const { analysisType = "quality" } = req.body;
+      const project = await storage.getProject(req.params.projectId);
+      
+      if (!project?.files) {
+        return res.status(404).json({ message: "Project or files not found" });
+      }
+      
+      const analysis = await storage.createCodeAnalysis({
+        projectId: req.params.projectId,
+        analysisType,
+        status: "running"
+      });
+      
+      try {
+        const analysisResult = await analyzeCode(project.files as Record<string, string>);
+        
+        await storage.updateCodeAnalysis(analysis.id, {
+          status: "completed",
+          score: analysisResult.overall?.score || 0,
+          findings: analysisResult,
+          completedAt: new Date()
+        });
+        
+        res.json({ analysis: analysisResult, analysisId: analysis.id });
+      } catch (error) {
+        await storage.updateCodeAnalysis(analysis.id, { status: "failed" });
+        throw error;
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to analyze code" });
+    }
+  });
+
+  // Code Improvement
+  app.post("/api/projects/:projectId/improve", async (req, res) => {
+    try {
+      const { improvement } = req.body;
+      const project = await storage.getProject(req.params.projectId);
+      
+      if (!project?.files) {
+        return res.status(404).json({ message: "Project or files not found" });
+      }
+      
+      const improvedCode = await improveCode(
+        project.files as Record<string, string>, 
+        improvement
+      );
+      
+      await storage.updateProject(req.params.projectId, {
+        files: improvedCode.files,
+        dependencies: { ...project.dependencies, ...improvedCode.dependencies }
+      });
+      
+      res.json({ 
+        success: true, 
+        improvements: improvedCode.metadata?.changes || []
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to improve code" });
+    }
+  });
+
+  // Test Generation
+  app.post("/api/projects/:projectId/generate-tests", async (req, res) => {
+    try {
+      const { testType = "unit" } = req.body;
+      const project = await storage.getProject(req.params.projectId);
+      
+      if (!project?.files) {
+        return res.status(404).json({ message: "Project or files not found" });
+      }
+      
+      const testFiles = await generateTests(
+        project.files as Record<string, string>, 
+        testType as 'unit' | 'integration' | 'e2e'
+      );
+      
+      const updatedFiles = { ...project.files, ...testFiles };
+      await storage.updateProject(req.params.projectId, {
+        files: updatedFiles
+      });
+      
+      res.json({ success: true, testFiles, testType });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate tests" });
     }
   });
 

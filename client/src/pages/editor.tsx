@@ -1,20 +1,41 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, Code, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Code, ExternalLink, AlertCircle, Loader2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import CodeEditor from "@/components/code-editor";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+// Streaming state types
+interface StreamingState {
+  isStreaming: boolean;
+  progress: number;
+  status: string;
+  message: string;
+  error: string | null;
+}
 
 export default function Editor() {
   const [, params] = useRoute("/editor/:projectId");
   const projectId = params?.projectId;
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Streaming state
+  const [streamingState, setStreamingState] = useState<StreamingState>({
+    isStreaming: false,
+    progress: 0,
+    status: '',
+    message: '',
+    error: null
+  });
+  
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   const { data: project, isLoading, error } = useQuery({
     queryKey: ["/api/projects", projectId],
@@ -63,8 +84,81 @@ export default function Editor() {
     updateProjectMutation.mutate({ files });
   };
 
+  // Streaming code generation with Server-Sent Events
+  const handleGenerateCodeStream = useCallback(async (prompt: string) => {
+    if (!projectId) return;
+    
+    try {
+      // Reset streaming state
+      setStreamingState({
+        isStreaming: true,
+        progress: 0,
+        status: 'Initializing...',
+        message: 'Starting code generation...',
+        error: null
+      });
+      
+      // Close any existing connection
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+      
+      // Start streaming generation
+      const response = await apiRequest("POST", "/api/generate-code/stream", {
+        projectId,
+        prompt,
+        generationType: "full-app"
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to start streaming generation');
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Generation failed');
+      }
+      
+      // Update UI with successful completion
+      setStreamingState(prev => ({
+        ...prev,
+        isStreaming: false,
+        progress: 100,
+        status: 'Completed',
+        message: 'Code generated successfully!'
+      }));
+      
+      // Invalidate queries to refresh project data
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", projectId] });
+      
+      toast({
+        title: "Success",
+        description: "Code generated successfully with streaming!",
+      });
+      
+    } catch (error) {
+      console.error('Streaming generation error:', error);
+      
+      setStreamingState(prev => ({
+        ...prev,
+        isStreaming: false,
+        error: (error as Error).message,
+        status: 'Failed',
+        message: 'Code generation failed'
+      }));
+      
+      toast({
+        title: "Error",
+        description: (error as Error).message || "Failed to generate code. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [projectId, queryClient, toast]);
+  
   const handleGenerateCode = (prompt: string) => {
-    generateCodeMutation.mutate(prompt);
+    // Use streaming generation by default
+    handleGenerateCodeStream(prompt);
   };
 
   const getStatusColor = (status: string) => {
@@ -230,6 +324,44 @@ export default function Editor() {
                 </AlertDescription>
               </Alert>
             )}
+            
+            {/* Streaming Progress Indicator */}
+            {streamingState.isStreaming && (
+              <Card data-testid="streaming-progress-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center space-x-2">
+                    <Zap className="h-4 w-4 text-yellow-500" />
+                    <span>AI Code Generation</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span data-testid="streaming-status">{streamingState.status}</span>
+                      <span data-testid="streaming-progress-percent">{streamingState.progress}%</span>
+                    </div>
+                    <Progress 
+                      value={streamingState.progress} 
+                      className="h-2"
+                      data-testid="streaming-progress-bar" 
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground" data-testid="streaming-message">
+                    {streamingState.message}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Streaming Error Display */}
+            {streamingState.error && !streamingState.isStreaming && (
+              <Alert variant="destructive" data-testid="streaming-error-alert">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Streaming Error:</strong> {streamingState.error}
+                </AlertDescription>
+              </Alert>
+            )}
 
             {project.status === "error" && (
               <Alert variant="destructive" data-testid="error-alert">
@@ -255,7 +387,7 @@ export default function Editor() {
                   files={project.files || {}}
                   onFilesChange={handleFilesChange}
                   onGenerateCode={handleGenerateCode}
-                  isGenerating={generateCodeMutation.isPending}
+                  isGenerating={streamingState.isStreaming || generateCodeMutation.isPending}
                 />
               </CardContent>
             </Card>

@@ -22,6 +22,11 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  preferences: jsonb("preferences").default({}), // coding preferences, themes, etc.
+  subscription: text("subscription").default("free"), // "free", "pro", "enterprise"
+  totalTokensUsed: integer("total_tokens_used").default(0),
+  monthlyTokensUsed: integer("monthly_tokens_used").default(0),
+  apiUsageLimit: integer("api_usage_limit").default(10000),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -32,9 +37,20 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   description: text("description"),
   framework: text("framework").notNull(),
+  templateId: varchar("template_id").references(() => projectTemplates.id),
   files: jsonb("files").default({}),
+  dependencies: jsonb("dependencies").default({}),
+  configuration: jsonb("configuration").default({}),
+  databaseSchema: jsonb("database_schema").default({}),
+  apiEndpoints: jsonb("api_endpoints").default([]),
   status: text("status").notNull().default("draft"), // draft, building, deployed, error
   deploymentUrl: text("deployment_url"),
+  repositoryUrl: text("repository_url"),
+  tags: text("tags").array().default([]),
+  isPublic: boolean("is_public").default(false),
+  starCount: integer("star_count").default(0),
+  viewCount: integer("view_count").default(0),
+  lastAccessedAt: timestamp("last_accessed_at").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -44,7 +60,17 @@ export const codeGenerations = pgTable("code_generations", {
   projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
   prompt: text("prompt").notNull(),
   generatedCode: jsonb("generated_code"),
+  status: text("status").notNull().default("pending"), // "pending", "streaming", "completed", "failed"
+  progress: integer("progress").default(0), // 0-100 percentage
+  generationType: text("generation_type").notNull().default("full-app"), // "full-app", "component", "api", "database", "test"
+  framework: text("framework"),
+  metadata: jsonb("metadata").default({}),
+  tokensUsed: integer("tokens_used").default(0),
+  estimatedCost: decimal("estimated_cost", { precision: 10, scale: 4 }).default("0"),
+  quality: text("quality"), // "excellent", "good", "fair", "poor"
+  errorMessage: text("error_message"),
   success: boolean("success").notNull().default(false),
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -151,6 +177,89 @@ export const infrastructureResources = pgTable("infrastructure_resources", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Enhanced Vibe Coding Engine Tables
+
+export const projectTemplates = pgTable("project_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // "web-app", "mobile-app", "api", "full-stack", "e-commerce"
+  framework: text("framework").notNull(), // "react", "vue", "next", "express", "fastapi"
+  difficulty: text("difficulty").notNull().default("beginner"), // "beginner", "intermediate", "advanced"
+  tags: text("tags").array().default([]),
+  fileStructure: jsonb("file_structure").notNull(),
+  dependencies: jsonb("dependencies").default({}),
+  configuration: jsonb("configuration").default({}),
+  databaseSchema: jsonb("database_schema").default({}),
+  prompts: jsonb("prompts").default({}), // predefined prompts for this template
+  thumbnail: text("thumbnail"),
+  demoUrl: text("demo_url"),
+  sourceUrl: text("source_url"),
+  downloads: integer("downloads").default(0),
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0"),
+  isOfficial: boolean("is_official").default(false),
+  isPublic: boolean("is_public").default(true),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const codeAnalysis = pgTable("code_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  generationId: varchar("generation_id").references(() => codeGenerations.id, { onDelete: "cascade" }),
+  analysisType: text("analysis_type").notNull(), // "security", "performance", "quality", "accessibility", "seo"
+  score: integer("score"), // 0-100
+  findings: jsonb("findings").default([]),
+  suggestions: jsonb("suggestions").default([]),
+  metrics: jsonb("metrics").default({}),
+  status: text("status").notNull().default("pending"), // "pending", "running", "completed", "failed"
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const generationHistory = pgTable("generation_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  generationId: varchar("generation_id").notNull().references(() => codeGenerations.id, { onDelete: "cascade" }),
+  version: integer("version").notNull(),
+  snapshot: jsonb("snapshot").notNull(), // complete state at this version
+  changes: jsonb("changes").default([]), // what changed from previous version
+  prompt: text("prompt"),
+  parentVersion: integer("parent_version"),
+  isCurrent: boolean("is_current").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const codeReviews = pgTable("code_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  generationId: varchar("generation_id").notNull().references(() => codeGenerations.id, { onDelete: "cascade" }),
+  reviewType: text("review_type").notNull(), // "automated", "manual", "ai-assisted"
+  reviewer: varchar("reviewer"), // user id or "ai"
+  status: text("status").notNull().default("pending"), // "pending", "approved", "rejected", "changes-requested"
+  score: integer("score"), // 1-10
+  comments: jsonb("comments").default([]),
+  suggestions: jsonb("suggestions").default([]),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const apiDocumentation = pgTable("api_documentation", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  endpoints: jsonb("endpoints").default([]),
+  schemas: jsonb("schemas").default({}),
+  examples: jsonb("examples").default({}),
+  version: text("version").default("1.0.0"),
+  format: text("format").default("openapi"), // "openapi", "swagger", "postman"
+  autoGenerated: boolean("auto_generated").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Define table relations
 export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projects),
@@ -161,6 +270,10 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     fields: [projects.userId],
     references: [users.id],
   }),
+  template: one(projectTemplates, {
+    fields: [projects.templateId],
+    references: [projectTemplates.id],
+  }),
   codeGenerations: many(codeGenerations),
   aiAgents: many(aiAgents),
   deployments: many(deployments),
@@ -168,11 +281,66 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
   performanceMetrics: many(performanceMetrics),
   securityScans: many(securityScans),
   infrastructureResources: many(infrastructureResources),
+  codeAnalysis: many(codeAnalysis),
+  generationHistory: many(generationHistory),
+  codeReviews: many(codeReviews),
+  apiDocumentation: many(apiDocumentation),
 }));
 
-export const codeGenerationsRelations = relations(codeGenerations, ({ one }) => ({
+export const codeGenerationsRelations = relations(codeGenerations, ({ one, many }) => ({
   project: one(projects, {
     fields: [codeGenerations.projectId],
+    references: [projects.id],
+  }),
+  codeAnalysis: many(codeAnalysis),
+  generationHistory: many(generationHistory),
+  codeReviews: many(codeReviews),
+}));
+
+export const projectTemplatesRelations = relations(projectTemplates, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [projectTemplates.createdBy],
+    references: [users.id],
+  }),
+  projects: many(projects),
+}));
+
+export const codeAnalysisRelations = relations(codeAnalysis, ({ one }) => ({
+  project: one(projects, {
+    fields: [codeAnalysis.projectId],
+    references: [projects.id],
+  }),
+  generation: one(codeGenerations, {
+    fields: [codeAnalysis.generationId],
+    references: [codeGenerations.id],
+  }),
+}));
+
+export const generationHistoryRelations = relations(generationHistory, ({ one }) => ({
+  project: one(projects, {
+    fields: [generationHistory.projectId],
+    references: [projects.id],
+  }),
+  generation: one(codeGenerations, {
+    fields: [generationHistory.generationId],
+    references: [codeGenerations.id],
+  }),
+}));
+
+export const codeReviewsRelations = relations(codeReviews, ({ one }) => ({
+  project: one(projects, {
+    fields: [codeReviews.projectId],
+    references: [projects.id],
+  }),
+  generation: one(codeGenerations, {
+    fields: [codeReviews.generationId],
+    references: [codeGenerations.id],
+  }),
+}));
+
+export const apiDocumentationRelations = relations(apiDocumentation, ({ one }) => ({
+  project: one(projects, {
+    fields: [apiDocumentation.projectId],
     references: [projects.id],
   }),
 }));
@@ -256,6 +424,42 @@ export const insertProjectSchema = createInsertSchema(projects).pick({
 export const insertCodeGenerationSchema = createInsertSchema(codeGenerations).pick({
   projectId: true,
   prompt: true,
+  generationType: true,
+  framework: true,
+  metadata: true,
+});
+
+export const insertProjectTemplateSchema = createInsertSchema(projectTemplates).pick({
+  name: true,
+  description: true,
+  category: true,
+  framework: true,
+  difficulty: true,
+  tags: true,
+  fileStructure: true,
+  dependencies: true,
+  configuration: true,
+  databaseSchema: true,
+  prompts: true,
+  thumbnail: true,
+  demoUrl: true,
+  isPublic: true,
+});
+
+export const insertCodeAnalysisSchema = createInsertSchema(codeAnalysis).pick({
+  projectId: true,
+  generationId: true,
+  analysisType: true,
+});
+
+export const insertCodeReviewSchema = createInsertSchema(codeReviews).pick({
+  projectId: true,
+  generationId: true,
+  reviewType: true,
+  reviewer: true,
+  score: true,
+  comments: true,
+  suggestions: true,
 });
 
 // AI DevOps schemas
@@ -324,6 +528,14 @@ export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 export type InsertCodeGeneration = z.infer<typeof insertCodeGenerationSchema>;
 export type CodeGeneration = typeof codeGenerations.$inferSelect;
+export type InsertProjectTemplate = z.infer<typeof insertProjectTemplateSchema>;
+export type ProjectTemplate = typeof projectTemplates.$inferSelect;
+export type InsertCodeAnalysis = z.infer<typeof insertCodeAnalysisSchema>;
+export type CodeAnalysis = typeof codeAnalysis.$inferSelect;
+export type InsertCodeReview = z.infer<typeof insertCodeReviewSchema>;
+export type CodeReview = typeof codeReviews.$inferSelect;
+export type GenerationHistory = typeof generationHistory.$inferSelect;
+export type ApiDocumentation = typeof apiDocumentation.$inferSelect;
 
 // AI DevOps types
 export type InsertAiAgent = z.infer<typeof insertAiAgentSchema>;
