@@ -25,6 +25,12 @@ import {
   migrationExecutionLogs,
   migrationAssessmentFindings,
   migrationCostAnalysis,
+  apmTransactions,
+  databasePerformanceMetrics,
+  rumMetrics,
+  timeSeriesMetrics,
+  performanceBaselines,
+  logEntries,
   type User, 
   type UpsertUser, 
   type Project, 
@@ -75,6 +81,18 @@ import {
   type InsertMigrationAssessmentFinding,
   type MigrationCostAnalysis,
   type InsertMigrationCostAnalysis,
+  type ApmTransaction,
+  type InsertApmTransaction,
+  type DatabasePerformanceMetric,
+  type InsertDatabasePerformanceMetric,
+  type RumMetric,
+  type InsertRumMetric,
+  type TimeSeriesMetric,
+  type InsertTimeSeriesMetric,
+  type PerformanceBaseline,
+  type InsertPerformanceBaseline,
+  type LogEntry,
+  type InsertLogEntry,
   integrations,
   integrationSecrets,
   repositoryConnections,
@@ -101,7 +119,7 @@ import {
   type InsertApiRateLimit
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -365,6 +383,19 @@ export interface IStorage {
   updateApiRateLimit(id: string, updates: Partial<ApiRateLimit>): Promise<ApiRateLimit | undefined>;
   deleteApiRateLimit(id: string): Promise<boolean>;
   getRateLimitsByService(service: string): Promise<ApiRateLimit[]>;
+
+  // Performance Analytics operations
+  createApmTransaction(transaction: InsertApmTransaction): Promise<ApmTransaction>;
+  getApmTransactions(projectId: string, startTime: Date, endTime: Date): Promise<ApmTransaction[]>;
+  createDatabasePerformanceMetric(metric: InsertDatabasePerformanceMetric): Promise<DatabasePerformanceMetric>;
+  getDatabasePerformanceMetrics(projectId: string, startTime: Date, endTime: Date): Promise<DatabasePerformanceMetric[]>;
+  createRumMetric(metric: InsertRumMetric): Promise<RumMetric>;
+  getRumMetrics(projectId: string, startTime: Date, endTime: Date): Promise<RumMetric[]>;
+  createTimeSeriesMetric(metric: InsertTimeSeriesMetric): Promise<TimeSeriesMetric>;
+  getTimeSeriesMetrics(projectId: string, resourceId: string | null, startTime: Date, endTime: Date): Promise<TimeSeriesMetric[]>;
+  createPerformanceBaseline(baseline: InsertPerformanceBaseline): Promise<PerformanceBaseline>;
+  getPerformanceBaselines(projectId: string): Promise<PerformanceBaseline[]>;
+  createLogEntry(logEntry: InsertLogEntry): Promise<LogEntry>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1760,6 +1791,107 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(apiRateLimits)
       .where(eq(apiRateLimits.service, service))
       .orderBy(desc(apiRateLimits.createdAt));
+  }
+
+  // Performance Analytics operations
+  async createApmTransaction(transaction: InsertApmTransaction): Promise<ApmTransaction> {
+    const [newTransaction] = await db
+      .insert(apmTransactions)
+      .values(transaction)
+      .returning();
+    return newTransaction;
+  }
+
+  async getApmTransactions(projectId: string, startTime: Date, endTime: Date): Promise<ApmTransaction[]> {
+    return await db.select().from(apmTransactions)
+      .where(and(
+        eq(apmTransactions.projectId, projectId),
+        sql`${apmTransactions.startTime} >= ${startTime}`,
+        sql`${apmTransactions.startTime} <= ${endTime}`
+      ))
+      .orderBy(desc(apmTransactions.startTime));
+  }
+
+  async createDatabasePerformanceMetric(metric: InsertDatabasePerformanceMetric): Promise<DatabasePerformanceMetric> {
+    const [newMetric] = await db
+      .insert(databasePerformanceMetrics)
+      .values(metric)
+      .returning();
+    return newMetric;
+  }
+
+  async getDatabasePerformanceMetrics(projectId: string, startTime: Date, endTime: Date): Promise<DatabasePerformanceMetric[]> {
+    return await db.select().from(databasePerformanceMetrics)
+      .where(and(
+        eq(databasePerformanceMetrics.projectId, projectId),
+        sql`${databasePerformanceMetrics.timestamp} >= ${startTime}`,
+        sql`${databasePerformanceMetrics.timestamp} <= ${endTime}`
+      ))
+      .orderBy(desc(databasePerformanceMetrics.timestamp));
+  }
+
+  async createRumMetric(metric: InsertRumMetric): Promise<RumMetric> {
+    const [newMetric] = await db
+      .insert(rumMetrics)
+      .values(metric)
+      .returning();
+    return newMetric;
+  }
+
+  async getRumMetrics(projectId: string, startTime: Date, endTime: Date): Promise<RumMetric[]> {
+    return await db.select().from(rumMetrics)
+      .where(and(
+        eq(rumMetrics.projectId, projectId),
+        sql`${rumMetrics.timestamp} >= ${startTime}`,
+        sql`${rumMetrics.timestamp} <= ${endTime}`
+      ))
+      .orderBy(desc(rumMetrics.timestamp));
+  }
+
+  async createTimeSeriesMetric(metric: InsertTimeSeriesMetric): Promise<TimeSeriesMetric> {
+    const [newMetric] = await db
+      .insert(timeSeriesMetrics)
+      .values(metric)
+      .returning();
+    return newMetric;
+  }
+
+  async getTimeSeriesMetrics(projectId: string, resourceId: string | null, startTime: Date, endTime: Date): Promise<TimeSeriesMetric[]> {
+    const conditions = [
+      eq(timeSeriesMetrics.projectId, projectId),
+      sql`${timeSeriesMetrics.timestamp} >= ${startTime}`,
+      sql`${timeSeriesMetrics.timestamp} <= ${endTime}`
+    ];
+    
+    if (resourceId) {
+      conditions.push(eq(timeSeriesMetrics.resourceId, resourceId));
+    }
+    
+    return await db.select().from(timeSeriesMetrics)
+      .where(and(...conditions))
+      .orderBy(desc(timeSeriesMetrics.timestamp));
+  }
+
+  async createPerformanceBaseline(baseline: InsertPerformanceBaseline): Promise<PerformanceBaseline> {
+    const [newBaseline] = await db
+      .insert(performanceBaselines)
+      .values(baseline)
+      .returning();
+    return newBaseline;
+  }
+
+  async getPerformanceBaselines(projectId: string): Promise<PerformanceBaseline[]> {
+    return await db.select().from(performanceBaselines)
+      .where(eq(performanceBaselines.projectId, projectId))
+      .orderBy(desc(performanceBaselines.createdAt));
+  }
+
+  async createLogEntry(logEntry: InsertLogEntry): Promise<LogEntry> {
+    const [newLogEntry] = await db
+      .insert(logEntries)
+      .values(logEntry)
+      .returning();
+    return newLogEntry;
   }
 }
 

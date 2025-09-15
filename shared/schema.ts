@@ -269,6 +269,426 @@ export const infrastructureResources = pgTable("infrastructure_resources", {
 });
 
 // =====================================================
+// Advanced Monitoring & Analytics Platform
+// =====================================================
+
+// SLA Configuration and Tracking
+export const slaConfigurations = pgTable("sla_configurations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  slaType: text("sla_type").notNull(), // "uptime", "response_time", "throughput", "error_rate", "availability"
+  targetValue: decimal("target_value", { precision: 10, scale: 4 }).notNull(),
+  unit: text("unit").notNull(), // "percent", "ms", "req/sec", etc.
+  measurementWindow: integer("measurement_window").default(86400), // seconds
+  breachThreshold: decimal("breach_threshold", { precision: 10, scale: 4 }),
+  violationActions: jsonb("violation_actions").default([]), // automated actions on SLA breach
+  escalationPolicy: jsonb("escalation_policy").default({}),
+  notificationChannels: jsonb("notification_channels").default([]),
+  isActive: boolean("is_active").default(true),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// SLA Violations and Tracking
+export const slaViolations = pgTable("sla_violations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slaConfigurationId: varchar("sla_configuration_id").notNull().references(() => slaConfigurations.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  violationType: text("violation_type").notNull(), // "threshold_breach", "downtime", "performance_degradation"
+  severity: text("severity").notNull(), // "low", "medium", "high", "critical"
+  actualValue: decimal("actual_value", { precision: 10, scale: 4 }),
+  expectedValue: decimal("expected_value", { precision: 10, scale: 4 }),
+  duration: integer("duration"), // violation duration in seconds
+  impactDescription: text("impact_description"),
+  rootCause: text("root_cause"),
+  resolution: text("resolution"),
+  status: text("status").notNull().default("open"), // "open", "investigating", "resolved", "closed"
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  automaticActions: jsonb("automatic_actions").default([]),
+  metadata: jsonb("metadata").default({}),
+  startedAt: timestamp("started_at").notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Enhanced Time-Series Metrics Storage
+export const timeSeriesMetrics = pgTable("time_series_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  resourceId: varchar("resource_id").references(() => infrastructureResources.id),
+  metricName: text("metric_name").notNull(),
+  metricType: text("metric_type").notNull(), // "counter", "gauge", "histogram", "rate"
+  value: decimal("value", { precision: 15, scale: 6 }).notNull(),
+  unit: text("unit").notNull(),
+  dimensions: jsonb("dimensions").default({}), // key-value pairs for grouping
+  tags: jsonb("tags").default({}),
+  aggregation: text("aggregation").default("avg"), // "avg", "sum", "min", "max", "count"
+  timeWindow: integer("time_window").default(60), // seconds
+  timestamp: timestamp("timestamp").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_time_series_metrics_project_name_time").on(table.projectId, table.metricName, table.timestamp),
+  index("idx_time_series_metrics_resource_name_time").on(table.resourceId, table.metricName, table.timestamp),
+]);
+
+// Anomaly Detection Models and Results
+export const anomalyDetectionModels = pgTable("anomaly_detection_models", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  modelName: text("model_name").notNull(),
+  modelType: text("model_type").notNull(), // "isolation_forest", "lstm", "arima", "statistical"
+  targetMetrics: jsonb("target_metrics").notNull(), // metrics this model monitors
+  trainingData: jsonb("training_data").default({}),
+  hyperparameters: jsonb("hyperparameters").default({}),
+  modelArtifacts: jsonb("model_artifacts").default({}), // serialized model
+  sensitivity: decimal("sensitivity", { precision: 3, scale: 2 }).default("0.8"),
+  accuracy: decimal("accuracy", { precision: 3, scale: 2 }).default("0"),
+  lastTrained: timestamp("last_trained"),
+  retrainingSchedule: text("retraining_schedule").default("daily"), // "hourly", "daily", "weekly"
+  status: text("status").notNull().default("active"), // "active", "training", "inactive", "error"
+  version: text("version").default("1.0"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Anomaly Detection Results
+export const anomalyDetections = pgTable("anomaly_detections", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  modelId: varchar("model_id").notNull().references(() => anomalyDetectionModels.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  metricName: text("metric_name").notNull(),
+  anomalyType: text("anomaly_type").notNull(), // "spike", "drop", "trend_change", "seasonality_break"
+  severity: text("severity").notNull(), // "low", "medium", "high", "critical"
+  confidenceScore: decimal("confidence_score", { precision: 3, scale: 2 }).notNull(),
+  actualValue: decimal("actual_value", { precision: 15, scale: 6 }),
+  expectedValue: decimal("expected_value", { precision: 15, scale: 6 }),
+  deviation: decimal("deviation", { precision: 15, scale: 6 }),
+  context: jsonb("context").default({}), // surrounding metrics and conditions
+  relatedIncidents: jsonb("related_incidents").default([]),
+  automaticActions: jsonb("automatic_actions").default([]),
+  status: text("status").notNull().default("new"), // "new", "investigating", "resolved", "false_positive"
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  resolution: text("resolution"),
+  metadata: jsonb("metadata").default({}),
+  detectedAt: timestamp("detected_at").notNull(),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Alert Rules and Configuration
+export const alertRules = pgTable("alert_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  ruleType: text("rule_type").notNull(), // "threshold", "anomaly", "composite", "sla_breach"
+  metricQuery: text("metric_query").notNull(), // query or filter for metrics
+  conditions: jsonb("conditions").notNull(), // threshold values, operators
+  severity: text("severity").notNull().default("medium"), // "low", "medium", "high", "critical"
+  evaluationInterval: integer("evaluation_interval").default(60), // seconds
+  silenceDuration: integer("silence_duration").default(300), // seconds to silence after trigger
+  escalationRules: jsonb("escalation_rules").default([]),
+  notificationChannels: jsonb("notification_channels").default([]),
+  automaticActions: jsonb("automatic_actions").default([]),
+  suppressionConditions: jsonb("suppression_conditions").default({}),
+  labels: jsonb("labels").default({}),
+  isEnabled: boolean("is_enabled").default(true),
+  lastTriggered: timestamp("last_triggered"),
+  triggerCount: integer("trigger_count").default(0),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Alert Notifications and History
+export const alertNotifications = pgTable("alert_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  alertRuleId: varchar("alert_rule_id").notNull().references(() => alertRules.id, { onDelete: "cascade" }),
+  incidentId: varchar("incident_id").references(() => incidents.id),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  notificationType: text("notification_type").notNull(), // "email", "sms", "slack", "webhook", "pagerduty"
+  channel: text("channel").notNull(), // recipient or endpoint
+  subject: text("subject"),
+  message: text("message"),
+  priority: text("priority").notNull().default("normal"), // "low", "normal", "high", "urgent"
+  status: text("status").notNull().default("pending"), // "pending", "sent", "delivered", "failed"
+  deliveredAt: timestamp("delivered_at"),
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Performance Baselines and Trend Analysis
+export const performanceBaselines = pgTable("performance_baselines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  metricName: text("metric_name").notNull(),
+  resourceType: text("resource_type"), // "deployment", "database", "api", "frontend"
+  resourceId: varchar("resource_id"),
+  baselineType: text("baseline_type").notNull(), // "historical", "target", "industry_standard"
+  timeFrame: text("time_frame").notNull(), // "1h", "1d", "1w", "1m", "3m"
+  baselineValue: decimal("baseline_value", { precision: 15, scale: 6 }).notNull(),
+  standardDeviation: decimal("standard_deviation", { precision: 15, scale: 6 }),
+  percentile95: decimal("percentile_95", { precision: 15, scale: 6 }),
+  percentile99: decimal("percentile_99", { precision: 15, scale: 6 }),
+  trendDirection: text("trend_direction"), // "improving", "degrading", "stable"
+  trendStrength: decimal("trend_strength", { precision: 3, scale: 2 }), // -1 to 1
+  seasonalityPattern: jsonb("seasonality_pattern").default({}),
+  confidenceLevel: decimal("confidence_level", { precision: 3, scale: 2 }).default("0.95"),
+  sampleSize: integer("sample_size"),
+  lastCalculated: timestamp("last_calculated").notNull(),
+  validUntil: timestamp("valid_until"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// APM (Application Performance Monitoring) Data
+export const apmTransactions = pgTable("apm_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  traceId: text("trace_id").notNull(),
+  spanId: text("span_id").notNull(),
+  parentSpanId: text("parent_span_id"),
+  transactionName: text("transaction_name").notNull(),
+  serviceName: text("service_name").notNull(),
+  operationType: text("operation_type"), // "http", "db", "cache", "external"
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time").notNull(),
+  duration: integer("duration").notNull(), // microseconds
+  status: text("status").notNull(), // "success", "error", "timeout"
+  statusCode: integer("status_code"),
+  errorMessage: text("error_message"),
+  userAgent: text("user_agent"),
+  ipAddress: text("ip_address"),
+  userId: varchar("user_id"),
+  sessionId: text("session_id"),
+  tags: jsonb("tags").default({}),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_apm_transactions_project_service_time").on(table.projectId, table.serviceName, table.startTime),
+  index("idx_apm_transactions_trace_id").on(table.traceId),
+]);
+
+// Database Performance Monitoring
+export const databasePerformanceMetrics = pgTable("database_performance_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  databaseType: text("database_type").notNull(), // "postgresql", "mysql", "mongodb", "redis"
+  instanceId: text("instance_id"),
+  queryHash: text("query_hash"), // hash of the normalized query
+  query: text("query"),
+  executionTime: decimal("execution_time", { precision: 12, scale: 6 }), // milliseconds
+  rowsAffected: integer("rows_affected"),
+  rowsExamined: integer("rows_examined"),
+  indexesUsed: jsonb("indexes_used").default([]),
+  executionPlan: jsonb("execution_plan").default({}),
+  lockTime: decimal("lock_time", { precision: 12, scale: 6 }),
+  ioCost: decimal("io_cost", { precision: 12, scale: 6 }),
+  cpuCost: decimal("cpu_cost", { precision: 12, scale: 6 }),
+  memoryCost: decimal("memory_cost", { precision: 12, scale: 6 }),
+  optimizationSuggestions: jsonb("optimization_suggestions").default([]),
+  isSlowQuery: boolean("is_slow_query").default(false),
+  frequency: integer("frequency").default(1), // how often this query runs
+  timestamp: timestamp("timestamp").notNull(),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_db_perf_metrics_project_time").on(table.projectId, table.timestamp),
+  index("idx_db_perf_metrics_query_hash").on(table.queryHash),
+]);
+
+// Log Aggregation and Analysis
+export const logEntries = pgTable("log_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  source: text("source").notNull(), // "application", "database", "infrastructure", "security"
+  logLevel: text("log_level").notNull(), // "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
+  serviceName: text("service_name"),
+  hostname: text("hostname"),
+  message: text("message").notNull(),
+  structuredData: jsonb("structured_data").default({}), // parsed JSON data from log
+  traceId: text("trace_id"), // correlation with APM traces
+  userId: varchar("user_id"),
+  sessionId: text("session_id"),
+  requestId: text("request_id"),
+  errorCode: text("error_code"),
+  stackTrace: text("stack_trace"),
+  fingerprint: text("fingerprint"), // unique identifier for similar logs
+  tags: jsonb("tags").default({}),
+  isProcessed: boolean("is_processed").default(false),
+  isIndexed: boolean("is_indexed").default(false),
+  timestamp: timestamp("timestamp").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_log_entries_project_level_time").on(table.projectId, table.logLevel, table.timestamp),
+  index("idx_log_entries_trace_id").on(table.traceId),
+  index("idx_log_entries_fingerprint").on(table.fingerprint),
+]);
+
+// Predictive Analytics and Forecasting
+export const predictiveModels = pgTable("predictive_models", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  modelName: text("model_name").notNull(),
+  modelType: text("model_type").notNull(), // "traffic_prediction", "capacity_planning", "cost_forecasting", "failure_prediction"
+  targetMetric: text("target_metric").notNull(),
+  inputFeatures: jsonb("input_features").notNull(),
+  algorithm: text("algorithm").notNull(), // "lstm", "arima", "prophet", "linear_regression", "random_forest"
+  hyperparameters: jsonb("hyperparameters").default({}),
+  trainingWindow: integer("training_window").default(30), // days
+  predictionHorizon: integer("prediction_horizon").default(7), // days
+  accuracy: decimal("accuracy", { precision: 5, scale: 4 }),
+  meanAbsoluteError: decimal("mean_absolute_error", { precision: 15, scale: 6 }),
+  modelArtifacts: jsonb("model_artifacts").default({}),
+  featureImportance: jsonb("feature_importance").default({}),
+  lastTrained: timestamp("last_trained"),
+  nextRetraining: timestamp("next_retraining"),
+  status: text("status").notNull().default("active"), // "active", "training", "inactive", "error"
+  version: text("version").default("1.0"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Prediction Results and Recommendations
+export const predictions = pgTable("predictions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  modelId: varchar("model_id").notNull().references(() => predictiveModels.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  predictionType: text("prediction_type").notNull(), // "traffic", "capacity", "cost", "failure"
+  targetTimestamp: timestamp("target_timestamp").notNull(),
+  predictedValue: decimal("predicted_value", { precision: 15, scale: 6 }).notNull(),
+  confidenceInterval: jsonb("confidence_interval").default({}), // lower/upper bounds
+  confidence: decimal("confidence", { precision: 3, scale: 2 }),
+  actualValue: decimal("actual_value", { precision: 15, scale: 6 }), // filled after target timestamp
+  accuracy: decimal("accuracy", { precision: 5, scale: 4 }), // calculated after actuals known
+  recommendations: jsonb("recommendations").default([]), // suggested actions
+  impactAssessment: jsonb("impact_assessment").default({}),
+  automationTriggered: boolean("automation_triggered").default(false),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_predictions_project_type_target").on(table.projectId, table.predictionType, table.targetTimestamp),
+]);
+
+// Real-User Monitoring (RUM) Data
+export const rumMetrics = pgTable("rum_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  sessionId: text("session_id").notNull(),
+  pageUrl: text("page_url").notNull(),
+  userAgent: text("user_agent"),
+  deviceType: text("device_type"), // "desktop", "mobile", "tablet"
+  browserName: text("browser_name"),
+  browserVersion: text("browser_version"),
+  connectionType: text("connection_type"), // "4g", "3g", "wifi", "ethernet"
+  country: text("country"),
+  region: text("region"),
+  firstContentfulPaint: integer("first_contentful_paint"), // milliseconds
+  largestContentfulPaint: integer("largest_contentful_paint"),
+  firstInputDelay: integer("first_input_delay"),
+  cumulativeLayoutShift: decimal("cumulative_layout_shift", { precision: 5, scale: 4 }),
+  timeToInteractive: integer("time_to_interactive"),
+  domContentLoaded: integer("dom_content_loaded"),
+  pageLoadTime: integer("page_load_time"),
+  errorCount: integer("error_count").default(0),
+  jsErrorMessages: jsonb("js_error_messages").default([]),
+  performanceEntries: jsonb("performance_entries").default({}),
+  customMetrics: jsonb("custom_metrics").default({}),
+  userId: varchar("user_id"),
+  timestamp: timestamp("timestamp").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_rum_metrics_project_page_time").on(table.projectId, table.pageUrl, table.timestamp),
+  index("idx_rum_metrics_session_id").on(table.sessionId),
+]);
+
+// Uptime Monitoring and Availability Tracking
+export const uptimeMonitors = pgTable("uptime_monitors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  monitorType: text("monitor_type").notNull(), // "http", "https", "tcp", "udp", "ping", "dns"
+  targetUrl: text("target_url").notNull(),
+  checkInterval: integer("check_interval").default(60), // seconds
+  timeout: integer("timeout").default(10), // seconds
+  expectedStatusCode: integer("expected_status_code").default(200),
+  expectedContent: text("expected_content"),
+  followRedirects: boolean("follow_redirects").default(true),
+  requestHeaders: jsonb("request_headers").default({}),
+  monitoringRegions: jsonb("monitoring_regions").default(["us-east-1"]),
+  alertThresholds: jsonb("alert_thresholds").default({}),
+  maintenanceWindows: jsonb("maintenance_windows").default([]),
+  isEnabled: boolean("is_enabled").default(true),
+  lastCheck: timestamp("last_check"),
+  currentStatus: text("current_status").default("unknown"), // "up", "down", "degraded", "unknown"
+  uptimePercentage: decimal("uptime_percentage", { precision: 5, scale: 4 }),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Uptime Check Results
+export const uptimeCheckResults = pgTable("uptime_check_results", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  monitorId: varchar("monitor_id").notNull().references(() => uptimeMonitors.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  checkRegion: text("check_region").notNull(),
+  status: text("status").notNull(), // "success", "failure", "timeout", "error"
+  responseTime: integer("response_time"), // milliseconds
+  statusCode: integer("status_code"),
+  responseSize: integer("response_size"), // bytes
+  errorMessage: text("error_message"),
+  sslCertExpiry: timestamp("ssl_cert_expiry"),
+  dnsLookupTime: integer("dns_lookup_time"),
+  connectTime: integer("connect_time"),
+  tlsHandshakeTime: integer("tls_handshake_time"),
+  transferTime: integer("transfer_time"),
+  redirectCount: integer("redirect_count").default(0),
+  incidentCreated: boolean("incident_created").default(false),
+  incidentId: varchar("incident_id").references(() => incidents.id),
+  timestamp: timestamp("timestamp").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_uptime_check_results_monitor_time").on(table.monitorId, table.timestamp),
+  index("idx_uptime_check_results_project_status").on(table.projectId, table.status),
+]);
+
+// Custom Dashboard Configurations
+export const customDashboards = pgTable("custom_dashboards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  dashboardType: text("dashboard_type").default("custom"), // "custom", "template", "shared"
+  layout: jsonb("layout").notNull(), // widget positions and configurations
+  widgets: jsonb("widgets").notNull(), // widget definitions and queries
+  filters: jsonb("filters").default({}), // global dashboard filters
+  refreshInterval: integer("refresh_interval").default(60), // seconds
+  timeRange: jsonb("time_range").default({}), // default time range
+  isPublic: boolean("is_public").default(false),
+  sharedWith: jsonb("shared_with").default([]), // user IDs with access
+  tags: jsonb("tags").default([]),
+  version: text("version").default("1.0"),
+  lastViewed: timestamp("last_viewed"),
+  viewCount: integer("view_count").default(0),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// =====================================================
 // Multi-Cloud Provider Integration Tables
 // =====================================================
 
@@ -2040,6 +2460,357 @@ export const insertApiRateLimitSchema = createInsertSchema(apiRateLimits).pick({
   warningThreshold: true,
   metadata: true,
 });
+
+// Insert schemas for Advanced Monitoring Platform
+export const insertSlaConfigurationSchema = createInsertSchema(slaConfigurations).pick({
+  projectId: true,
+  name: true,
+  description: true,
+  slaType: true,
+  targetValue: true,
+  unit: true,
+  measurementWindow: true,
+  breachThreshold: true,
+  violationActions: true,
+  escalationPolicy: true,
+  notificationChannels: true,
+  isActive: true,
+  metadata: true,
+});
+
+export const insertSlaViolationSchema = createInsertSchema(slaViolations).pick({
+  slaConfigurationId: true,
+  projectId: true,
+  violationType: true,
+  severity: true,
+  actualValue: true,
+  expectedValue: true,
+  duration: true,
+  impactDescription: true,
+  rootCause: true,
+  resolution: true,
+  status: true,
+  resolvedBy: true,
+  automaticActions: true,
+  metadata: true,
+  startedAt: true,
+});
+
+export const insertTimeSeriesMetricSchema = createInsertSchema(timeSeriesMetrics).pick({
+  projectId: true,
+  resourceId: true,
+  metricName: true,
+  metricType: true,
+  value: true,
+  unit: true,
+  dimensions: true,
+  tags: true,
+  aggregation: true,
+  timeWindow: true,
+  timestamp: true,
+});
+
+export const insertAnomalyDetectionModelSchema = createInsertSchema(anomalyDetectionModels).pick({
+  projectId: true,
+  modelName: true,
+  modelType: true,
+  targetMetrics: true,
+  trainingData: true,
+  hyperparameters: true,
+  modelArtifacts: true,
+  sensitivity: true,
+  retrainingSchedule: true,
+  status: true,
+  version: true,
+  metadata: true,
+});
+
+export const insertAnomalyDetectionSchema = createInsertSchema(anomalyDetections).pick({
+  modelId: true,
+  projectId: true,
+  metricName: true,
+  anomalyType: true,
+  severity: true,
+  confidenceScore: true,
+  actualValue: true,
+  expectedValue: true,
+  deviation: true,
+  context: true,
+  relatedIncidents: true,
+  automaticActions: true,
+  status: true,
+  acknowledgedBy: true,
+  resolution: true,
+  metadata: true,
+  detectedAt: true,
+});
+
+export const insertAlertRuleSchema = createInsertSchema(alertRules).pick({
+  projectId: true,
+  name: true,
+  description: true,
+  ruleType: true,
+  metricQuery: true,
+  conditions: true,
+  severity: true,
+  evaluationInterval: true,
+  silenceDuration: true,
+  escalationRules: true,
+  notificationChannels: true,
+  automaticActions: true,
+  suppressionConditions: true,
+  labels: true,
+  isEnabled: true,
+  createdBy: true,
+  metadata: true,
+});
+
+export const insertAlertNotificationSchema = createInsertSchema(alertNotifications).pick({
+  alertRuleId: true,
+  incidentId: true,
+  projectId: true,
+  notificationType: true,
+  channel: true,
+  subject: true,
+  message: true,
+  priority: true,
+  status: true,
+  metadata: true,
+});
+
+export const insertPerformanceBaselineSchema = createInsertSchema(performanceBaselines).pick({
+  projectId: true,
+  metricName: true,
+  resourceType: true,
+  resourceId: true,
+  baselineType: true,
+  timeFrame: true,
+  baselineValue: true,
+  standardDeviation: true,
+  percentile95: true,
+  percentile99: true,
+  trendDirection: true,
+  trendStrength: true,
+  seasonalityPattern: true,
+  confidenceLevel: true,
+  sampleSize: true,
+  lastCalculated: true,
+  validUntil: true,
+  metadata: true,
+});
+
+export const insertApmTransactionSchema = createInsertSchema(apmTransactions).pick({
+  projectId: true,
+  traceId: true,
+  spanId: true,
+  parentSpanId: true,
+  transactionName: true,
+  serviceName: true,
+  operationType: true,
+  startTime: true,
+  endTime: true,
+  duration: true,
+  status: true,
+  statusCode: true,
+  errorMessage: true,
+  userAgent: true,
+  ipAddress: true,
+  userId: true,
+  sessionId: true,
+  tags: true,
+  metadata: true,
+});
+
+export const insertDatabasePerformanceMetricSchema = createInsertSchema(databasePerformanceMetrics).pick({
+  projectId: true,
+  databaseType: true,
+  instanceId: true,
+  queryHash: true,
+  query: true,
+  executionTime: true,
+  rowsAffected: true,
+  rowsExamined: true,
+  indexesUsed: true,
+  executionPlan: true,
+  lockTime: true,
+  ioCost: true,
+  cpuCost: true,
+  memoryCost: true,
+  optimizationSuggestions: true,
+  isSlowQuery: true,
+  frequency: true,
+  timestamp: true,
+  metadata: true,
+});
+
+export const insertLogEntrySchema = createInsertSchema(logEntries).pick({
+  projectId: true,
+  source: true,
+  logLevel: true,
+  serviceName: true,
+  hostname: true,
+  message: true,
+  structuredData: true,
+  traceId: true,
+  userId: true,
+  sessionId: true,
+  requestId: true,
+  errorCode: true,
+  stackTrace: true,
+  fingerprint: true,
+  tags: true,
+  timestamp: true,
+});
+
+export const insertPredictiveModelSchema = createInsertSchema(predictiveModels).pick({
+  projectId: true,
+  modelName: true,
+  modelType: true,
+  targetMetric: true,
+  inputFeatures: true,
+  algorithm: true,
+  hyperparameters: true,
+  trainingWindow: true,
+  predictionHorizon: true,
+  modelArtifacts: true,
+  featureImportance: true,
+  status: true,
+  version: true,
+  metadata: true,
+});
+
+export const insertPredictionSchema = createInsertSchema(predictions).pick({
+  modelId: true,
+  projectId: true,
+  predictionType: true,
+  targetTimestamp: true,
+  predictedValue: true,
+  confidenceInterval: true,
+  confidence: true,
+  actualValue: true,
+  recommendations: true,
+  impactAssessment: true,
+  automationTriggered: true,
+  metadata: true,
+});
+
+export const insertRumMetricSchema = createInsertSchema(rumMetrics).pick({
+  projectId: true,
+  sessionId: true,
+  pageUrl: true,
+  userAgent: true,
+  deviceType: true,
+  browserName: true,
+  browserVersion: true,
+  connectionType: true,
+  country: true,
+  region: true,
+  firstContentfulPaint: true,
+  largestContentfulPaint: true,
+  firstInputDelay: true,
+  cumulativeLayoutShift: true,
+  timeToInteractive: true,
+  domContentLoaded: true,
+  pageLoadTime: true,
+  errorCount: true,
+  jsErrorMessages: true,
+  performanceEntries: true,
+  customMetrics: true,
+  userId: true,
+  timestamp: true,
+});
+
+export const insertUptimeMonitorSchema = createInsertSchema(uptimeMonitors).pick({
+  projectId: true,
+  name: true,
+  monitorType: true,
+  targetUrl: true,
+  checkInterval: true,
+  timeout: true,
+  expectedStatusCode: true,
+  expectedContent: true,
+  followRedirects: true,
+  requestHeaders: true,
+  monitoringRegions: true,
+  alertThresholds: true,
+  maintenanceWindows: true,
+  isEnabled: true,
+  metadata: true,
+});
+
+export const insertUptimeCheckResultSchema = createInsertSchema(uptimeCheckResults).pick({
+  monitorId: true,
+  projectId: true,
+  checkRegion: true,
+  status: true,
+  responseTime: true,
+  statusCode: true,
+  responseSize: true,
+  errorMessage: true,
+  sslCertExpiry: true,
+  dnsLookupTime: true,
+  connectTime: true,
+  tlsHandshakeTime: true,
+  transferTime: true,
+  redirectCount: true,
+  incidentCreated: true,
+  incidentId: true,
+  timestamp: true,
+});
+
+export const insertCustomDashboardSchema = createInsertSchema(customDashboards).pick({
+  projectId: true,
+  userId: true,
+  name: true,
+  description: true,
+  dashboardType: true,
+  layout: true,
+  widgets: true,
+  filters: true,
+  refreshInterval: true,
+  timeRange: true,
+  isPublic: true,
+  sharedWith: true,
+  tags: true,
+  version: true,
+  metadata: true,
+});
+
+// Type Definitions for Advanced Monitoring Platform
+export type SlaConfiguration = typeof slaConfigurations.$inferSelect;
+export type InsertSlaConfiguration = z.infer<typeof insertSlaConfigurationSchema>;
+export type SlaViolation = typeof slaViolations.$inferSelect;
+export type InsertSlaViolation = z.infer<typeof insertSlaViolationSchema>;
+export type TimeSeriesMetric = typeof timeSeriesMetrics.$inferSelect;
+export type InsertTimeSeriesMetric = z.infer<typeof insertTimeSeriesMetricSchema>;
+export type AnomalyDetectionModel = typeof anomalyDetectionModels.$inferSelect;
+export type InsertAnomalyDetectionModel = z.infer<typeof insertAnomalyDetectionModelSchema>;
+export type AnomalyDetection = typeof anomalyDetections.$inferSelect;
+export type InsertAnomalyDetection = z.infer<typeof insertAnomalyDetectionSchema>;
+export type AlertRule = typeof alertRules.$inferSelect;
+export type InsertAlertRule = z.infer<typeof insertAlertRuleSchema>;
+export type AlertNotification = typeof alertNotifications.$inferSelect;
+export type InsertAlertNotification = z.infer<typeof insertAlertNotificationSchema>;
+export type PerformanceBaseline = typeof performanceBaselines.$inferSelect;
+export type InsertPerformanceBaseline = z.infer<typeof insertPerformanceBaselineSchema>;
+export type ApmTransaction = typeof apmTransactions.$inferSelect;
+export type InsertApmTransaction = z.infer<typeof insertApmTransactionSchema>;
+export type DatabasePerformanceMetric = typeof databasePerformanceMetrics.$inferSelect;
+export type InsertDatabasePerformanceMetric = z.infer<typeof insertDatabasePerformanceMetricSchema>;
+export type LogEntry = typeof logEntries.$inferSelect;
+export type InsertLogEntry = z.infer<typeof insertLogEntrySchema>;
+export type PredictiveModel = typeof predictiveModels.$inferSelect;
+export type InsertPredictiveModel = z.infer<typeof insertPredictiveModelSchema>;
+export type Prediction = typeof predictions.$inferSelect;
+export type InsertPrediction = z.infer<typeof insertPredictionSchema>;
+export type RumMetric = typeof rumMetrics.$inferSelect;
+export type InsertRumMetric = z.infer<typeof insertRumMetricSchema>;
+export type UptimeMonitor = typeof uptimeMonitors.$inferSelect;
+export type InsertUptimeMonitor = z.infer<typeof insertUptimeMonitorSchema>;
+export type UptimeCheckResult = typeof uptimeCheckResults.$inferSelect;
+export type InsertUptimeCheckResult = z.infer<typeof insertUptimeCheckResultSchema>;
+export type CustomDashboard = typeof customDashboards.$inferSelect;
+export type InsertCustomDashboard = z.infer<typeof insertCustomDashboardSchema>;
 
 // Type Definitions for Integration Hub
 export type Integration = typeof integrations.$inferSelect;
