@@ -1,0 +1,58 @@
+. Fix Current Critical Issues
+- Resolve UI rendering issues on “Create New Project” (ensure responsive, accessible, and legible design).
+- Fix project creation failures — debug backend logic, review logs, and ensure reliable provisioning.
+
+2. Core Platform Capabilities
+Implement and ensure production‑ready delivery of:
+Vibe Coding
+- Natural language to full‑stack app generation (React, Node.js, DB, APIs).
+- Real‑time code generation with authentic APIs.
+- Built‑in automated testing for APIs, flows, and UI components (results in chat).
+Vibe Hosting
+- Autonomous infrastructure: AI agents manage servers, scaling, load balancing, optimization.
+- Security & compliance: automated updates, vulnerability scanning, compliance monitoring.
+- Intelligent monitoring: proactive performance checks, self‑healing, predictive scaling.
+- Global CDN & Edge computing.
+- Zero‑downtime deployments with blue‑green and rollback strategies.
+- Smart resource management, AI‑driven DB optimization, predictive auto‑scaling.
+
+3. AI DevOps & SRE Agents
+- Full lifecycle automation: deployment, scaling, monitoring, incident response, optimization.
+- Reliability engineering: uptime guarantees, SLA enforcement, automated failover.
+- Continuous security hardening and compliance checks.
+- Infrastructure as Code (IaC) with AI‑driven adjustments.
+
+4. Enterprise‑Grade Features
+- AI‑Driven Cloud Migration:
+- Manual or AI‑auto selection of best cloud provider (AWS, Azure, GCP) based on workload, cost, and performance.
+- Automated migration of workloads, data, and services.
+- Codebase Modernization for AI Era:
+- Refactor legacy code for AI‑readability and maintainability.
+- Automated dependency upgrades and architecture modernization.
+- Custom AI Model Training for org‑specific needs.
+- White‑labeling, custom integrations, and compliance certifications.
+- Advanced GitHub/GitLab integration with CI/CD pipelines.
+
+5. Integrations Hub
+- Central dashboard for:
+- Cloud provider connections (AWS, Azure, GCP).
+- GitHub/GitLab repo sync.
+- Secrets & environment variable management.
+- Third‑party API integrations.
+- Allow users to choose provider or let AI agents auto‑select.
+
+6. Required Secrets (Prompt User)
+- AWS Access Key & Secret
+- Azure Client ID, Tenant ID, Secret
+- GCP Service Account JSON
+- GitHub/GitLab Personal Access Tokens
+- Any other relevant API keys (OpenAI, Stripe, etc.)
+
+7. Framework & Tech Stack
+- Use modern, reliable frameworks (e.g., Next.js, tRPC, Tailwind, Bun/Vite) unless a better option exists.
+- Ensure modular, scalable architecture for rapid feature expansion.
+
+8. Delivery Requirements
+- All features must be functional, tested, and production‑ready.
+- Prioritize speed, reliability, and user experience.
+- Maintain clear logs and error reporting for all automated actions.
