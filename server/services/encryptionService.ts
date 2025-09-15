@@ -1,4 +1,4 @@
-import { createCipher, createDecipher, randomBytes, pbkdf2Sync } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes, pbkdf2Sync } from "node:crypto";
 import { promisify } from "util";
 
 // Environment variable for master encryption key (should be 32 bytes in production)
@@ -63,7 +63,7 @@ export class EncryptionService {
       const key = this.deriveKey(salt, options.keyId, options.environment);
       
       // Create cipher
-      const cipher = createCipher(algorithm, key);
+      const cipher = createCipheriv(algorithm, key, iv);
       cipher.setAAD(salt); // Use salt as additional authenticated data
       
       // Encrypt data
@@ -106,7 +106,7 @@ export class EncryptionService {
       const key = this.deriveKey(saltBuffer, keyId, environment);
       
       // Create decipher
-      const decipher = createDecipher(algorithm, key);
+      const decipher = createDecipheriv(algorithm, key, ivBuffer);
       decipher.setAAD(saltBuffer); // Set the same AAD used during encryption
       
       if ((decipher as any).setAuthTag) {

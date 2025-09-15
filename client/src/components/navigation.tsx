@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Code, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
 
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId);
@@ -47,14 +49,34 @@ export default function Navigation() {
             >
               Pricing
             </button>
-            <Link href="/dashboard">
+            {isAuthenticated ? (
+              <>
+                <Link href="/dashboard">
+                  <Button 
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                    data-testid="button-dashboard"
+                  >
+                    Dashboard
+                  </Button>
+                </Link>
+                <Button 
+                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium hover:bg-gray-200 transition-colors"
+                  data-testid="button-logout"
+                  onClick={() => window.location.href = '/api/logout'}
+                >
+                  Logout
+                </Button>
+              </>
+            ) : (
               <Button 
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
-                data-testid="button-dashboard"
+                data-testid="button-login"
+                onClick={() => window.location.href = '/api/login'}
+                disabled={isLoading}
               >
-                Dashboard
+                {isLoading ? 'Loading...' : 'Login'}
               </Button>
-            </Link>
+            )}
           </div>
 
           <button 
@@ -91,14 +113,34 @@ export default function Navigation() {
               >
                 Pricing
               </button>
-              <Link href="/dashboard">
+              {isAuthenticated ? (
+                <>
+                  <Link href="/dashboard">
+                    <Button 
+                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+                      data-testid="button-mobile-dashboard"
+                    >
+                      Dashboard
+                    </Button>
+                  </Link>
+                  <Button 
+                    className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-full text-sm font-medium hover:bg-gray-200 transition-colors"
+                    data-testid="button-mobile-logout"
+                    onClick={() => window.location.href = '/api/logout'}
+                  >
+                    Logout
+                  </Button>
+                </>
+              ) : (
                 <Button 
                   className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
-                  data-testid="button-mobile-dashboard"
+                  data-testid="button-mobile-login"
+                  onClick={() => window.location.href = '/api/login'}
+                  disabled={isLoading}
                 >
-                  Dashboard
+                  {isLoading ? 'Loading...' : 'Login'}
                 </Button>
-              </Link>
+              )}
             </div>
           </div>
         )}
