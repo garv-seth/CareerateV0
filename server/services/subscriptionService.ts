@@ -3,21 +3,8 @@
 
 import Stripe from "stripe";
 import { 
-  subscriptionPlans, 
-  userSubscriptions, 
-  usageTracking, 
-  billingHistory, 
-  paymentMethods,
   users,
-  type SubscriptionPlan, 
-  type UserSubscription, 
-  type InsertUserSubscription,
-  type UsageTracking,
-  type InsertUsageTracking,
-  type BillingHistory,
-  type InsertBillingHistory,
-  type PaymentMethod,
-  type InsertPaymentMethod
+  type User
 } from "@shared/schema";
 import { db } from "../db";
 import { eq, and, desc, gte, lte, isNull, or } from "drizzle-orm";

@@ -4,6 +4,40 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Core tables
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull().unique(),
+  name: text("name"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const projects = pgTable("projects", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const codeGenerations = pgTable("code_generations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  prompt: text("prompt").notNull(),
+  generatedCode: text("generated_code"),
+  framework: text("framework"),
+  language: text("language"),
+  status: text("status").notNull().default("pending"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Integrations table
 export const integrations = pgTable("integrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -415,70 +449,107 @@ export type InsertApiRateLimit = z.infer<typeof insertApiRateLimitSchema>;
 export type ApiUsageAnalytics = typeof apiUsageAnalytics.$inferSelect;
 
 // =====================================================
-// Enterprise User Management Zod Schemas
+// Core table schemas and types
 // =====================================================
 
+export const insertUserSchema = createInsertSchema(users).pick({
+  email: true,
+  name: true,
+  metadata: true,
+});
+
+export const insertProjectSchema = createInsertSchema(projects).pick({
+  userId: true,
+  name: true,
+  description: true,
+  metadata: true,
+});
+
+export const insertCodeGenerationSchema = createInsertSchema(codeGenerations).pick({
+  userId: true,
+  projectId: true,
+  prompt: true,
+  generatedCode: true,
+  framework: true,
+  language: true,
+  status: true,
+  metadata: true,
+});
+
+export type User = typeof users.$inferSelect;
+export type UpsertUser = z.infer<typeof insertUserSchema>;
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type CodeGeneration = typeof codeGenerations.$inferSelect;
+export type InsertCodeGeneration = z.infer<typeof insertCodeGenerationSchema>;
+
+// =====================================================
+// Enterprise User Management Zod Schemas (COMMENTED OUT - TABLES NOT DEFINED)
+// =====================================================
+/*
+
 // Organization schemas
-export const insertOrganizationSchema = createInsertSchema(organizations).pick({
-  name: true,
-  slug: true,
-  description: true,
-  logoUrl: true,
-  website: true,
-  industry: true,
-  companySize: true,
-  plan: true,
-  billingEmail: true,
-  settings: true,
-  metadata: true,
-  isActive: true,
-});
+// Commented out - organization tables not yet defined
+// export const insertOrganizationSchema = createInsertSchema(organizations).pick({
+//   name: true,
+//   slug: true,
+//   description: true,
+//   logoUrl: true,
+//   website: true,
+//   industry: true,
+//   companySize: true,
+//   plan: true,
+//   billingEmail: true,
+//   settings: true,
+//   metadata: true,
+//   isActive: true,
+// });
 
-export const insertOrganizationMemberSchema = createInsertSchema(organizationMembers).pick({
-  organizationId: true,
-  userId: true,
-  role: true,
-  permissions: true,
-  invitedBy: true,
-  invitedAt: true,
-  metadata: true,
-  isActive: true,
-});
+// export const insertOrganizationMemberSchema = createInsertSchema(organizationMembers).pick({
+//   organizationId: true,
+//   userId: true,
+//   role: true,
+//   permissions: true,
+//   invitedBy: true,
+//   invitedAt: true,
+//   metadata: true,
+//   isActive: true,
+// });
 
-// Team schemas
-export const insertTeamSchema = createInsertSchema(teams).pick({
-  organizationId: true,
-  name: true,
-  description: true,
-  slug: true,
-  teamType: true,
-  leaderId: true,
-  settings: true,
-  metadata: true,
-  isActive: true,
-});
+// // Team schemas
+// export const insertTeamSchema = createInsertSchema(teams).pick({
+//   organizationId: true,
+//   name: true,
+//   description: true,
+//   slug: true,
+//   teamType: true,
+//   leaderId: true,
+//   settings: true,
+//   metadata: true,
+//   isActive: true,
+// });
 
-export const insertTeamMemberSchema = createInsertSchema(teamMembers).pick({
-  teamId: true,
-  userId: true,
-  role: true,
-  permissions: true,
-  addedBy: true,
-  metadata: true,
-  isActive: true,
-});
+// export const insertTeamMemberSchema = createInsertSchema(teamMembers).pick({
+//   teamId: true,
+//   userId: true,
+//   role: true,
+//   permissions: true,
+//   addedBy: true,
+//   metadata: true,
+//   isActive: true,
+// });
 
 // Role and permission schemas
-export const insertRoleSchema = createInsertSchema(roles).pick({
-  name: true,
-  displayName: true,
-  description: true,
-  scope: true,
-  permissions: true,
-  isDefault: true,
-  isSystemRole: true,
-  metadata: true,
-});
+// export const insertRoleSchema = createInsertSchema(roles).pick({
+//   name: true,
+//   displayName: true,
+//   description: true,
+//   scope: true,
+//   permissions: true,
+//   isDefault: true,
+//   isSystemRole: true,
+//   metadata: true,
+// });
 
 export const insertPermissionSchema = createInsertSchema(permissions).pick({
   name: true,
@@ -798,3 +869,5 @@ export type DiscountCode = typeof discountCodes.$inferSelect;
 export type InsertDiscountCode = z.infer<typeof insertDiscountCodeSchema>;
 export type DiscountUsage = typeof discountUsage.$inferSelect;
 export type InsertDiscountUsage = z.infer<typeof insertDiscountUsageSchema>;
+
+*/

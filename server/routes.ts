@@ -6,27 +6,11 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
   insertProjectSchema, 
   insertCodeGenerationSchema,
-  insertAiAgentSchema,
-  insertDeploymentSchema,
-  insertIncidentSchema,
-  insertPerformanceMetricSchema,
-  insertSecurityScanSchema,
-  insertAgentTaskSchema,
-  insertInfrastructureResourceSchema,
-  insertProjectTemplateSchema,
-  insertCodeAnalysisSchema,
-  insertCodeReviewSchema,
-  insertMigrationProjectSchema,
-  insertLegacySystemAssessmentSchema,
-  insertCodeModernizationTaskSchema,
-  insertCustomAiModelSchema,
-  insertMigrationExecutionLogSchema,
-  insertMigrationAssessmentFindingSchema,
-  insertMigrationCostAnalysisSchema,
-  insertUserSubscriptionSchema,
-  insertUsageTrackingSchema,
-  insertBillingHistorySchema,
-  insertPaymentMethodSchema
+  insertIntegrationSchema,
+  type User,
+  type Project,
+  type CodeGeneration,
+  type Integration
 } from "@shared/schema";
 import { 
   generateCodeFromPrompt, 
@@ -1893,7 +1877,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/integrations/:id/secrets", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const userId = getUserId(req);
       const user = await storage.getUser(userId);
       const credentials = user?.metadata?.credentials || {};
       
@@ -1910,7 +1893,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString()
       }));
       
-      res.json(safeSecrets);
+      res.json(secrets);
     } catch (error) {
       console.error('Get secrets error:', error);
       res.status(500).json({ message: "Failed to get secrets" });
