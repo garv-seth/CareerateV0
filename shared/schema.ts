@@ -243,6 +243,128 @@ export const codeGenerations = pgTable("code_generations", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// =====================================================
+// Real-time Collaboration System Tables
+// =====================================================
+
+// Active collaboration sessions for real-time editing
+export const collaborationSessions = pgTable("collaboration_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  sessionId: varchar("session_id").notNull().unique(), // WebSocket session identifier
+  isActive: boolean("is_active").default(true),
+  maxParticipants: integer("max_participants").default(10),
+  lockingEnabled: boolean("locking_enabled").default(false), // file locking for exclusive editing
+  conflictResolution: text("conflict_resolution").default("operational_transform"), // "operational_transform", "last_write_wins"
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_collaboration_sessions_project").on(table.projectId),
+  index("idx_collaboration_sessions_active").on(table.isActive),
+]);
+
+// User presence tracking for active collaborators
+export const userPresence = pgTable("user_presence", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => collaborationSessions.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  connectionId: varchar("connection_id").notNull(), // WebSocket connection identifier
+  status: text("status").notNull().default("online"), // "online", "away", "editing", "idle"
+  currentFile: text("current_file"), // file currently being edited
+  viewportStart: integer("viewport_start").default(0), // visible line start
+  viewportEnd: integer("viewport_end").default(0), // visible line end
+  lastActivity: timestamp("last_activity").defaultNow(),
+  userAgent: text("user_agent"),
+  ipAddress: varchar("ip_address"),
+  metadata: jsonb("metadata").default({}),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_presence_session_user").on(table.sessionId, table.userId),
+  index("idx_user_presence_connection").on(table.connectionId),
+  index("idx_user_presence_activity").on(table.lastActivity),
+]);
+
+// Real-time cursor positions and selections
+export const cursorPositions = pgTable("cursor_positions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  presenceId: varchar("presence_id").notNull().references(() => userPresence.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  line: integer("line").notNull(),
+  column: integer("column").notNull(),
+  selectionStart: jsonb("selection_start"), // { line, column } for selection start
+  selectionEnd: jsonb("selection_end"), // { line, column } for selection end
+  cursorColor: varchar("cursor_color").default("#007acc"), // user's cursor color
+  isVisible: boolean("is_visible").default(true),
+  metadata: jsonb("metadata").default({}),
+  timestamp: timestamp("timestamp").defaultNow(),
+}, (table) => [
+  index("idx_cursor_positions_presence_file").on(table.presenceId, table.fileName),
+  index("idx_cursor_positions_timestamp").on(table.timestamp),
+]);
+
+// Edit operations for operational transformation
+export const editOperations = pgTable("edit_operations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => collaborationSessions.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  operationId: varchar("operation_id").notNull(), // unique operation identifier
+  fileName: text("file_name").notNull(),
+  operationType: text("operation_type").notNull(), // "insert", "delete", "replace"
+  position: jsonb("position").notNull(), // { line, column } where operation starts
+  content: text("content"), // content being inserted/replaced
+  length: integer("length").default(0), // length of content being deleted/replaced
+  vectorClock: jsonb("vector_clock").default({}), // for ordering operations
+  dependsOn: jsonb("depends_on").default([]), // operations this depends on
+  isApplied: boolean("is_applied").default(false),
+  conflictResolved: boolean("conflict_resolved").default(false),
+  metadata: jsonb("metadata").default({}),
+  timestamp: timestamp("timestamp").defaultNow(),
+}, (table) => [
+  index("idx_edit_operations_session_file").on(table.sessionId, table.fileName),
+  index("idx_edit_operations_user_time").on(table.userId, table.timestamp),
+  index("idx_edit_operations_operation_id").on(table.operationId),
+]);
+
+// File locks for exclusive editing
+export const fileLocks = pgTable("file_locks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => collaborationSessions.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(),
+  lockedBy: varchar("locked_by").notNull().references(() => users.id, { onDelete: "cascade" }),
+  lockType: text("lock_type").default("exclusive"), // "exclusive", "shared"
+  autoRelease: boolean("auto_release").default(true), // auto-release on disconnect
+  expiresAt: timestamp("expires_at"), // optional lock expiration
+  metadata: jsonb("metadata").default({}),
+  lockedAt: timestamp("locked_at").defaultNow(),
+}, (table) => [
+  index("idx_file_locks_session_file").on(table.sessionId, table.fileName),
+  index("idx_file_locks_user").on(table.lockedBy),
+]);
+
+// Chat messages for project discussions
+export const collaborationMessages = pgTable("collaboration_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => collaborationSessions.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  messageType: text("message_type").default("chat"), // "chat", "system", "code_comment", "file_share"
+  content: text("content").notNull(),
+  fileName: text("file_name"), // for code comments
+  lineNumber: integer("line_number"), // for inline code comments
+  replyTo: varchar("reply_to").references(() => collaborationMessages.id), // for threaded conversations
+  mentions: jsonb("mentions").default([]), // user IDs mentioned in message
+  attachments: jsonb("attachments").default([]), // file attachments
+  isEdited: boolean("is_edited").default(false),
+  editedAt: timestamp("edited_at"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_collaboration_messages_session_time").on(table.sessionId, table.createdAt),
+  index("idx_collaboration_messages_user").on(table.userId),
+  index("idx_collaboration_messages_file").on(table.fileName, table.lineNumber),
+]);
+
 // AI DevOps Agent System Tables
 
 export const aiAgents = pgTable("ai_agents", {
@@ -3134,3 +3256,95 @@ export type ProjectCollaborator = typeof projectCollaborators.$inferSelect;
 export type InsertProjectCollaborator = z.infer<typeof insertProjectCollaboratorSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+// =====================================================
+// Real-time Collaboration Zod Schemas
+// =====================================================
+
+export const insertCollaborationSessionSchema = createInsertSchema(collaborationSessions).pick({
+  projectId: true,
+  sessionId: true,
+  isActive: true,
+  maxParticipants: true,
+  lockingEnabled: true,
+  conflictResolution: true,
+  metadata: true,
+});
+
+export const insertUserPresenceSchema = createInsertSchema(userPresence).pick({
+  sessionId: true,
+  userId: true,
+  connectionId: true,
+  status: true,
+  currentFile: true,
+  viewportStart: true,
+  viewportEnd: true,
+  userAgent: true,
+  ipAddress: true,
+  metadata: true,
+});
+
+export const insertCursorPositionSchema = createInsertSchema(cursorPositions).pick({
+  presenceId: true,
+  fileName: true,
+  line: true,
+  column: true,
+  selectionStart: true,
+  selectionEnd: true,
+  cursorColor: true,
+  isVisible: true,
+  metadata: true,
+});
+
+export const insertEditOperationSchema = createInsertSchema(editOperations).pick({
+  sessionId: true,
+  userId: true,
+  operationId: true,
+  fileName: true,
+  operationType: true,
+  position: true,
+  content: true,
+  length: true,
+  vectorClock: true,
+  dependsOn: true,
+  isApplied: true,
+  conflictResolved: true,
+  metadata: true,
+});
+
+export const insertFileLockSchema = createInsertSchema(fileLocks).pick({
+  sessionId: true,
+  fileName: true,
+  lockedBy: true,
+  lockType: true,
+  autoRelease: true,
+  expiresAt: true,
+  metadata: true,
+});
+
+export const insertCollaborationMessageSchema = createInsertSchema(collaborationMessages).pick({
+  sessionId: true,
+  userId: true,
+  messageType: true,
+  content: true,
+  fileName: true,
+  lineNumber: true,
+  replyTo: true,
+  mentions: true,
+  attachments: true,
+  metadata: true,
+});
+
+// Real-time Collaboration Type Definitions
+export type CollaborationSession = typeof collaborationSessions.$inferSelect;
+export type InsertCollaborationSession = z.infer<typeof insertCollaborationSessionSchema>;
+export type UserPresence = typeof userPresence.$inferSelect;
+export type InsertUserPresence = z.infer<typeof insertUserPresenceSchema>;
+export type CursorPosition = typeof cursorPositions.$inferSelect;
+export type InsertCursorPosition = z.infer<typeof insertCursorPositionSchema>;
+export type EditOperation = typeof editOperations.$inferSelect;
+export type InsertEditOperation = z.infer<typeof insertEditOperationSchema>;
+export type FileLock = typeof fileLocks.$inferSelect;
+export type InsertFileLock = z.infer<typeof insertFileLockSchema>;
+export type CollaborationMessage = typeof collaborationMessages.$inferSelect;
+export type InsertCollaborationMessage = z.infer<typeof insertCollaborationMessageSchema>;

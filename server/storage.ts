@@ -31,6 +31,12 @@ import {
   timeSeriesMetrics,
   performanceBaselines,
   logEntries,
+  collaborationSessions,
+  userPresence,
+  cursorPositions,
+  editOperations,
+  fileLocks,
+  collaborationMessages,
   type User, 
   type UpsertUser, 
   type Project, 
@@ -143,7 +149,19 @@ import {
   type ProjectCollaborator,
   type InsertProjectCollaborator,
   type AuditLog,
-  type InsertAuditLog
+  type InsertAuditLog,
+  type CollaborationSession,
+  type InsertCollaborationSession,
+  type UserPresence,
+  type InsertUserPresence,
+  type CursorPosition,
+  type InsertCursorPosition,
+  type EditOperation,
+  type InsertEditOperation,
+  type FileLock,
+  type InsertFileLock,
+  type CollaborationMessage,
+  type InsertCollaborationMessage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -497,6 +515,60 @@ export interface IStorage {
   hasPermission(userId: string, permission: string, scope: string, scopeId?: string): Promise<boolean>;
   canAccessProject(userId: string, projectId: string): Promise<boolean>;
   getUserPermissions(userId: string, scope: string, scopeId?: string): Promise<string[]>;
+
+  // =====================================================
+  // Real-time Collaboration Operations
+  // =====================================================
+
+  // Collaboration session operations
+  createCollaborationSession(session: InsertCollaborationSession): Promise<CollaborationSession>;
+  getCollaborationSession(id: string): Promise<CollaborationSession | undefined>;
+  getCollaborationSessionBySessionId(sessionId: string): Promise<CollaborationSession | undefined>;
+  getProjectCollaborationSessions(projectId: string): Promise<CollaborationSession[]>;
+  updateCollaborationSession(sessionId: string, updates: Partial<CollaborationSession>): Promise<CollaborationSession | undefined>;
+  deleteCollaborationSession(id: string): Promise<boolean>;
+
+  // User presence operations
+  createUserPresence(presence: InsertUserPresence): Promise<UserPresence>;
+  getUserPresence(id: string): Promise<UserPresence | undefined>;
+  getUserPresenceByConnection(connectionId: string): Promise<UserPresence | undefined>;
+  getSessionUserPresence(sessionId: string): Promise<UserPresence[]>;
+  updateUserPresence(connectionId: string, updates: Partial<UserPresence>): Promise<UserPresence | undefined>;
+  removeUserPresence(connectionId: string): Promise<boolean>;
+  getActiveUserPresence(sessionId: string): Promise<UserPresence[]>;
+
+  // Cursor position operations
+  createCursorPosition(cursor: InsertCursorPosition): Promise<CursorPosition>;
+  updateCursorPosition(presenceId: string, cursor: Partial<InsertCursorPosition>): Promise<CursorPosition | undefined>;
+  getCursorPositions(sessionId: string, fileName?: string): Promise<CursorPosition[]>;
+  getUserCursorPosition(presenceId: string, fileName: string): Promise<CursorPosition | undefined>;
+  deleteCursorPosition(id: string): Promise<boolean>;
+  deleteUserCursorPositions(presenceId: string): Promise<boolean>;
+
+  // Edit operation operations
+  createEditOperation(operation: InsertEditOperation): Promise<EditOperation>;
+  getEditOperation(id: string): Promise<EditOperation | undefined>;
+  getSessionEditOperations(sessionId: string, fileName?: string): Promise<EditOperation[]>;
+  getFileEditOperations(sessionId: string, fileName: string, limit?: number): Promise<EditOperation[]>;
+  updateEditOperation(id: string, updates: Partial<EditOperation>): Promise<EditOperation | undefined>;
+  markEditOperationApplied(operationId: string): Promise<EditOperation | undefined>;
+
+  // File lock operations
+  createFileLock(lock: InsertFileLock): Promise<FileLock>;
+  getFileLock(sessionId: string, fileName: string): Promise<FileLock | undefined>;
+  getSessionFileLocks(sessionId: string): Promise<FileLock[]>;
+  getUserFileLocks(sessionId: string, userId: string): Promise<FileLock[]>;
+  removeFileLock(sessionId: string, fileName: string): Promise<boolean>;
+  removeUserFileLocks(sessionId: string, userId: string): Promise<boolean>;
+  isFileLocked(sessionId: string, fileName: string): Promise<boolean>;
+
+  // Collaboration message operations
+  createCollaborationMessage(message: InsertCollaborationMessage): Promise<CollaborationMessage>;
+  getCollaborationMessage(id: string): Promise<CollaborationMessage | undefined>;
+  getSessionMessages(sessionId: string, limit?: number): Promise<CollaborationMessage[]>;
+  getFileMessages(sessionId: string, fileName: string, limit?: number): Promise<CollaborationMessage[]>;
+  updateCollaborationMessage(id: string, updates: Partial<CollaborationMessage>): Promise<CollaborationMessage | undefined>;
+  deleteCollaborationMessage(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1993,6 +2065,365 @@ export class DatabaseStorage implements IStorage {
       .values(logEntry)
       .returning();
     return newLogEntry;
+  }
+
+  // =====================================================
+  // Real-time Collaboration Operations Implementation
+  // =====================================================
+
+  // Collaboration session operations
+  async createCollaborationSession(session: InsertCollaborationSession): Promise<CollaborationSession> {
+    const [newSession] = await db
+      .insert(collaborationSessions)
+      .values(session)
+      .returning();
+    return newSession;
+  }
+
+  async getCollaborationSession(id: string): Promise<CollaborationSession | undefined> {
+    const [session] = await db.select().from(collaborationSessions)
+      .where(eq(collaborationSessions.id, id));
+    return session;
+  }
+
+  async getCollaborationSessionBySessionId(sessionId: string): Promise<CollaborationSession | undefined> {
+    const [session] = await db.select().from(collaborationSessions)
+      .where(eq(collaborationSessions.sessionId, sessionId));
+    return session;
+  }
+
+  async getProjectCollaborationSessions(projectId: string): Promise<CollaborationSession[]> {
+    return await db.select().from(collaborationSessions)
+      .where(eq(collaborationSessions.projectId, projectId))
+      .orderBy(desc(collaborationSessions.createdAt));
+  }
+
+  async updateCollaborationSession(sessionId: string, updates: Partial<CollaborationSession>): Promise<CollaborationSession | undefined> {
+    const [updatedSession] = await db
+      .update(collaborationSessions)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(collaborationSessions.sessionId, sessionId))
+      .returning();
+    return updatedSession;
+  }
+
+  async deleteCollaborationSession(id: string): Promise<boolean> {
+    const result = await db.delete(collaborationSessions).where(eq(collaborationSessions.id, id));
+    return result.rowCount > 0;
+  }
+
+  // User presence operations
+  async createUserPresence(presence: InsertUserPresence): Promise<UserPresence> {
+    const [newPresence] = await db
+      .insert(userPresence)
+      .values(presence)
+      .returning();
+    return newPresence;
+  }
+
+  async getUserPresence(id: string): Promise<UserPresence | undefined> {
+    const [presence] = await db.select().from(userPresence)
+      .where(eq(userPresence.id, id));
+    return presence;
+  }
+
+  async getUserPresenceByConnection(connectionId: string): Promise<UserPresence | undefined> {
+    const [presence] = await db.select().from(userPresence)
+      .where(eq(userPresence.connectionId, connectionId));
+    return presence;
+  }
+
+  async getSessionUserPresence(sessionId: string): Promise<UserPresence[]> {
+    return await db.select().from(userPresence)
+      .where(eq(userPresence.sessionId, sessionId))
+      .orderBy(desc(userPresence.lastActivity));
+  }
+
+  async updateUserPresence(connectionId: string, updates: Partial<UserPresence>): Promise<UserPresence | undefined> {
+    const [updatedPresence] = await db
+      .update(userPresence)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(userPresence.connectionId, connectionId))
+      .returning();
+    return updatedPresence;
+  }
+
+  async removeUserPresence(connectionId: string): Promise<boolean> {
+    const result = await db.delete(userPresence).where(eq(userPresence.connectionId, connectionId));
+    return result.rowCount > 0;
+  }
+
+  async getActiveUserPresence(sessionId: string): Promise<UserPresence[]> {
+    // Return users active in the last 30 minutes
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    return await db.select().from(userPresence)
+      .where(and(
+        eq(userPresence.sessionId, sessionId),
+        sql`${userPresence.lastActivity} > ${thirtyMinutesAgo}`
+      ))
+      .orderBy(desc(userPresence.lastActivity));
+  }
+
+  // Cursor position operations
+  async createCursorPosition(cursor: InsertCursorPosition): Promise<CursorPosition> {
+    const [newCursor] = await db
+      .insert(cursorPositions)
+      .values(cursor)
+      .returning();
+    return newCursor;
+  }
+
+  async updateCursorPosition(presenceId: string, cursor: Partial<InsertCursorPosition>): Promise<CursorPosition | undefined> {
+    // First try to update existing cursor position
+    const [updated] = await db
+      .update(cursorPositions)
+      .set({
+        ...cursor,
+        timestamp: new Date(),
+      })
+      .where(and(
+        eq(cursorPositions.presenceId, presenceId),
+        eq(cursorPositions.fileName, cursor.fileName!)
+      ))
+      .returning();
+
+    if (updated) {
+      return updated;
+    }
+
+    // If no existing cursor position, create a new one
+    if (cursor.fileName && cursor.line !== undefined && cursor.column !== undefined) {
+      return await this.createCursorPosition({
+        presenceId,
+        fileName: cursor.fileName,
+        line: cursor.line,
+        column: cursor.column,
+        selectionStart: cursor.selectionStart,
+        selectionEnd: cursor.selectionEnd,
+        cursorColor: cursor.cursorColor || '#007acc',
+        isVisible: cursor.isVisible ?? true,
+        metadata: cursor.metadata || {}
+      });
+    }
+
+    return undefined;
+  }
+
+  async getCursorPositions(sessionId: string, fileName?: string): Promise<CursorPosition[]> {
+    const query = db.select().from(cursorPositions)
+      .innerJoin(userPresence, eq(cursorPositions.presenceId, userPresence.id))
+      .where(eq(userPresence.sessionId, sessionId));
+
+    if (fileName) {
+      query.where(and(
+        eq(userPresence.sessionId, sessionId),
+        eq(cursorPositions.fileName, fileName)
+      ));
+    }
+
+    const results = await query.orderBy(desc(cursorPositions.timestamp));
+    return results.map(result => result.cursor_positions);
+  }
+
+  async getUserCursorPosition(presenceId: string, fileName: string): Promise<CursorPosition | undefined> {
+    const [cursor] = await db.select().from(cursorPositions)
+      .where(and(
+        eq(cursorPositions.presenceId, presenceId),
+        eq(cursorPositions.fileName, fileName)
+      ))
+      .orderBy(desc(cursorPositions.timestamp))
+      .limit(1);
+    return cursor;
+  }
+
+  async deleteCursorPosition(id: string): Promise<boolean> {
+    const result = await db.delete(cursorPositions).where(eq(cursorPositions.id, id));
+    return result.rowCount > 0;
+  }
+
+  async deleteUserCursorPositions(presenceId: string): Promise<boolean> {
+    const result = await db.delete(cursorPositions).where(eq(cursorPositions.presenceId, presenceId));
+    return result.rowCount > 0;
+  }
+
+  // Edit operation operations
+  async createEditOperation(operation: InsertEditOperation): Promise<EditOperation> {
+    const [newOperation] = await db
+      .insert(editOperations)
+      .values(operation)
+      .returning();
+    return newOperation;
+  }
+
+  async getEditOperation(id: string): Promise<EditOperation | undefined> {
+    const [operation] = await db.select().from(editOperations)
+      .where(eq(editOperations.id, id));
+    return operation;
+  }
+
+  async getSessionEditOperations(sessionId: string, fileName?: string): Promise<EditOperation[]> {
+    const conditions = [eq(editOperations.sessionId, sessionId)];
+    
+    if (fileName) {
+      conditions.push(eq(editOperations.fileName, fileName));
+    }
+
+    return await db.select().from(editOperations)
+      .where(and(...conditions))
+      .orderBy(desc(editOperations.timestamp));
+  }
+
+  async getFileEditOperations(sessionId: string, fileName: string, limit?: number): Promise<EditOperation[]> {
+    const query = db.select().from(editOperations)
+      .where(and(
+        eq(editOperations.sessionId, sessionId),
+        eq(editOperations.fileName, fileName)
+      ))
+      .orderBy(desc(editOperations.timestamp));
+
+    if (limit) {
+      query.limit(limit);
+    }
+
+    return await query;
+  }
+
+  async updateEditOperation(id: string, updates: Partial<EditOperation>): Promise<EditOperation | undefined> {
+    const [updatedOperation] = await db
+      .update(editOperations)
+      .set(updates)
+      .where(eq(editOperations.id, id))
+      .returning();
+    return updatedOperation;
+  }
+
+  async markEditOperationApplied(operationId: string): Promise<EditOperation | undefined> {
+    const [updatedOperation] = await db
+      .update(editOperations)
+      .set({
+        isApplied: true,
+        timestamp: new Date()
+      })
+      .where(eq(editOperations.operationId, operationId))
+      .returning();
+    return updatedOperation;
+  }
+
+  // File lock operations
+  async createFileLock(lock: InsertFileLock): Promise<FileLock> {
+    const [newLock] = await db
+      .insert(fileLocks)
+      .values(lock)
+      .returning();
+    return newLock;
+  }
+
+  async getFileLock(sessionId: string, fileName: string): Promise<FileLock | undefined> {
+    const [lock] = await db.select().from(fileLocks)
+      .where(and(
+        eq(fileLocks.sessionId, sessionId),
+        eq(fileLocks.fileName, fileName)
+      ));
+    return lock;
+  }
+
+  async getSessionFileLocks(sessionId: string): Promise<FileLock[]> {
+    return await db.select().from(fileLocks)
+      .where(eq(fileLocks.sessionId, sessionId))
+      .orderBy(desc(fileLocks.lockedAt));
+  }
+
+  async getUserFileLocks(sessionId: string, userId: string): Promise<FileLock[]> {
+    return await db.select().from(fileLocks)
+      .where(and(
+        eq(fileLocks.sessionId, sessionId),
+        eq(fileLocks.lockedBy, userId)
+      ))
+      .orderBy(desc(fileLocks.lockedAt));
+  }
+
+  async removeFileLock(sessionId: string, fileName: string): Promise<boolean> {
+    const result = await db.delete(fileLocks)
+      .where(and(
+        eq(fileLocks.sessionId, sessionId),
+        eq(fileLocks.fileName, fileName)
+      ));
+    return result.rowCount > 0;
+  }
+
+  async removeUserFileLocks(sessionId: string, userId: string): Promise<boolean> {
+    const result = await db.delete(fileLocks)
+      .where(and(
+        eq(fileLocks.sessionId, sessionId),
+        eq(fileLocks.lockedBy, userId)
+      ));
+    return result.rowCount > 0;
+  }
+
+  async isFileLocked(sessionId: string, fileName: string): Promise<boolean> {
+    const [lock] = await db.select().from(fileLocks)
+      .where(and(
+        eq(fileLocks.sessionId, sessionId),
+        eq(fileLocks.fileName, fileName)
+      ))
+      .limit(1);
+    return !!lock;
+  }
+
+  // Collaboration message operations
+  async createCollaborationMessage(message: InsertCollaborationMessage): Promise<CollaborationMessage> {
+    const [newMessage] = await db
+      .insert(collaborationMessages)
+      .values(message)
+      .returning();
+    return newMessage;
+  }
+
+  async getCollaborationMessage(id: string): Promise<CollaborationMessage | undefined> {
+    const [message] = await db.select().from(collaborationMessages)
+      .where(eq(collaborationMessages.id, id));
+    return message;
+  }
+
+  async getSessionMessages(sessionId: string, limit: number = 50): Promise<CollaborationMessage[]> {
+    return await db.select().from(collaborationMessages)
+      .where(eq(collaborationMessages.sessionId, sessionId))
+      .orderBy(desc(collaborationMessages.createdAt))
+      .limit(limit);
+  }
+
+  async getFileMessages(sessionId: string, fileName: string, limit: number = 20): Promise<CollaborationMessage[]> {
+    return await db.select().from(collaborationMessages)
+      .where(and(
+        eq(collaborationMessages.sessionId, sessionId),
+        eq(collaborationMessages.fileName, fileName)
+      ))
+      .orderBy(desc(collaborationMessages.createdAt))
+      .limit(limit);
+  }
+
+  async updateCollaborationMessage(id: string, updates: Partial<CollaborationMessage>): Promise<CollaborationMessage | undefined> {
+    const [updatedMessage] = await db
+      .update(collaborationMessages)
+      .set({
+        ...updates,
+        isEdited: true,
+        editedAt: new Date(),
+      })
+      .where(eq(collaborationMessages.id, id))
+      .returning();
+    return updatedMessage;
+  }
+
+  async deleteCollaborationMessage(id: string): Promise<boolean> {
+    const result = await db.delete(collaborationMessages).where(eq(collaborationMessages.id, id));
+    return result.rowCount > 0;
   }
 }
 

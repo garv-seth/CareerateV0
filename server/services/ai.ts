@@ -99,7 +99,6 @@ export async function* generateCodeStreamFromPrompt(
       ],
       stream: true,
       max_completion_tokens: 8000,
-      temperature: 0.7,
     });
 
     let content = "";

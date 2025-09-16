@@ -39,6 +39,7 @@ import { integrationService } from "./services/integrationService";
 import { repositoryIntegrationService } from "./services/repositoryIntegrationService";
 import { apiConnectorManager, ApiConnectorFactory } from "./services/apiConnectorFramework";
 import { encryptionService, secretsManager } from "./services/encryptionService";
+import { collaborationServer } from "./services/collaborationServer";
 import { 
   insertIntegrationSchema,
   insertIntegrationSecretSchema,
@@ -51,6 +52,10 @@ import {
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth first
   await setupAuth(app);
+
+  // Create HTTP server and initialize WebSocket collaboration
+  const server = createServer(app);
+  collaborationServer.initialize(server);
 
   // Helper function to get authenticated user ID
   const getUserId = (req: any): string => {
@@ -1907,6 +1912,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-  return httpServer;
+  // =====================================================
+  // Real-time Collaboration API Endpoints
+  // =====================================================
+
+  // Get active collaboration session for a project
+  app.get("/api/projects/:projectId/collaboration/session", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId } = req.params;
+      
+      // Validate project ownership/access
+      await validateProjectOwnership(projectId, userId);
+      
+      // Get active collaboration sessions for the project
+      const sessions = await storage.getProjectCollaborationSessions(projectId);
+      const activeSession = sessions.find(session => session.isActive);
+      
+      if (activeSession) {
+        // Get current participants
+        const participants = collaborationServer.getRoomParticipants(projectId);
+        
+        res.json({
+          ...activeSession,
+          participants: participants.length,
+          activeUsers: participants
+        });
+      } else {
+        res.json(null);
+      }
+    } catch (error) {
+      console.error('Get collaboration session error:', error);
+      res.status(500).json({ message: "Failed to get collaboration session" });
+    }
+  });
+
+  // Get collaboration room participants
+  app.get("/api/projects/:projectId/collaboration/participants", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId } = req.params;
+      
+      // Validate project ownership/access
+      await validateProjectOwnership(projectId, userId);
+      
+      const participants = collaborationServer.getRoomParticipants(projectId);
+      res.json(participants);
+    } catch (error) {
+      console.error('Get collaboration participants error:', error);
+      res.status(500).json({ message: "Failed to get collaboration participants" });
+    }
+  });
+
+  // Get collaboration session messages
+  app.get("/api/projects/:projectId/collaboration/messages", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId } = req.params;
+      const { limit = 50, fileName } = req.query;
+      
+      // Validate project ownership/access
+      await validateProjectOwnership(projectId, userId);
+      
+      // Get active session
+      const sessions = await storage.getProjectCollaborationSessions(projectId);
+      const activeSession = sessions.find(session => session.isActive);
+      
+      if (!activeSession) {
+        return res.json([]);
+      }
+      
+      let messages;
+      if (fileName) {
+        messages = await storage.getFileMessages(activeSession.sessionId, fileName as string, Number(limit));
+      } else {
+        messages = await storage.getSessionMessages(activeSession.sessionId, Number(limit));
+      }
+      
+      res.json(messages);
+    } catch (error) {
+      console.error('Get collaboration messages error:', error);
+      res.status(500).json({ message: "Failed to get collaboration messages" });
+    }
+  });
+
+  // Get collaboration statistics
+  app.get("/api/collaboration/stats", isAuthenticated, async (req, res) => {
+    try {
+      const stats = {
+        totalRooms: collaborationServer.getRoomCount(),
+        totalConnections: collaborationServer.getTotalConnections(),
+        timestamp: new Date()
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error('Get collaboration stats error:', error);
+      res.status(500).json({ message: "Failed to get collaboration stats" });
+    }
+  });
+
+  return server;
 }
