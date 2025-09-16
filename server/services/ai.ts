@@ -49,7 +49,7 @@ export async function generateCodeFromPrompt(
         { role: "user", content: enhancedPrompt },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 8000,
+      max_completion_tokens: 8000,
       temperature: 0.7,
     });
 
@@ -98,7 +98,7 @@ export async function* generateCodeStreamFromPrompt(
         { role: "user", content: enhancedPrompt },
       ],
       stream: true,
-      max_tokens: 8000,
+      max_completion_tokens: 8000,
       temperature: 0.7,
     });
 
@@ -195,7 +195,7 @@ export async function improveCode(
         }
       ],
       response_format: { type: "json_object" },
-      max_tokens: 6000,
+      max_completion_tokens: 6000,
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
@@ -393,7 +393,7 @@ export async function analyzeCode(code: string, language: string = 'typescript')
         { role: "user", content: `Analyze this code:\n\n${code}` },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 2000,
+      max_completion_tokens: 2000,
       temperature: 0.3,
     });
 
@@ -423,7 +423,7 @@ export async function generateTests(code: string, framework: string): Promise<an
         { role: "user", content: `Generate tests for this ${framework} code:\n\n${code}` },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 3000,
+      max_completion_tokens: 3000,
       temperature: 0.5,
     });
 
@@ -452,7 +452,7 @@ export async function optimizeCode(code: string, optimizationType: string = 'per
         { role: "user", content: `Optimize this code:\n\n${code}` },
       ],
       response_format: { type: "json_object" },
-      max_tokens: 3000,
+      max_completion_tokens: 3000,
       temperature: 0.4,
     });
 

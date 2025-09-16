@@ -147,59 +147,60 @@ export default function Dashboard() {
                   New Project
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" data-testid="dialog-create-project">
-                <DialogHeader>
-                  <DialogTitle>Create New Project</DialogTitle>
-                  <DialogDescription>
+              <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl" data-testid="dialog-create-project">
+                <DialogHeader className="space-y-3 pb-4">
+                  <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">Create New Project</DialogTitle>
+                  <DialogDescription className="text-gray-600 dark:text-gray-300 text-base">
                     Start building your next application with AI assistance.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="project-name">Project Name *</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="project-name" className="text-sm font-semibold text-gray-900 dark:text-white">Project Name *</Label>
                     <Input
                       id="project-name"
                       value={projectName}
                       onChange={(e) => setProjectName(e.target.value)}
                       placeholder="My Awesome App"
                       data-testid="input-project-name"
-                      className="w-full"
+                      className="w-full h-11 text-base bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="project-description">Description (Optional)</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="project-description" className="text-sm font-semibold text-gray-900 dark:text-white">Description (Optional)</Label>
                     <Textarea
                       id="project-description"
                       value={projectDescription}
                       onChange={(e) => setProjectDescription(e.target.value)}
                       placeholder="Describe what your app does..."
                       data-testid="textarea-project-description"
-                      className="w-full min-h-[80px]"
-                      rows={3}
+                      className="w-full min-h-[100px] text-base bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:border-blue-500 dark:focus:border-blue-400 resize-none"
+                      rows={4}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="framework">Framework *</Label>
+                  <div className="space-y-3">
+                    <Label htmlFor="framework" className="text-sm font-semibold text-gray-900 dark:text-white">Framework *</Label>
                     <Select value={framework} onValueChange={setFramework}>
-                      <SelectTrigger data-testid="select-framework" className="w-full">
-                        <SelectValue placeholder="Choose a framework" />
+                      <SelectTrigger data-testid="select-framework" className="w-full h-11 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:border-blue-500 dark:focus:border-blue-400">
+                        <SelectValue placeholder="Choose a framework" className="text-gray-500 dark:text-gray-400" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="react">⚛️ React</SelectItem>
-                        <SelectItem value="vue">💚 Vue.js</SelectItem>
-                        <SelectItem value="angular">🅰️ Angular</SelectItem>
-                        <SelectItem value="next">▲ Next.js</SelectItem>
-                        <SelectItem value="react-native">📱 React Native</SelectItem>
-                        <SelectItem value="node">🟢 Node.js</SelectItem>
+                      <SelectContent className="bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600">
+                        <SelectItem value="react" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">⚛️ React</SelectItem>
+                        <SelectItem value="vue" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">💚 Vue.js</SelectItem>
+                        <SelectItem value="angular" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">🅰️ Angular</SelectItem>
+                        <SelectItem value="next" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">▲ Next.js</SelectItem>
+                        <SelectItem value="react-native" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">📱 React Native</SelectItem>
+                        <SelectItem value="node" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">🟢 Node.js</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
-                <DialogFooter>
+                <DialogFooter className="space-x-3 pt-6">
                   <Button 
                     variant="outline" 
                     onClick={() => setIsCreateDialogOpen(false)}
                     data-testid="button-cancel-create"
+                    className="px-6 py-2 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     Cancel
                   </Button>
@@ -207,8 +208,16 @@ export default function Dashboard() {
                     onClick={handleCreateProject}
                     disabled={createProjectMutation.isPending}
                     data-testid="button-confirm-create"
+                    className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {createProjectMutation.isPending ? "Creating..." : "Create Project"}
+                    {createProjectMutation.isPending ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                        <span>Creating...</span>
+                      </div>
+                    ) : (
+                      "Create Project"
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>

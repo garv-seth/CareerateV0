@@ -82,26 +82,42 @@ export default function CodeEditor({ files, onFilesChange, onGenerateCode, isGen
           <p className="text-muted-foreground mb-4">Generate some code to get started</p>
           
           {onGenerateCode && (
-            <div className="max-w-md mx-auto">
-              <div className="flex space-x-2">
-                <Input
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe what you want to build..."
-                  className="flex-1"
-                  data-testid="input-code-prompt"
-                />
-                <Button 
-                  onClick={handleGenerateCode}
-                  disabled={isGenerating}
-                  data-testid="button-generate-code"
-                >
-                  {isGenerating ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                  ) : (
-                    <Wand2 className="h-4 w-4" />
-                  )}
-                </Button>
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+                <div className="text-center mb-4">
+                  <div className="inline-flex items-center space-x-2 text-purple-600 dark:text-purple-400 mb-2">
+                    <Wand2 className="h-5 w-5" />
+                    <span className="font-semibold">AI Code Generation</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Describe your app in natural language and watch AI build it</p>
+                </div>
+                <div className="flex space-x-3">
+                  <Input
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder="e.g., A todo app with user authentication and real-time sync..."
+                    className="flex-1 h-12 text-base border-purple-200 dark:border-purple-700 focus:border-purple-400 dark:focus:border-purple-500 bg-white/70 dark:bg-gray-900/70"
+                    data-testid="input-code-prompt"
+                  />
+                  <Button 
+                    onClick={handleGenerateCode}
+                    disabled={isGenerating}
+                    className="h-12 px-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-200"
+                    data-testid="button-generate-code"
+                  >
+                    {isGenerating ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                        <span>Building...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Wand2 className="h-4 w-4" />
+                        <span>Generate</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -139,25 +155,35 @@ export default function CodeEditor({ files, onFilesChange, onGenerateCode, isGen
 
       {/* AI Prompt Section */}
       {onGenerateCode && (
-        <div className="p-4 border-b border-border bg-muted/30">
-          <div className="flex space-x-2">
+        <div className="p-4 border-b border-border bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20">
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400">
+              <Wand2 className="h-4 w-4" />
+              <span className="text-sm font-medium">AI Assistant</span>
+            </div>
             <Input
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Ask AI to modify or add to your code..."
-              className="flex-1"
+              placeholder="Ask AI to modify, add features, or refactor your code..."
+              className="flex-1 h-10 border-emerald-200 dark:border-emerald-700 focus:border-emerald-400 dark:focus:border-emerald-500 bg-white/80 dark:bg-gray-900/80"
               data-testid="input-code-improvement"
             />
             <Button 
               onClick={handleGenerateCode}
               disabled={isGenerating}
-              size="sm"
+              className="h-10 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white border-0 shadow-md hover:shadow-lg transition-all duration-200"
               data-testid="button-improve-code"
             >
               {isGenerating ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white" />
+                  <span className="text-sm">Thinking...</span>
+                </div>
               ) : (
-                <Wand2 className="h-4 w-4" />
+                <div className="flex items-center space-x-2">
+                  <Wand2 className="h-3 w-3" />
+                  <span className="text-sm">Enhance</span>
+                </div>
               )}
             </Button>
           </div>
