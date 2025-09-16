@@ -147,7 +147,7 @@ export function planFeatureMiddleware(requiredPlan: string, featureName: string)
       const currentPlan = subscriptionWithPlan?.plan?.name || 'free';
 
       // Define plan hierarchy (higher number = more features)
-      const planHierarchy = {
+      const planHierarchy: Record<string, number> = {
         'free': 0,
         'starter': 1,
         'professional': 2,
@@ -200,7 +200,7 @@ export const teamManagementMiddleware = planFeatureMiddleware('enterprise', 'Tea
 export function usageSummaryMiddleware(req: UsageCheckRequest, res: Response, next: NextFunction) {
   const originalSend = res.json;
   
-  res.json = async function(data: any) {
+  res.json = (async function(data: any) {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
       
@@ -226,7 +226,7 @@ export function usageSummaryMiddleware(req: UsageCheckRequest, res: Response, ne
     }
     
     return originalSend.call(this, data);
-  };
+  }) as any;
 
   next();
 }
@@ -252,7 +252,7 @@ export async function validateUsage(userId: string, metricType: string): Promise
       usage: 0,
       limit: 0,
       plan: 'unknown',
-      error: `Failed to check usage: ${error.message}`
+      error: `Failed to check usage: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }
@@ -269,6 +269,5 @@ export async function incrementUsage(userId: string, metricType: string, increme
 
 // Export all middleware and utilities
 export {
-  createUsageTrackingMiddleware,
   subscriptionService
 };
