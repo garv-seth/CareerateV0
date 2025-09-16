@@ -23,13 +23,16 @@ import { db } from "../db";
 import { eq, and, desc, gte, lte, isNull, or } from "drizzle-orm";
 
 // Initialize Stripe (from javascript_stripe blueprint)
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
-}
+// Make Stripe optional to allow app to run without credentials
+let stripe: Stripe | null = null;
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2023-10-16",
-});
+if (process.env.STRIPE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2023-10-16",
+  });
+} else {
+  console.warn('STRIPE_SECRET_KEY not found. Stripe features will be disabled.');
+}
 
 export interface PlanLimits {
   projects: number;
@@ -47,6 +50,14 @@ export interface SubscriptionServiceError {
 }
 
 export class SubscriptionService {
+  
+  // Helper method to check if Stripe is available
+  private ensureStripeAvailable(): Stripe {
+    if (!stripe) {
+      throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.');
+    }
+    return stripe;
+  }
   
   // =====================================================
   // Plan Management
@@ -215,7 +226,7 @@ export class SubscriptionService {
 
       // Also cancel in Stripe if we have a Stripe subscription ID
       if (subscription?.stripeSubscriptionId) {
-        await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+        await this.ensureStripeAvailable().subscriptions.update(subscription.stripeSubscriptionId, {
           cancel_at_period_end: cancelAtPeriodEnd
         });
       }
@@ -408,7 +419,7 @@ export class SubscriptionService {
       }
 
       // Create new Stripe customer
-      const customer = await stripe.customers.create({
+      const customer = await this.ensureStripeAvailable().customers.create({
         email,
         name,
         metadata: { userId }
@@ -462,7 +473,7 @@ export class SubscriptionService {
       }
 
       // Create Stripe subscription
-      const stripeSubscription = await stripe.subscriptions.create({
+      const stripeSubscription = await this.ensureStripeAvailable().subscriptions.create({
         customer: customerId,
         items: [{ price: stripePriceId }],
         payment_behavior: 'default_incomplete',
@@ -661,7 +672,7 @@ export class SubscriptionService {
           throw new Error(`Stripe price ID not configured for ${billingCycle} billing`);
         }
 
-        await stripe.subscriptions.update(currentSubscription.stripeSubscriptionId, {
+        await this.ensureStripeAvailable().subscriptions.update(currentSubscription.stripeSubscriptionId, {
           items: [{
             price: stripePriceId
           }],
