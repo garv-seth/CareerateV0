@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Eye, Trash2, Code, ArrowLeft, Activity, Shield, Zap, Settings } from "lucide-react";
+import { Plus, Eye, Trash2, Code, ArrowLeft, Activity, Shield, Zap, Settings, Cloud, BarChart3, Target, Cpu, GitBranch, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -228,6 +228,155 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Migration Tools Section */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">Vibe Hosting - Cloud Migration</h2>
+              <p className="text-muted-foreground">
+                AI-powered migration tools for modernizing your infrastructure and applications
+              </p>
+            </div>
+            <Link href="/migration">
+              <Button variant="outline" data-testid="button-view-all-migration">
+                View Migration Dashboard
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/migration/analysis'}>
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Legacy Analysis</CardTitle>
+                    <CardDescription>AI-powered system assessment</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Upload and analyze your existing infrastructure for migration readiness
+                </p>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-xs text-muted-foreground">AI Assessment Ready</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/migration/planning'}>
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Target className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Migration Planning</CardTitle>
+                    <CardDescription>Interactive timeline management</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Create detailed migration plans with resource allocation and risk management
+                </p>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-xs text-muted-foreground">Project Management</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/migration/modernization'}>
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Zap className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">AI Modernization</CardTitle>
+                    <CardDescription>Automated code transformation</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  AI-powered workflows for framework upgrades and architectural modernization
+                </p>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                  <span className="text-xs text-muted-foreground">Code Generation</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/migration/execution'}>
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <Cpu className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Execution Monitor</CardTitle>
+                    <CardDescription>Real-time migration tracking</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Monitor migration progress with live metrics and automated rollback capabilities
+                </p>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-xs text-muted-foreground">Real-time Monitoring</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/migration/recommendations'}>
+              <CardHeader>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">AI Recommendations</CardTitle>
+                    <CardDescription>Optimization insights</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Get AI-powered recommendations for architecture, performance, and cost optimization
+                </p>
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                  <span className="text-xs text-muted-foreground">AI Insights</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors cursor-pointer" onClick={() => window.location.href = '/migration'}>
+              <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                <Cloud className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="font-semibold mb-2">Explore All Migration Tools</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Access the complete migration dashboard with advanced features
+                </p>
+                <Button variant="outline" size="sm">
+                  <GitBranch className="mr-2 h-4 w-4" />
+                  Open Dashboard
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2" data-testid="dashboard-title">
             Your Projects

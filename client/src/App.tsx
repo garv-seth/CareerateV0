@@ -14,6 +14,12 @@ import IntegrationsPage from "@/pages/IntegrationsPage";
 import BillingDashboard from "@/pages/BillingDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import PaymentPage from "@/pages/payment";
+import MigrationDashboard from "@/pages/migration-dashboard";
+import LegacyAnalysis from "@/pages/legacy-analysis";
+import MigrationPlanning from "@/pages/migration-planning";
+import ModernizationWorkflows from "@/pages/modernization-workflows";
+import MigrationExecution from "@/pages/migration-execution";
+import MigrationRecommendations from "@/pages/migration-recommendations";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -35,6 +41,17 @@ function Router() {
           <Route path="/integrations" component={IntegrationsPage} />
           <Route path="/billing" component={BillingDashboard} />
           <Route path="/admin" component={AdminDashboard} />
+          {/* Migration Tools Routes */}
+          <Route path="/migration" component={MigrationDashboard} />
+          <Route path="/migration/analysis" component={LegacyAnalysis} />
+          <Route path="/migration/new-assessment" component={LegacyAnalysis} />
+          <Route path="/migration/planning" component={MigrationPlanning} />
+          <Route path="/migration/modernization" component={ModernizationWorkflows} />
+          <Route path="/migration/execution" component={MigrationExecution} />
+          <Route path="/migration/execution/:projectId" component={MigrationExecution} />
+          <Route path="/migration/recommendations" component={MigrationRecommendations} />
+          <Route path="/migration/project/:projectId" component={MigrationPlanning} />
+          <Route path="/migration/reports" component={MigrationRecommendations} />
         </>
       )}
       <Route component={NotFound} />
