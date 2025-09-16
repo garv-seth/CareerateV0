@@ -64,13 +64,13 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   // Fetch subscription metrics
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
+  const { data: metrics, isLoading: metricsLoading } = useQuery<SubscriptionMetrics>({
     queryKey: ['/api/admin/subscription-metrics'],
     enabled: true
   });
 
   // Fetch all subscriptions
-  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery({
+  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useQuery<SubscriptionDetails[]>({
     queryKey: ['/api/admin/subscriptions'],
     enabled: true
   });
