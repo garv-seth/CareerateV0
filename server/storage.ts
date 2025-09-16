@@ -37,6 +37,10 @@ import {
   editOperations,
   fileLocks,
   collaborationMessages,
+  anomalyDetectionModels,
+  anomalyDetections,
+  alertRules,
+  alertNotifications,
   type User, 
   type UpsertUser, 
   type Project, 
@@ -161,7 +165,15 @@ import {
   type FileLock,
   type InsertFileLock,
   type CollaborationMessage,
-  type InsertCollaborationMessage
+  type InsertCollaborationMessage,
+  type AnomalyDetectionModel,
+  type InsertAnomalyDetectionModel,
+  type AnomalyDetection,
+  type InsertAnomalyDetection,
+  type AlertRule,
+  type InsertAlertRule,
+  type AlertNotification,
+  type InsertAlertNotification
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -257,6 +269,35 @@ export interface IStorage {
   // Enhanced code generation operations
   updateCodeGeneration(id: string, updates: Partial<CodeGeneration>): Promise<CodeGeneration | undefined>;
   getCodeGeneration(id: string): Promise<CodeGeneration | undefined>;
+
+  // Anomaly Detection operations
+  createAnomalyDetectionModel(model: InsertAnomalyDetectionModel): Promise<AnomalyDetectionModel>;
+  getAnomalyDetectionModels(projectId: string, metricName?: string): Promise<AnomalyDetectionModel[]>;
+  updateAnomalyDetectionModel(id: string, updates: Partial<AnomalyDetectionModel>): Promise<AnomalyDetectionModel | undefined>;
+  
+  // Anomaly Detection Results
+  createAnomalyDetection(anomaly: InsertAnomalyDetection): Promise<AnomalyDetection>;
+  getProjectAnomalies(projectId: string, days?: number): Promise<AnomalyDetection[]>;
+  updateAnomalyDetection(id: string, updates: Partial<AnomalyDetection>): Promise<AnomalyDetection | undefined>;
+
+  // Alert Rules operations
+  createAlertRule(rule: InsertAlertRule): Promise<AlertRule>;
+  getAlertRules(projectId: string): Promise<AlertRule[]>;
+  updateAlertRule(id: string, updates: Partial<AlertRule>): Promise<AlertRule | undefined>;
+  deleteAlertRule(id: string): Promise<boolean>;
+
+  // Alert Notifications operations
+  createAlertNotification(notification: InsertAlertNotification): Promise<AlertNotification>;
+  getAlertNotifications(alertRuleId?: string, projectId?: string): Promise<AlertNotification[]>;
+  updateAlertNotification(id: string, updates: Partial<AlertNotification>): Promise<AlertNotification | undefined>;
+
+  // Time Series Metrics operations (enhanced)
+  createTimeSeriesMetric(metric: InsertTimeSeriesMetric): Promise<TimeSeriesMetric>;
+  getTimeSeriesMetrics(projectId: string, resourceId: string | null, startTime: Date, endTime: Date): Promise<TimeSeriesMetric[]>;
+
+  // Performance Baselines operations (enhanced)
+  createPerformanceBaseline(baseline: InsertPerformanceBaseline): Promise<PerformanceBaseline>;
+  getPerformanceBaselines(projectId: string): Promise<PerformanceBaseline[]>;
 
   // Enhanced Infrastructure Operations
   // Deployment Environment operations
@@ -2424,6 +2465,147 @@ export class DatabaseStorage implements IStorage {
   async deleteCollaborationMessage(id: string): Promise<boolean> {
     const result = await db.delete(collaborationMessages).where(eq(collaborationMessages.id, id));
     return result.rowCount > 0;
+  }
+
+  // =====================================================
+  // Enhanced Monitoring Operations Implementation
+  // =====================================================
+
+  // Anomaly Detection Model operations
+  async createAnomalyDetectionModel(model: InsertAnomalyDetectionModel): Promise<AnomalyDetectionModel> {
+    const [newModel] = await db
+      .insert(anomalyDetectionModels)
+      .values(model)
+      .returning();
+    return newModel;
+  }
+
+  async getAnomalyDetectionModels(projectId: string, metricName?: string): Promise<AnomalyDetectionModel[]> {
+    const conditions = [eq(anomalyDetectionModels.projectId, projectId)];
+    
+    if (metricName) {
+      conditions.push(sql`${anomalyDetectionModels.targetMetrics} @> ${JSON.stringify([metricName])}`);
+    }
+    
+    return await db.select().from(anomalyDetectionModels)
+      .where(and(...conditions))
+      .orderBy(desc(anomalyDetectionModels.lastTrained));
+  }
+
+  async updateAnomalyDetectionModel(id: string, updates: Partial<AnomalyDetectionModel>): Promise<AnomalyDetectionModel | undefined> {
+    const [updatedModel] = await db
+      .update(anomalyDetectionModels)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(anomalyDetectionModels.id, id))
+      .returning();
+    return updatedModel;
+  }
+
+  // Anomaly Detection Results operations
+  async createAnomalyDetection(anomaly: InsertAnomalyDetection): Promise<AnomalyDetection> {
+    const [newAnomaly] = await db
+      .insert(anomalyDetections)
+      .values(anomaly)
+      .returning();
+    return newAnomaly;
+  }
+
+  async getProjectAnomalies(projectId: string, days: number = 30): Promise<AnomalyDetection[]> {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    return await db.select().from(anomalyDetections)
+      .where(and(
+        eq(anomalyDetections.projectId, projectId),
+        sql`${anomalyDetections.detectedAt} >= ${startDate}`
+      ))
+      .orderBy(desc(anomalyDetections.detectedAt));
+  }
+
+  async updateAnomalyDetection(id: string, updates: Partial<AnomalyDetection>): Promise<AnomalyDetection | undefined> {
+    const [updatedAnomaly] = await db
+      .update(anomalyDetections)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(anomalyDetections.id, id))
+      .returning();
+    return updatedAnomaly;
+  }
+
+  // Alert Rules operations
+  async createAlertRule(rule: InsertAlertRule): Promise<AlertRule> {
+    const [newRule] = await db
+      .insert(alertRules)
+      .values(rule)
+      .returning();
+    return newRule;
+  }
+
+  async getAlertRules(projectId: string): Promise<AlertRule[]> {
+    return await db.select().from(alertRules)
+      .where(eq(alertRules.projectId, projectId))
+      .orderBy(desc(alertRules.createdAt));
+  }
+
+  async updateAlertRule(id: string, updates: Partial<AlertRule>): Promise<AlertRule | undefined> {
+    const [updatedRule] = await db
+      .update(alertRules)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(alertRules.id, id))
+      .returning();
+    return updatedRule;
+  }
+
+  async deleteAlertRule(id: string): Promise<boolean> {
+    const result = await db.delete(alertRules).where(eq(alertRules.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Alert Notifications operations
+  async createAlertNotification(notification: InsertAlertNotification): Promise<AlertNotification> {
+    const [newNotification] = await db
+      .insert(alertNotifications)
+      .values(notification)
+      .returning();
+    return newNotification;
+  }
+
+  async getAlertNotifications(alertRuleId?: string, projectId?: string): Promise<AlertNotification[]> {
+    const conditions = [];
+    
+    if (alertRuleId) {
+      conditions.push(eq(alertNotifications.alertRuleId, alertRuleId));
+    }
+    
+    if (projectId) {
+      conditions.push(eq(alertNotifications.projectId, projectId));
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    
+    return await db.select().from(alertNotifications)
+      .where(whereClause)
+      .orderBy(desc(alertNotifications.createdAt));
+  }
+
+  async updateAlertNotification(id: string, updates: Partial<AlertNotification>): Promise<AlertNotification | undefined> {
+    const [updatedNotification] = await db
+      .update(alertNotifications)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(alertNotifications.id, id))
+      .returning();
+    return updatedNotification;
   }
 }
 

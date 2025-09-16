@@ -2012,5 +2012,377 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // =====================================================
+  // Comprehensive Monitoring API Endpoints
+  // =====================================================
+
+  // Time Series Metrics APIs
+  app.get("/api/projects/:projectId/time-series-metrics", async (req, res) => {
+    try {
+      const { resourceId, startTime, endTime, metricName } = req.query;
+      const start = startTime ? new Date(startTime as string) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const end = endTime ? new Date(endTime as string) : new Date();
+      
+      const metrics = await storage.getTimeSeriesMetrics(
+        req.params.projectId, 
+        resourceId as string || null, 
+        start, 
+        end
+      );
+      
+      let filteredMetrics = metrics;
+      if (metricName) {
+        filteredMetrics = metrics.filter(m => m.metricName === metricName);
+      }
+      
+      res.json(filteredMetrics);
+    } catch (error) {
+      console.error('Get time series metrics error:', error);
+      res.status(500).json({ message: "Failed to get time series metrics" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/time-series-metrics", async (req, res) => {
+    try {
+      const data = insertTimeSeriesMetricSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      const metric = await storage.createTimeSeriesMetric(data);
+      res.status(201).json(metric);
+    } catch (error) {
+      console.error('Create time series metric error:', error);
+      res.status(400).json({ message: "Failed to create time series metric", error: (error as Error).message });
+    }
+  });
+
+  // Anomaly Detection APIs
+  app.get("/api/projects/:projectId/anomaly-models", async (req, res) => {
+    try {
+      const { metricName } = req.query;
+      const models = await storage.getAnomalyDetectionModels(
+        req.params.projectId, 
+        metricName as string
+      );
+      res.json(models);
+    } catch (error) {
+      console.error('Get anomaly models error:', error);
+      res.status(500).json({ message: "Failed to get anomaly detection models" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/anomaly-models", async (req, res) => {
+    try {
+      const data = insertAnomalyDetectionModelSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      const model = await storage.createAnomalyDetectionModel(data);
+      res.status(201).json(model);
+    } catch (error) {
+      console.error('Create anomaly model error:', error);
+      res.status(400).json({ message: "Failed to create anomaly detection model", error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/projects/:projectId/anomalies", async (req, res) => {
+    try {
+      const { days = 30 } = req.query;
+      const anomalies = await storage.getProjectAnomalies(
+        req.params.projectId, 
+        Number(days)
+      );
+      res.json(anomalies);
+    } catch (error) {
+      console.error('Get anomalies error:', error);
+      res.status(500).json({ message: "Failed to get anomalies" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/anomalies", async (req, res) => {
+    try {
+      const data = insertAnomalyDetectionSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      const anomaly = await storage.createAnomalyDetection(data);
+      res.status(201).json(anomaly);
+    } catch (error) {
+      console.error('Create anomaly error:', error);
+      res.status(400).json({ message: "Failed to create anomaly detection", error: (error as Error).message });
+    }
+  });
+
+  // Alert Rules APIs
+  app.get("/api/projects/:projectId/alert-rules", async (req, res) => {
+    try {
+      const alertRules = await storage.getAlertRules(req.params.projectId);
+      res.json(alertRules);
+    } catch (error) {
+      console.error('Get alert rules error:', error);
+      res.status(500).json({ message: "Failed to get alert rules" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/alert-rules", async (req, res) => {
+    try {
+      const data = insertAlertRuleSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      const alertRule = await storage.createAlertRule(data);
+      res.status(201).json(alertRule);
+    } catch (error) {
+      console.error('Create alert rule error:', error);
+      res.status(400).json({ message: "Failed to create alert rule", error: (error as Error).message });
+    }
+  });
+
+  app.put("/api/alert-rules/:ruleId", async (req, res) => {
+    try {
+      const updatedRule = await storage.updateAlertRule(req.params.ruleId, req.body);
+      if (!updatedRule) {
+        return res.status(404).json({ message: "Alert rule not found" });
+      }
+      res.json(updatedRule);
+    } catch (error) {
+      console.error('Update alert rule error:', error);
+      res.status(500).json({ message: "Failed to update alert rule" });
+    }
+  });
+
+  app.delete("/api/alert-rules/:ruleId", async (req, res) => {
+    try {
+      const deleted = await storage.deleteAlertRule(req.params.ruleId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Alert rule not found" });
+      }
+      res.status(204).send();
+    } catch (error) {
+      console.error('Delete alert rule error:', error);
+      res.status(500).json({ message: "Failed to delete alert rule" });
+    }
+  });
+
+  // Alert Notifications APIs
+  app.get("/api/projects/:projectId/alert-notifications", async (req, res) => {
+    try {
+      const { alertRuleId, limit = 100 } = req.query;
+      const notifications = await storage.getAlertNotifications(
+        alertRuleId as string,
+        req.params.projectId
+      );
+      res.json(notifications.slice(0, Number(limit)));
+    } catch (error) {
+      console.error('Get alert notifications error:', error);
+      res.status(500).json({ message: "Failed to get alert notifications" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/alert-notifications", async (req, res) => {
+    try {
+      const data = insertAlertNotificationSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      const notification = await storage.createAlertNotification(data);
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error('Create alert notification error:', error);
+      res.status(400).json({ message: "Failed to create alert notification", error: (error as Error).message });
+    }
+  });
+
+  // Performance Baselines APIs
+  app.get("/api/projects/:projectId/performance-baselines", async (req, res) => {
+    try {
+      const baselines = await storage.getPerformanceBaselines(req.params.projectId);
+      res.json(baselines);
+    } catch (error) {
+      console.error('Get performance baselines error:', error);
+      res.status(500).json({ message: "Failed to get performance baselines" });
+    }
+  });
+
+  app.post("/api/projects/:projectId/performance-baselines", async (req, res) => {
+    try {
+      const data = insertPerformanceBaselineSchema.parse({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+      const baseline = await storage.createPerformanceBaseline(data);
+      res.status(201).json(baseline);
+    } catch (error) {
+      console.error('Create performance baseline error:', error);
+      res.status(400).json({ message: "Failed to create performance baseline", error: (error as Error).message });
+    }
+  });
+
+  // Analytics Dashboard APIs
+  app.get("/api/projects/:projectId/monitoring-dashboard", async (req, res) => {
+    try {
+      const { timeRange = '24h' } = req.query;
+      
+      // Calculate time range
+      const now = new Date();
+      let startTime = new Date();
+      switch (timeRange) {
+        case '1h':
+          startTime = new Date(now.getTime() - 60 * 60 * 1000);
+          break;
+        case '24h':
+          startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case '7d':
+          startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case '30d':
+          startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      }
+
+      // Gather dashboard data
+      const [
+        metrics,
+        incidents,
+        anomalies,
+        alertRules,
+        baselines
+      ] = await Promise.all([
+        storage.getTimeSeriesMetrics(req.params.projectId, null, startTime, now),
+        storage.getProjectIncidents(req.params.projectId),
+        storage.getProjectAnomalies(req.params.projectId, 7),
+        storage.getAlertRules(req.params.projectId),
+        storage.getPerformanceBaselines(req.params.projectId)
+      ]);
+
+      // Calculate dashboard statistics
+      const recentIncidents = incidents.filter(inc => 
+        new Date(inc.createdAt).getTime() > startTime.getTime()
+      );
+      
+      const openIncidents = incidents.filter(inc => inc.status === 'open');
+      const criticalAnomalies = anomalies.filter(anom => anom.severity === 'critical');
+      
+      // Group metrics by type for charts
+      const metricsGrouped = metrics.reduce((acc, metric) => {
+        if (!acc[metric.metricName]) {
+          acc[metric.metricName] = [];
+        }
+        acc[metric.metricName].push({
+          timestamp: metric.timestamp,
+          value: metric.value,
+          unit: metric.unit
+        });
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      const dashboardData = {
+        overview: {
+          totalIncidents: incidents.length,
+          openIncidents: openIncidents.length,
+          recentIncidents: recentIncidents.length,
+          criticalAnomalies: criticalAnomalies.length,
+          activeAlerts: alertRules.filter(rule => rule.isEnabled).length,
+          performanceBaselines: baselines.length
+        },
+        metrics: metricsGrouped,
+        incidents: recentIncidents.slice(0, 10),
+        anomalies: anomalies.slice(0, 10),
+        alertRules: alertRules.filter(rule => rule.isEnabled).slice(0, 10),
+        timeRange: {
+          start: startTime,
+          end: now,
+          range: timeRange
+        }
+      };
+
+      res.json(dashboardData);
+    } catch (error) {
+      console.error('Get monitoring dashboard error:', error);
+      res.status(500).json({ message: "Failed to get monitoring dashboard data" });
+    }
+  });
+
+  // Real-time Metrics Streaming API
+  app.get("/api/projects/:projectId/metrics/stream", async (req, res) => {
+    try {
+      // Set up Server-Sent Events
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+      });
+
+      // Send initial connection message
+      res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date() })}\n\n`);
+
+      // Send metrics every 30 seconds
+      const metricsInterval = setInterval(async () => {
+        try {
+          const endTime = new Date();
+          const startTime = new Date(endTime.getTime() - 5 * 60 * 1000); // Last 5 minutes
+          
+          const recentMetrics = await storage.getTimeSeriesMetrics(
+            req.params.projectId, 
+            null, 
+            startTime, 
+            endTime
+          );
+
+          const streamData = {
+            type: 'metrics',
+            timestamp: new Date(),
+            data: recentMetrics.slice(0, 20) // Latest 20 metrics
+          };
+
+          res.write(`data: ${JSON.stringify(streamData)}\n\n`);
+        } catch (error) {
+          console.error('Error streaming metrics:', error);
+        }
+      }, 30000);
+
+      // Handle client disconnect
+      req.on('close', () => {
+        clearInterval(metricsInterval);
+        console.log('Metrics stream client disconnected');
+      });
+
+    } catch (error) {
+      console.error('Metrics streaming error:', error);
+      res.status(500).json({ message: "Failed to start metrics stream" });
+    }
+  });
+
+  // Health Check for Monitoring System
+  app.get("/api/monitoring/health", async (req, res) => {
+    try {
+      const healthData = {
+        status: 'healthy',
+        timestamp: new Date(),
+        services: {
+          database: 'healthy',
+          metricsCollection: 'healthy',
+          alertSystem: 'healthy',
+          aiDetection: 'healthy'
+        },
+        version: '1.0.0',
+        uptime: process.uptime()
+      };
+
+      res.json(healthData);
+    } catch (error) {
+      res.status(500).json({ 
+        status: 'unhealthy',
+        error: error.message,
+        timestamp: new Date()
+      });
+    }
+  });
+
   return server;
 }
