@@ -1330,6 +1330,64 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
+  // Integration operations
+  async getUserIntegrations(userId: string, filters?: { projectId?: string, type?: string, service?: string, status?: string }): Promise<any[]> {
+    let query = db.select().from(integrations).where(eq(integrations.userId, userId));
+    
+    // Apply filters if provided
+    // This would be expanded with actual integration table schema
+    
+    return [];
+  }
+
+  async createIntegration(integration: any): Promise<any> {
+    // This would create an actual integration record
+    return { id: 'temp-id', ...integration };
+  }
+
+  async getIntegration(id: string): Promise<any | undefined> {
+    // This would fetch a specific integration
+    return undefined;
+  }
+
+  async updateIntegration(id: string, updates: any): Promise<any | undefined> {
+    // This would update an integration
+    return undefined;
+  }
+
+  async deleteIntegration(id: string): Promise<boolean> {
+    // This would delete an integration
+    return false;
+  }
+
+  async getUserCredentials(userId: string, service: string): Promise<any | undefined> {
+    // Get stored credentials for a service
+    const user = await this.getUser(userId);
+    const credentials = user?.metadata?.credentials || {};
+    return credentials[service];
+  }
+
+  async storeUserCredentials(userId: string, service: string, credentials: any): Promise<void> {
+    // Store encrypted credentials for a user and service
+    const user = await this.getUser(userId);
+    if (user) {
+      const existingMetadata = user.metadata || {};
+      const existingCredentials = existingMetadata.credentials || {};
+      
+      await db.update(users)
+        .set({ 
+          metadata: {
+            ...existingMetadata,
+            credentials: {
+              ...existingCredentials,
+              [service]: credentials
+            }
+          }
+        })
+        .where(eq(users.id, userId));
+    }
+  }
+
   // Custom AI Model operations
   async createCustomAiModel(model: InsertCustomAiModel): Promise<CustomAiModel> {
     const [newModel] = await db

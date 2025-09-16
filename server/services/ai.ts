@@ -42,16 +42,32 @@ export async function generateCodeFromPrompt(
     const systemPrompt = buildAdvancedSystemPrompt(context);
     const enhancedPrompt = enhanceUserPrompt(prompt, context);
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: enhancedPrompt },
-      ],
-      response_format: { type: "json_object" },
-      max_completion_tokens: 8000,
-      temperature: 0.7,
-    });
+    // Try GPT-5 first, fallback to GPT-4 if not available
+    let response;
+    try {
+      response = await openai.chat.completions.create({
+        model: "gpt-5",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: enhancedPrompt },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 8000,
+        temperature: 0.7,
+      });
+    } catch (gpt5Error) {
+      console.log('GPT-5 failed, falling back to GPT-4:', gpt5Error.message);
+      response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: enhancedPrompt },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 8000,
+        temperature: 0.7,
+      });
+    }
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
     
@@ -91,15 +107,30 @@ export async function* generateCodeStreamFromPrompt(
     yield { type: 'progress', data: 'Initializing generation...', progress: 5 };
     onProgress?.({ type: 'progress', data: 'Initializing generation...', progress: 5 });
 
-    const stream = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: enhancedPrompt },
-      ],
-      stream: true,
-      max_completion_tokens: 8000,
-    });
+    // Try GPT-5 first, fallback to GPT-4 if streaming not available
+    let stream;
+    try {
+      stream = await openai.chat.completions.create({
+        model: "gpt-5",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: enhancedPrompt },
+        ],
+        stream: true,
+        max_completion_tokens: 8000,
+      });
+    } catch (streamError) {
+      console.log('GPT-5 streaming failed, falling back to GPT-4 streaming:', streamError.message);
+      stream = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: enhancedPrompt },
+        ],
+        stream: true,
+        max_completion_tokens: 8000,
+      });
+    }
 
     let content = "";
     let progress = 10;
