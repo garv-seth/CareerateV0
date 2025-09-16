@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import Stripe from "stripe"; // From javascript_stripe blueprint
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { 
@@ -21,7 +22,11 @@ import {
   insertCustomAiModelSchema,
   insertMigrationExecutionLogSchema,
   insertMigrationAssessmentFindingSchema,
-  insertMigrationCostAnalysisSchema
+  insertMigrationCostAnalysisSchema,
+  insertUserSubscriptionSchema,
+  insertUsageTrackingSchema,
+  insertBillingHistorySchema,
+  insertPaymentMethodSchema
 } from "@shared/schema";
 import { 
   generateCodeFromPrompt, 
@@ -40,6 +45,24 @@ import { repositoryIntegrationService } from "./services/repositoryIntegrationSe
 import { apiConnectorManager, ApiConnectorFactory } from "./services/apiConnectorFramework";
 import { encryptionService, secretsManager } from "./services/encryptionService";
 import { collaborationServer } from "./services/collaborationServer";
+import { subscriptionService } from "./services/subscriptionService"; // Subscription management service
+import { 
+  projectCreationMiddleware,
+  aiGenerationMiddleware,
+  apiCallMiddleware,
+  collaborationMiddleware,
+  storageMiddleware,
+  usageReportingMiddleware,
+  usageSummaryMiddleware,
+  professionalFeatureMiddleware,
+  enterpriseFeatureMiddleware,
+  collaborationFeatureMiddleware,
+  monitoringFeatureMiddleware,
+  customIntegrationMiddleware,
+  teamManagementMiddleware,
+  validateUsage,
+  incrementUsage
+} from "./services/usageTrackingMiddleware"; // Usage tracking middleware
 import { 
   insertIntegrationSchema,
   insertIntegrationSecretSchema,
@@ -48,6 +71,14 @@ import {
   insertWebhookConfigurationSchema,
   insertApiRateLimitSchema
 } from "@shared/schema";
+
+// Initialize Stripe (from javascript_stripe blueprint)
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth first
@@ -115,8 +146,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create new project for authenticated user
-  app.post("/api/projects", isAuthenticated, async (req, res) => {
+  // Create new project for authenticated user (with usage tracking)
+  app.post("/api/projects", isAuthenticated, projectCreationMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const data = insertProjectSchema.parse(req.body);
@@ -169,6 +200,312 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // =====================================================
+  // Comprehensive Subscription and Billing API Endpoints
+  // =====================================================
+
+  // Get all available subscription plans
+  app.get("/api/subscription/plans", async (req, res) => {
+    try {
+      const plans = await subscriptionService.getActivePlans();
+      res.json(plans);
+    } catch (error) {
+      console.error('Get plans error:', error);
+      res.status(500).json({ message: "Failed to get subscription plans" });
+    }
+  });
+
+  // Get current user's subscription details with usage information
+  app.get("/api/subscription/current", isAuthenticated, usageSummaryMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const subscription = await subscriptionService.getUserSubscriptionWithPlan(userId);
+      
+      if (!subscription) {
+        return res.json({
+          subscription: null,
+          plan: await subscriptionService.getPlanByName('free'),
+          message: "No active subscription - using free plan"
+        });
+      }
+
+      res.json({
+        subscription,
+        plan: subscription.plan
+      });
+    } catch (error) {
+      console.error('Get current subscription error:', error);
+      res.status(500).json({ message: "Failed to get subscription details" });
+    }
+  });
+
+  // Create new subscription (from javascript_stripe blueprint)
+  app.post("/api/subscription/create", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { planId, billingCycle = 'monthly' } = req.body;
+
+      if (!planId) {
+        return res.status(400).json({ message: "Plan ID is required" });
+      }
+
+      // Check if user already has an active subscription
+      const existingSubscription = await subscriptionService.getUserSubscription(userId);
+      if (existingSubscription) {
+        return res.status(400).json({ 
+          message: "User already has an active subscription. Use upgrade/downgrade endpoint instead.",
+          code: "SUBSCRIPTION_EXISTS"
+        });
+      }
+
+      const result = await subscriptionService.createStripeSubscription(userId, planId, billingCycle);
+      
+      res.status(201).json({
+        subscription: result.subscription,
+        clientSecret: result.clientSecret,
+        message: "Subscription created successfully"
+      });
+    } catch (error) {
+      console.error('Create subscription error:', error);
+      res.status(500).json({ 
+        message: error.message || "Failed to create subscription",
+        code: "SUBSCRIPTION_CREATION_FAILED"
+      });
+    }
+  });
+
+  // Upgrade/downgrade subscription plan
+  app.post("/api/subscription/change-plan", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { planId, billingCycle = 'monthly' } = req.body;
+
+      if (!planId) {
+        return res.status(400).json({ message: "Plan ID is required" });
+      }
+
+      const updatedSubscription = await subscriptionService.changePlan(userId, planId, billingCycle);
+      
+      res.json({
+        subscription: updatedSubscription,
+        message: "Plan changed successfully"
+      });
+    } catch (error) {
+      console.error('Change plan error:', error);
+      res.status(500).json({ 
+        message: error.message || "Failed to change plan",
+        code: "PLAN_CHANGE_FAILED"
+      });
+    }
+  });
+
+  // Cancel subscription
+  app.post("/api/subscription/cancel", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { cancelAtPeriodEnd = true } = req.body;
+
+      const subscription = await subscriptionService.getUserSubscription(userId);
+      if (!subscription) {
+        return res.status(404).json({ message: "No active subscription found" });
+      }
+
+      const canceledSubscription = await subscriptionService.cancelSubscription(
+        subscription.id, 
+        cancelAtPeriodEnd
+      );
+      
+      res.json({
+        subscription: canceledSubscription,
+        message: cancelAtPeriodEnd 
+          ? "Subscription will be canceled at the end of the billing period"
+          : "Subscription canceled immediately"
+      });
+    } catch (error) {
+      console.error('Cancel subscription error:', error);
+      res.status(500).json({ 
+        message: error.message || "Failed to cancel subscription",
+        code: "SUBSCRIPTION_CANCELLATION_FAILED"
+      });
+    }
+  });
+
+  // Get user's usage statistics
+  app.get("/api/subscription/usage", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const usageSummary = await subscriptionService.getAllUserUsage(userId);
+      const subscriptionWithPlan = await subscriptionService.getUserSubscriptionWithPlan(userId);
+      
+      res.json({
+        usage: usageSummary,
+        plan: subscriptionWithPlan?.plan?.name || 'free',
+        subscription: subscriptionWithPlan || null
+      });
+    } catch (error) {
+      console.error('Get usage error:', error);
+      res.status(500).json({ message: "Failed to get usage statistics" });
+    }
+  });
+
+  // Get specific usage metric
+  app.get("/api/subscription/usage/:metricType", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { metricType } = req.params;
+      
+      const usageCheck = await subscriptionService.checkUsageLimit(userId, metricType);
+      
+      res.json({
+        metricType,
+        usage: usageCheck.usage,
+        limit: usageCheck.limit,
+        allowed: usageCheck.allowed,
+        plan: usageCheck.plan,
+        remaining: usageCheck.limit === -1 ? -1 : Math.max(0, usageCheck.limit - usageCheck.usage)
+      });
+    } catch (error) {
+      console.error('Get metric usage error:', error);
+      res.status(500).json({ message: "Failed to get usage metric" });
+    }
+  });
+
+  // Get billing history
+  app.get("/api/subscription/billing-history", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const billingHistory = await subscriptionService.getUserBillingHistory(userId);
+      
+      res.json(billingHistory);
+    } catch (error) {
+      console.error('Get billing history error:', error);
+      res.status(500).json({ message: "Failed to get billing history" });
+    }
+  });
+
+  // Create payment intent for one-time charges (from javascript_stripe blueprint)
+  app.post("/api/create-payment-intent", isAuthenticated, async (req, res) => {
+    try {
+      const { amount } = req.body;
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ message: "Valid amount is required" });
+      }
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(amount * 100), // Convert to cents
+        currency: "usd",
+        metadata: {
+          userId: getUserId(req)
+        }
+      });
+      
+      res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+      console.error('Create payment intent error:', error);
+      res.status(500).json({ 
+        message: "Error creating payment intent: " + error.message 
+      });
+    }
+  });
+
+  // Get or create subscription (from javascript_stripe blueprint)
+  app.post('/api/get-or-create-subscription', isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if user already has a subscription
+      const existingSubscription = await subscriptionService.getUserSubscription(userId);
+      
+      if (existingSubscription?.stripeSubscriptionId) {
+        const subscription = await stripe.subscriptions.retrieve(existingSubscription.stripeSubscriptionId);
+
+        return res.json({
+          subscriptionId: subscription.id,
+          clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+        });
+      }
+      
+      if (!user.email) {
+        return res.status(400).json({ message: 'No user email on file' });
+      }
+
+      // Create or get Stripe customer
+      const customerId = await subscriptionService.createOrGetStripeCustomer(
+        userId, 
+        user.email, 
+        `${user.firstName} ${user.lastName}`.trim()
+      );
+
+      // Get default plan (you may want to make this configurable)
+      const defaultPlan = await subscriptionService.getPlanByName('professional');
+      if (!defaultPlan) {
+        return res.status(500).json({ message: 'Default plan not found' });
+      }
+
+      const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{
+          price: defaultPlan.stripeMonthlyPriceId || process.env.STRIPE_PRICE_ID,
+        }],
+        payment_behavior: 'default_incomplete',
+        expand: ['latest_invoice.payment_intent'],
+      });
+
+      // Create our subscription record
+      await subscriptionService.createSubscription({
+        userId,
+        planId: defaultPlan.id,
+        stripeSubscriptionId: subscription.id,
+        status: subscription.status as any,
+        billingCycle: 'monthly',
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        unitAmount: defaultPlan.monthlyPrice,
+        currency: 'usd'
+      });
+  
+      res.json({
+        subscriptionId: subscription.id,
+        clientSecret: subscription.latest_invoice?.payment_intent?.client_secret,
+      });
+    } catch (error) {
+      console.error('Get or create subscription error:', error);
+      return res.status(400).json({ error: { message: error.message } });
+    }
+  });
+
+  // Stripe webhook handler (from javascript_stripe blueprint)
+  app.post('/api/webhooks/stripe', express.raw({type: 'application/json'}), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error('Stripe webhook secret not configured');
+      return res.status(400).send('Webhook secret not configured');
+    }
+
+    let event: Stripe.Event;
+
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig!, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    try {
+      await subscriptionService.handleStripeWebhook(event);
+      res.json({received: true});
+    } catch (error) {
+      console.error('Webhook handler error:', error);
+      res.status(500).json({ error: 'Webhook handler failed' });
+    }
+  });
+
+  // =====================================================
   // Enhanced Vibe Coding Engine API Endpoints
   // =====================================================
 
@@ -197,8 +534,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced code generation with streaming support
-  app.post("/api/generate-code", isAuthenticated, async (req, res) => {
+  // Enhanced code generation with streaming support (with AI usage tracking)
+  app.post("/api/generate-code", isAuthenticated, aiGenerationMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
       const data = insertCodeGenerationSchema.parse(req.body);

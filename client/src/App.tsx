@@ -11,12 +11,18 @@ import Editor from "@/pages/editor";
 import DevOpsDashboard from "@/pages/devops-dashboard";
 import MonitoringDashboard from "@/pages/monitoring-dashboard";
 import IntegrationsPage from "@/pages/IntegrationsPage";
+import BillingDashboard from "@/pages/BillingDashboard";
+import AdminDashboard from "@/pages/AdminDashboard";
+import PaymentPage from "@/pages/payment";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <Switch>
+      {/* Payment route accessible to all users */}
+      <Route path="/payment" component={PaymentPage} />
+      
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
@@ -27,6 +33,8 @@ function Router() {
           <Route path="/devops/:projectId" component={DevOpsDashboard} />
           <Route path="/monitoring/:projectId" component={MonitoringDashboard} />
           <Route path="/integrations" component={IntegrationsPage} />
+          <Route path="/billing" component={BillingDashboard} />
+          <Route path="/admin" component={AdminDashboard} />
         </>
       )}
       <Route component={NotFound} />

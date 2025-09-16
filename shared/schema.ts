@@ -23,13 +23,213 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   preferences: jsonb("preferences").default({}), // coding preferences, themes, etc.
-  subscription: text("subscription").default("free"), // "free", "pro", "enterprise"
+  subscription: text("subscription").default("free"), // "free", "starter", "professional", "enterprise"
   totalTokensUsed: integer("total_tokens_used").default(0),
   monthlyTokensUsed: integer("monthly_tokens_used").default(0),
   apiUsageLimit: integer("api_usage_limit").default(10000),
+  // Stripe integration fields (from javascript_stripe blueprint)
+  stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID
+  stripeSubscriptionId: varchar("stripe_subscription_id"), // Current subscription ID
+  trialEndsAt: timestamp("trial_ends_at"), // trial period end
+  subscriptionStatus: text("subscription_status").default("inactive"), // "active", "inactive", "past_due", "canceled", "trialing"
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// =====================================================
+// Comprehensive Subscription and Billing System
+// =====================================================
+
+// Subscription plans definition
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // "free", "starter", "professional", "enterprise"
+  displayName: text("display_name").notNull(), // "Free", "Starter", "Professional", "Enterprise"
+  description: text("description"),
+  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull(),
+  yearlyPrice: decimal("yearly_price", { precision: 10, scale: 2 }).notNull(),
+  stripeMonthlyPriceId: varchar("stripe_monthly_price_id"), // Stripe price ID for monthly billing
+  stripeYearlyPriceId: varchar("stripe_yearly_price_id"), // Stripe price ID for yearly billing
+  features: jsonb("features").notNull().default([]), // array of feature strings
+  limits: jsonb("limits").notNull().default({}), // usage limits: { projects: 5, aiGenerations: 10, storageGB: 1 }
+  isActive: boolean("is_active").default(true),
+  isPopular: boolean("is_popular").default(false),
+  trialDays: integer("trial_days").default(0),
+  sortOrder: integer("sort_order").default(0),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_subscription_plans_active").on(table.isActive),
+  index("idx_subscription_plans_sort").on(table.sortOrder),
+]);
+
+// User subscriptions tracking
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  stripeSubscriptionId: varchar("stripe_subscription_id").unique(), // Stripe subscription ID
+  status: text("status").notNull().default("pending"), // "pending", "active", "past_due", "canceled", "unpaid", "trialing"
+  billingCycle: text("billing_cycle").notNull().default("monthly"), // "monthly", "yearly"
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  trialStart: timestamp("trial_start"),
+  trialEnd: timestamp("trial_end"),
+  canceledAt: timestamp("canceled_at"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  quantity: integer("quantity").default(1), // for per-seat pricing
+  unitAmount: decimal("unit_amount", { precision: 10, scale: 2 }), // actual amount charged
+  currency: varchar("currency").default("usd"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_subscriptions_user_status").on(table.userId, table.status),
+  index("idx_user_subscriptions_stripe").on(table.stripeSubscriptionId),
+  index("idx_user_subscriptions_period").on(table.currentPeriodEnd),
+]);
+
+// Usage tracking for plan limits enforcement
+export const usageTracking = pgTable("usage_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  organizationId: varchar("organization_id").references(() => organizations.id, { onDelete: "cascade" }),
+  subscriptionId: varchar("subscription_id").references(() => userSubscriptions.id, { onDelete: "cascade" }),
+  metricType: text("metric_type").notNull(), // "ai_generations", "projects", "storage_gb", "api_calls", "collaborators"
+  metricValue: integer("metric_value").notNull().default(0),
+  period: text("period").notNull(), // "current_month", "current_billing_period", "lifetime"
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  resetAt: timestamp("reset_at"), // when usage resets (typically monthly)
+  limit: integer("limit"), // plan limit for this metric
+  lastIncrement: timestamp("last_increment"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_usage_tracking_user_metric").on(table.userId, table.metricType, table.period),
+  index("idx_usage_tracking_org_metric").on(table.organizationId, table.metricType, table.period),
+  index("idx_usage_tracking_reset").on(table.resetAt),
+]);
+
+// Billing history and invoice tracking
+export const billingHistory = pgTable("billing_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscriptionId: varchar("subscription_id").references(() => userSubscriptions.id, { onDelete: "set null" }),
+  stripeInvoiceId: varchar("stripe_invoice_id").unique(), // Stripe invoice ID
+  stripePaymentIntentId: varchar("stripe_payment_intent_id"), // Stripe payment intent ID
+  invoiceNumber: varchar("invoice_number"), // human-readable invoice number
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").default("usd"),
+  status: text("status").notNull(), // "draft", "open", "paid", "past_due", "canceled", "uncollectible"
+  paymentStatus: text("payment_status"), // "pending", "succeeded", "failed", "canceled"
+  description: text("description"),
+  invoiceUrl: text("invoice_url"), // Stripe hosted invoice URL
+  pdfUrl: text("pdf_url"), // PDF download URL
+  dueDate: timestamp("due_date"),
+  paidAt: timestamp("paid_at"),
+  attemptedAt: timestamp("attempted_at"),
+  nextPaymentAttempt: timestamp("next_payment_attempt"),
+  failureReason: text("failure_reason"),
+  lineItems: jsonb("line_items").default([]), // detailed breakdown
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_billing_history_user_status").on(table.userId, table.status),
+  index("idx_billing_history_stripe_invoice").on(table.stripeInvoiceId),
+  index("idx_billing_history_due_date").on(table.dueDate),
+  index("idx_billing_history_paid_at").on(table.paidAt),
+]);
+
+// Payment methods and customer billing information
+export const paymentMethods = pgTable("payment_methods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stripePaymentMethodId: varchar("stripe_payment_method_id").notNull().unique(),
+  type: text("type").notNull(), // "card", "bank_account", "paypal"
+  brand: varchar("brand"), // "visa", "mastercard", "amex", etc.
+  last4: varchar("last_4"), // last 4 digits
+  expiryMonth: integer("expiry_month"),
+  expiryYear: integer("expiry_year"),
+  fingerprint: varchar("fingerprint"), // unique identifier for the payment method
+  isDefault: boolean("is_default").default(false),
+  isVerified: boolean("is_verified").default(false),
+  billingDetails: jsonb("billing_details").default({}), // name, email, address, phone
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_payment_methods_user").on(table.userId),
+  index("idx_payment_methods_stripe").on(table.stripePaymentMethodId),
+  index("idx_payment_methods_default").on(table.userId, table.isDefault),
+]);
+
+// Subscription plan features definition
+export const planFeatures = pgTable("plan_features", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id, { onDelete: "cascade" }),
+  featureName: text("feature_name").notNull(), // "unlimited_projects", "real_time_collaboration", "priority_support"
+  featureType: text("feature_type").notNull(), // "boolean", "limit", "usage_based"
+  isEnabled: boolean("is_enabled").default(true),
+  limitValue: integer("limit_value"), // for limit-based features
+  displayName: text("display_name"),
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_plan_features_plan").on(table.planId),
+  index("idx_plan_features_name").on(table.featureName),
+]);
+
+// Discount and coupon codes
+export const discountCodes = pgTable("discount_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  discountType: text("discount_type").notNull(), // "percentage", "fixed_amount"
+  discountValue: decimal("discount_value", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency").default("usd"), // for fixed_amount discounts
+  minAmount: decimal("min_amount", { precision: 10, scale: 2 }), // minimum order amount
+  maxDiscountAmount: decimal("max_discount_amount", { precision: 10, scale: 2 }), // maximum discount
+  usageLimit: integer("usage_limit"), // total usage limit
+  usageCount: integer("usage_count").default(0), // current usage count
+  userLimit: integer("user_limit").default(1), // per-user usage limit
+  validFrom: timestamp("valid_from").defaultNow(),
+  validUntil: timestamp("valid_until"),
+  applicablePlans: jsonb("applicable_plans").default([]), // plan IDs this applies to
+  isActive: boolean("is_active").default(true),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_discount_codes_code").on(table.code),
+  index("idx_discount_codes_active").on(table.isActive),
+  index("idx_discount_codes_valid").on(table.validFrom, table.validUntil),
+]);
+
+// Discount code usage tracking
+export const discountUsage = pgTable("discount_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  discountCodeId: varchar("discount_code_id").notNull().references(() => discountCodes.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscriptionId: varchar("subscription_id").references(() => userSubscriptions.id, { onDelete: "set null" }),
+  invoiceId: varchar("invoice_id").references(() => billingHistory.id, { onDelete: "set null" }),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).notNull(),
+  originalAmount: decimal("original_amount", { precision: 10, scale: 2 }).notNull(),
+  finalAmount: decimal("final_amount", { precision: 10, scale: 2 }).notNull(),
+  metadata: jsonb("metadata").default({}),
+  appliedAt: timestamp("applied_at").defaultNow(),
+}, (table) => [
+  index("idx_discount_usage_code_user").on(table.discountCodeId, table.userId),
+  index("idx_discount_usage_user").on(table.userId),
+]);
 
 // =====================================================
 // Enterprise User Management System
@@ -3348,3 +3548,159 @@ export type FileLock = typeof fileLocks.$inferSelect;
 export type InsertFileLock = z.infer<typeof insertFileLockSchema>;
 export type CollaborationMessage = typeof collaborationMessages.$inferSelect;
 export type InsertCollaborationMessage = z.infer<typeof insertCollaborationMessageSchema>;
+
+// =====================================================
+// Subscription and Billing Zod Schemas
+// =====================================================
+
+// Subscription plan schemas
+export const insertSubscriptionPlanSchema = createInsertSchema(subscriptionPlans).pick({
+  name: true,
+  displayName: true,
+  description: true,
+  monthlyPrice: true,
+  yearlyPrice: true,
+  stripeMonthlyPriceId: true,
+  stripeYearlyPriceId: true,
+  features: true,
+  limits: true,
+  isActive: true,
+  isPopular: true,
+  trialDays: true,
+  sortOrder: true,
+  metadata: true,
+});
+
+export const insertUserSubscriptionSchema = createInsertSchema(userSubscriptions).pick({
+  userId: true,
+  planId: true,
+  stripeSubscriptionId: true,
+  status: true,
+  billingCycle: true,
+  currentPeriodStart: true,
+  currentPeriodEnd: true,
+  trialStart: true,
+  trialEnd: true,
+  canceledAt: true,
+  cancelAtPeriodEnd: true,
+  quantity: true,
+  unitAmount: true,
+  currency: true,
+  metadata: true,
+});
+
+export const insertUsageTrackingSchema = createInsertSchema(usageTracking).pick({
+  userId: true,
+  organizationId: true,
+  subscriptionId: true,
+  metricType: true,
+  metricValue: true,
+  period: true,
+  periodStart: true,
+  periodEnd: true,
+  resetAt: true,
+  limit: true,
+  lastIncrement: true,
+  metadata: true,
+});
+
+export const insertBillingHistorySchema = createInsertSchema(billingHistory).pick({
+  userId: true,
+  subscriptionId: true,
+  stripeInvoiceId: true,
+  stripePaymentIntentId: true,
+  invoiceNumber: true,
+  amount: true,
+  currency: true,
+  status: true,
+  paymentStatus: true,
+  description: true,
+  invoiceUrl: true,
+  pdfUrl: true,
+  dueDate: true,
+  paidAt: true,
+  attemptedAt: true,
+  nextPaymentAttempt: true,
+  failureReason: true,
+  lineItems: true,
+  taxAmount: true,
+  discountAmount: true,
+  metadata: true,
+});
+
+export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).pick({
+  userId: true,
+  stripePaymentMethodId: true,
+  type: true,
+  brand: true,
+  last4: true,
+  expiryMonth: true,
+  expiryYear: true,
+  fingerprint: true,
+  isDefault: true,
+  isVerified: true,
+  billingDetails: true,
+  metadata: true,
+});
+
+export const insertPlanFeatureSchema = createInsertSchema(planFeatures).pick({
+  planId: true,
+  featureName: true,
+  featureType: true,
+  isEnabled: true,
+  limitValue: true,
+  displayName: true,
+  description: true,
+  sortOrder: true,
+  metadata: true,
+});
+
+export const insertDiscountCodeSchema = createInsertSchema(discountCodes).pick({
+  code: true,
+  name: true,
+  description: true,
+  discountType: true,
+  discountValue: true,
+  currency: true,
+  minAmount: true,
+  maxDiscountAmount: true,
+  usageLimit: true,
+  userLimit: true,
+  validFrom: true,
+  validUntil: true,
+  applicablePlans: true,
+  isActive: true,
+  metadata: true,
+});
+
+export const insertDiscountUsageSchema = createInsertSchema(discountUsage).pick({
+  discountCodeId: true,
+  userId: true,
+  subscriptionId: true,
+  invoiceId: true,
+  discountAmount: true,
+  originalAmount: true,
+  finalAmount: true,
+  metadata: true,
+});
+
+// =====================================================
+// Subscription and Billing Type Definitions
+// =====================================================
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = z.infer<typeof insertSubscriptionPlanSchema>;
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type InsertUserSubscription = z.infer<typeof insertUserSubscriptionSchema>;
+export type UsageTracking = typeof usageTracking.$inferSelect;
+export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
+export type BillingHistory = typeof billingHistory.$inferSelect;
+export type InsertBillingHistory = z.infer<typeof insertBillingHistorySchema>;
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
+export type PlanFeature = typeof planFeatures.$inferSelect;
+export type InsertPlanFeature = z.infer<typeof insertPlanFeatureSchema>;
+export type DiscountCode = typeof discountCodes.$inferSelect;
+export type InsertDiscountCode = z.infer<typeof insertDiscountCodeSchema>;
+export type DiscountUsage = typeof discountUsage.$inferSelect;
+export type InsertDiscountUsage = z.infer<typeof insertDiscountUsageSchema>;
