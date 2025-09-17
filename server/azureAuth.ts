@@ -27,7 +27,8 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+    // Ensure the sessions table is created automatically in new environments
+    createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
   });
@@ -46,13 +47,18 @@ export function getSession() {
 }
 
 async function upsertUser(payload: UserPayload) {
+  const fullName = payload.name || [payload.given_name, payload.family_name].filter(Boolean).join(' ') || (payload.preferred_username || payload.email || '');
   await storage.upsertUser({
     id: payload.sub || payload.oid || '',
     email: payload.preferred_username || payload.email || '',
-    firstName: payload.given_name || payload.name?.split(' ')[0] || '',
-    lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || '',
-    profileImageUrl: '',
-  });
+    name: fullName,
+    metadata: {
+      authProvider: payload.oid ? 'azure-b2c' : 'oauth',
+      given_name: payload.given_name,
+      family_name: payload.family_name,
+      preferred_username: payload.preferred_username,
+    }
+  } as any);
 }
 
 export async function setupAuth(app: Express) {
@@ -71,6 +77,11 @@ export async function setupAuth(app: Express) {
     const clientId = process.env.AZURE_CLIENT_ID;
     const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/callback`);
     
+    if (!tenantName || !policyName || !clientId) {
+      console.error("Azure B2C env vars missing. Expected B2C_TENANT_NAME, B2C_SIGNUP_SIGNIN_POLICY_NAME, AZURE_CLIENT_ID");
+      return res.status(500).send("Authentication not configured");
+    }
+
     const authUrl = `https://${tenantName}.b2clogin.com/${tenantName}.onmicrosoft.com/oauth2/v2.0/authorize?` +
       `client_id=${clientId}&` +
       `response_type=code&` +
@@ -147,6 +158,77 @@ export async function setupAuth(app: Express) {
         `post_logout_redirect_uri=${encodeURIComponent(`${req.protocol}://${req.get('host')}`)}`;
       res.redirect(logoutUrl);
     });
+  });
+
+  // GitHub OAuth login
+  app.get("/api/login/github", (req, res) => {
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    if (!clientId) {
+      return res.status(500).send("GitHub auth not configured");
+    }
+    const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/callback/github`);
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=read:user user:email`;
+    res.redirect(authUrl);
+  });
+
+  // GitHub OAuth callback
+  app.get("/api/callback/github", async (req, res) => {
+    const { code } = req.query as { code?: string };
+    if (!code) {
+      return res.status(400).json({ error: "Authorization code not received" });
+    }
+    try {
+      const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify({
+          client_id: process.env.GITHUB_CLIENT_ID,
+          client_secret: process.env.GITHUB_CLIENT_SECRET,
+          code,
+          redirect_uri: `${req.protocol}://${req.get('host')}/api/callback/github`,
+        }),
+      });
+      const tokenJson = await tokenRes.json();
+      if (!tokenJson.access_token) {
+        console.error("GitHub token exchange failed:", tokenJson);
+        return res.status(400).json({ error: "GitHub authentication failed" });
+      }
+
+      // Get user info
+      const userRes = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `Bearer ${tokenJson.access_token}`, "User-Agent": "careerate-app" },
+      });
+      const ghUser: any = await userRes.json();
+
+      // Get primary email (may require separate call)
+      let email = ghUser.email || "";
+      if (!email) {
+        const emailsRes = await fetch("https://api.github.com/user/emails", {
+          headers: { Authorization: `Bearer ${tokenJson.access_token}`, "User-Agent": "careerate-app" },
+        });
+        const emails: any[] = await emailsRes.json();
+        const primary = emails?.find((e) => e.primary && e.verified) || emails?.[0];
+        email = primary?.email || "";
+      }
+
+      const payload: UserPayload = {
+        sub: `github-${ghUser.id}`,
+        preferred_username: email,
+        name: ghUser.name || ghUser.login,
+      };
+
+      await upsertUser(payload);
+
+      req.login(payload, (err) => {
+        if (err) {
+          return res.status(500).json({ error: "Login failed" });
+        }
+        res.redirect("/");
+      });
+    } catch (error) {
+      console.error("GitHub auth error:", error);
+      res.status(500).json({ error: "Authentication failed" });
+    }
   });
 }
 

@@ -107,6 +107,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update current authenticated user profile (name, metadata)
+  app.put("/api/user", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const allowed = (({ name, metadata }) => ({ name, metadata }))(req.body || {});
+      const updated = await (storage as any).updateUser?.(userId, allowed);
+      if (!updated) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const { password, ...userWithoutPassword } = updated as any;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error('Update user error:', error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
   // Get authenticated user's projects
   app.get("/api/projects", isAuthenticated, async (req, res) => {
     try {

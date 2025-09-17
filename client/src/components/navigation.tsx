@@ -68,14 +68,25 @@ export default function Navigation() {
                 </Button>
               </>
             ) : (
-              <Button 
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
-                data-testid="button-login"
-                onClick={() => window.location.href = '/api/login'}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Loading...' : 'Login'}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                  data-testid="button-login"
+                  onClick={() => window.location.href = '/api/login'}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Loading...' : 'Login'}
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="px-4 py-2 rounded-lg text-sm font-medium"
+                  data-testid="button-login-github"
+                  onClick={() => window.location.href = '/api/login/github'}
+                  disabled={isLoading}
+                >
+                  GitHub
+                </Button>
+              </div>
             )}
           </div>
 
@@ -132,14 +143,25 @@ export default function Navigation() {
                   </Button>
                 </>
               ) : (
-                <Button 
-                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
-                  data-testid="button-mobile-login"
-                  onClick={() => window.location.href = '/api/login'}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Loading...' : 'Login'}
-                </Button>
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                    data-testid="button-mobile-login"
+                    onClick={() => window.location.href = '/api/login'}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Loading...' : 'Login'}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="w-full px-4 py-2 rounded-lg text-sm font-medium"
+                    data-testid="button-mobile-login-github"
+                    onClick={() => window.location.href = '/api/login/github'}
+                    disabled={isLoading}
+                  >
+                    GitHub
+                  </Button>
+                </div>
               )}
             </div>
           </div>
