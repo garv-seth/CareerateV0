@@ -20,14 +20,19 @@ import MigrationPlanning from "@/pages/migration-planning";
 import ModernizationWorkflows from "@/pages/modernization-workflows";
 import MigrationExecution from "@/pages/migration-execution";
 import MigrationRecommendations from "@/pages/migration-recommendations";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfService from "@/pages/TermsOfService";
+import { CookieConsent } from "@/components/CookieConsent";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
     <Switch>
-      {/* Payment route accessible to all users */}
+      {/* Routes accessible to all users */}
       <Route path="/payment" component={PaymentPage} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsOfService} />
       
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
@@ -65,6 +70,7 @@ function App() {
       <TooltipProvider>
         <Toaster />
         <Router />
+        <CookieConsent />
       </TooltipProvider>
     </QueryClientProvider>
   );
