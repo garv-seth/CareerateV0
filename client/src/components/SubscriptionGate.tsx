@@ -7,6 +7,20 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+interface SubscriptionData {
+  plan?: {
+    name?: string;
+  };
+}
+
+interface UsageData {
+  usage: number;
+  limit: number;
+  remaining: number;
+  allowed: boolean;
+  metricType: string;
+}
+
 interface SubscriptionGateProps {
   feature: string;
   requiredPlan?: string;
@@ -30,18 +44,18 @@ export function SubscriptionGate({
   children, 
   fallback 
 }: SubscriptionGateProps) {
-  const { data: subscription } = useQuery({
+  const { data: subscription } = useQuery<SubscriptionData>({
     queryKey: ['/api/subscription/current'],
     enabled: true
   });
 
-  const { data: usage } = useQuery({
+  const { data: usage } = useQuery<UsageData>({
     queryKey: ['/api/subscription/usage', metricType],
     enabled: !!metricType
   });
 
   const currentPlan = subscription?.plan?.name?.toLowerCase() || 'free';
-  const planHierarchy = { free: 0, starter: 1, professional: 2, enterprise: 3 };
+  const planHierarchy: Record<string, number> = { free: 0, starter: 1, professional: 2, enterprise: 3 };
   
   const hasRequiredPlan = !requiredPlan || 
     (planHierarchy[currentPlan] >= planHierarchy[requiredPlan.toLowerCase()]);
@@ -76,14 +90,14 @@ export function UsageCheck({
   showWarning = true, 
   warningThreshold = 0.8 
 }: UsageCheckProps) {
-  const { data: usage } = useQuery({
+  const { data: usage } = useQuery<UsageData>({
     queryKey: ['/api/subscription/usage', metricType],
     enabled: true
   });
 
   if (!usage) return <>{children}</>;
 
-  const usagePercentage = usage.limit === -1 ? 0 : usage.usage / usage.limit;
+  const usagePercentage = usage.limit === -1 ? 0 : (usage.usage || 0) / (usage.limit || 1);
   const shouldShowWarning = showWarning && usagePercentage >= warningThreshold && usage.limit !== -1;
 
   return (
@@ -91,9 +105,9 @@ export function UsageCheck({
       {shouldShowWarning && (
         <UsageWarning 
           metricType={metricType}
-          usage={usage.usage}
-          limit={usage.limit}
-          remaining={usage.remaining}
+          usage={usage.usage || 0}
+          limit={usage.limit || 0}
+          remaining={usage.remaining || 0}
         />
       )}
       {children}
@@ -110,7 +124,7 @@ function UpgradePrompt({
 }: { 
   feature: string;
   requiredPlan?: string;
-  usage?: any;
+  usage?: UsageData;
   currentPlan: string;
 }) {
   const getUpgradeMessage = () => {
@@ -148,10 +162,10 @@ function UpgradePrompt({
             <div className="flex justify-between text-sm">
               <span>Current Usage:</span>
               <span data-testid="current-usage">
-                {usage.usage} / {usage.limit === -1 ? 'Unlimited' : usage.limit}
+                {usage.usage || 0} / {usage.limit === -1 ? 'Unlimited' : usage.limit}
               </span>
             </div>
-            <Progress value={usage.limit === -1 ? 0 : (usage.usage / usage.limit) * 100} className="h-2" />
+            <Progress value={usage.limit === -1 ? 0 : ((usage.usage || 0) / (usage.limit || 1)) * 100} className="h-2" />
           </div>
         )}
         
@@ -238,7 +252,7 @@ export function PlanBadge({ plan }: { plan?: string }) {
     enterprise: { color: 'bg-amber-500', icon: Users, label: 'Enterprise' }
   };
 
-  const config = planConfig[plan.toLowerCase()] || planConfig.free;
+  const config = planConfig[plan.toLowerCase() as keyof typeof planConfig] || planConfig.free;
   const Icon = config.icon;
 
   return (
@@ -259,7 +273,7 @@ export function FeatureAvailability({
   requiredPlan: string;
   currentPlan?: string;
 }) {
-  const planHierarchy = { free: 0, starter: 1, professional: 2, enterprise: 3 };
+  const planHierarchy: Record<string, number> = { free: 0, starter: 1, professional: 2, enterprise: 3 };
   const current = currentPlan?.toLowerCase() || 'free';
   const required = requiredPlan.toLowerCase();
   
@@ -283,21 +297,21 @@ export function UsageMeter({
   metricType: string;
   className?: string;
 }) {
-  const { data: usage } = useQuery({
+  const { data: usage } = useQuery<UsageData>({
     queryKey: ['/api/subscription/usage', metricType],
     enabled: true
   });
 
   if (!usage) return null;
 
-  const percentage = usage.limit === -1 ? 0 : (usage.usage / usage.limit) * 100;
+  const percentage = usage.limit === -1 ? 0 : ((usage.usage || 0) / (usage.limit || 1)) * 100;
 
   return (
     <div className={`space-y-2 ${className}`} data-testid={`usage-meter-${metricType}`}>
       <div className="flex justify-between text-sm">
         <span>{formatMetricType(metricType)}</span>
         <span data-testid={`usage-text-${metricType}`}>
-          {usage.usage} / {usage.limit === -1 ? 'Unlimited' : usage.limit}
+          {usage.usage || 0} / {usage.limit === -1 ? 'Unlimited' : usage.limit}
         </span>
       </div>
       <Progress 
@@ -311,7 +325,7 @@ export function UsageMeter({
 
 // Helper function to format metric types
 function formatMetricType(metricType: string): string {
-  const labels = {
+  const labels: Record<string, string> = {
     'aigenerations': 'AI generations',
     'projects': 'projects',
     'collaborators': 'collaborators',
@@ -321,12 +335,4 @@ function formatMetricType(metricType: string): string {
   return labels[metricType.toLowerCase()] || metricType;
 }
 
-// Export all components
-export {
-  UsageCheck,
-  UpgradePrompt,
-  UsageWarning,
-  PlanBadge,
-  FeatureAvailability,
-  UsageMeter
-};
+// All components are exported via export function declarations above
