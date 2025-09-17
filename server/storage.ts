@@ -17,6 +17,28 @@ import {
   type InsertProject, 
   type CodeGeneration, 
   type InsertCodeGeneration,
+  type Integration,
+  type InsertIntegration,
+  type IntegrationSecret,
+  type InsertIntegrationSecret,
+  type RepositoryConnection,
+  type InsertRepositoryConnection,
+  type ApiConnection,
+  type InsertApiConnection,
+  type IntegrationHealthCheck,
+  type InsertIntegrationHealthCheck,
+  type IntegrationAuditLog,
+  type InsertIntegrationAuditLog,
+  type WebhookConfiguration,
+  type InsertWebhookConfiguration,
+  type ApiRateLimit,
+  type InsertApiRateLimit,
+  type ApiUsageAnalytics
+  
+  // ====================================================================
+  // COMMENTED OUT - THESE TABLES/TYPES ARE NOT YET DEFINED IN SCHEMA.TS
+  // ====================================================================
+  /*
   type AiAgent,
   type InsertAiAgent,
   type Deployment,
@@ -73,30 +95,6 @@ import {
   type InsertPerformanceBaseline,
   type LogEntry,
   type InsertLogEntry,
-  integrations,
-  integrationSecrets,
-  repositoryConnections,
-  apiConnections,
-  integrationHealthChecks,
-  integrationAuditLogs,
-  webhookConfigurations,
-  apiRateLimits,
-  type Integration,
-  type InsertIntegration,
-  type IntegrationSecret,
-  type InsertIntegrationSecret,
-  type RepositoryConnection,
-  type InsertRepositoryConnection,
-  type ApiConnection,
-  type InsertApiConnection,
-  type IntegrationHealthCheck,
-  type InsertIntegrationHealthCheck,
-  type IntegrationAuditLog,
-  type InsertIntegrationAuditLog,
-  type WebhookConfiguration,
-  type InsertWebhookConfiguration,
-  type ApiRateLimit,
-  type InsertApiRateLimit,
   organizations,
   organizationMembers,
   teams,
@@ -144,6 +142,7 @@ import {
   type InsertAlertRule,
   type AlertNotification,
   type InsertAlertNotification
+  */
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -167,203 +166,204 @@ export interface IStorage {
   updateCodeGeneration(id: string, updates: Partial<CodeGeneration>): Promise<CodeGeneration | undefined>;
   getCodeGeneration(id: string): Promise<CodeGeneration | undefined>;
 
-  // AI Agent operations
-  createAiAgent(agent: InsertAiAgent): Promise<AiAgent>;
-  getAiAgent(id: string): Promise<AiAgent | undefined>;
-  getProjectAgents(projectId: string): Promise<AiAgent[]>;
-  updateAiAgent(id: string, updates: Partial<AiAgent>): Promise<AiAgent | undefined>;
-  deleteAiAgent(id: string): Promise<boolean>;
+  // AI Agent operations - COMMENTED OUT: AiAgent type not defined in schema
+  // createAiAgent(agent: InsertAiAgent): Promise<AiAgent>;
+  // getAiAgent(id: string): Promise<AiAgent | undefined>;
+  // getProjectAgents(projectId: string): Promise<AiAgent[]>;
+  // updateAiAgent(id: string, updates: Partial<AiAgent>): Promise<AiAgent | undefined>;
+  // deleteAiAgent(id: string): Promise<boolean>;
 
-  // Deployment operations
-  createDeployment(deployment: InsertDeployment): Promise<Deployment>;
-  getDeployment(id: string): Promise<Deployment | undefined>;
-  getProjectDeployments(projectId: string): Promise<Deployment[]>;
-  updateDeployment(id: string, updates: Partial<Deployment>): Promise<Deployment | undefined>;
+  // Deployment operations - COMMENTED OUT: Deployment type not defined in schema
+  // createDeployment(deployment: InsertDeployment): Promise<Deployment>;
+  // getDeployment(id: string): Promise<Deployment | undefined>;
+  // getProjectDeployments(projectId: string): Promise<Deployment[]>;
+  // updateDeployment(id: string, updates: Partial<Deployment>): Promise<Deployment | undefined>;
 
-  // Incident operations
-  createIncident(incident: InsertIncident): Promise<Incident>;
-  getIncident(id: string): Promise<Incident | undefined>;
-  getProjectIncidents(projectId: string): Promise<Incident[]>;
-  updateIncident(id: string, updates: Partial<Incident>): Promise<Incident | undefined>;
-  getOpenIncidents(projectId: string): Promise<Incident[]>;
+  // Incident operations - COMMENTED OUT: Incident type not defined in schema
+  // createIncident(incident: InsertIncident): Promise<Incident>;
+  // getIncident(id: string): Promise<Incident | undefined>;
+  // getProjectIncidents(projectId: string): Promise<Incident[]>;
+  // updateIncident(id: string, updates: Partial<Incident>): Promise<Incident | undefined>;
+  // getOpenIncidents(projectId: string): Promise<Incident[]>;
 
-  // Performance Metrics operations
-  createPerformanceMetric(metric: InsertPerformanceMetric): Promise<PerformanceMetric>;
-  getProjectMetrics(projectId: string, metricType?: string): Promise<PerformanceMetric[]>;
+  // Performance Metrics operations - COMMENTED OUT: PerformanceMetric type not defined in schema
+  // createPerformanceMetric(metric: InsertPerformanceMetric): Promise<PerformanceMetric>;
+  // getProjectMetrics(projectId: string, metricType?: string): Promise<PerformanceMetric[]>;
 
-  // Security Scan operations
-  createSecurityScan(scan: InsertSecurityScan): Promise<SecurityScan>;
-  getProjectSecurityScans(projectId: string): Promise<SecurityScan[]>;
-  updateSecurityScan(id: string, updates: Partial<SecurityScan>): Promise<SecurityScan | undefined>;
+  // Security Scan operations - COMMENTED OUT: SecurityScan type not defined in schema
+  // createSecurityScan(scan: InsertSecurityScan): Promise<SecurityScan>;
+  // getProjectSecurityScans(projectId: string): Promise<SecurityScan[]>;
+  // updateSecurityScan(id: string, updates: Partial<SecurityScan>): Promise<SecurityScan | undefined>;
 
-  // Agent Task operations
-  createAgentTask(task: InsertAgentTask): Promise<AgentTask>;
-  getAgentTask(id: string): Promise<AgentTask | undefined>;
-  getAgentTasks(agentId: string): Promise<AgentTask[]>;
-  updateAgentTask(id: string, updates: Partial<AgentTask>): Promise<AgentTask | undefined>;
+  // Agent Task operations - COMMENTED OUT: AgentTask type not defined in schema
+  // createAgentTask(task: InsertAgentTask): Promise<AgentTask>;
+  // getAgentTask(id: string): Promise<AgentTask | undefined>;
+  // getAgentTasks(agentId: string): Promise<AgentTask[]>;
+  // updateAgentTask(id: string, updates: Partial<AgentTask>): Promise<AgentTask | undefined>;
 
+  // COMMENTED OUT: All types below not defined in schema
   // Infrastructure Resource operations
-  createInfrastructureResource(resource: InsertInfrastructureResource): Promise<InfrastructureResource>;
-  getProjectResources(projectId: string): Promise<InfrastructureResource[]>;
-  updateInfrastructureResource(id: string, updates: Partial<InfrastructureResource>): Promise<InfrastructureResource | undefined>;
+  // createInfrastructureResource(resource: InsertInfrastructureResource): Promise<InfrastructureResource>;
+  // getProjectResources(projectId: string): Promise<InfrastructureResource[]>;
+  // updateInfrastructureResource(id: string, updates: Partial<InfrastructureResource>): Promise<InfrastructureResource | undefined>;
 
   // Enhanced Vibe Coding operations
   // Project Template operations
-  createProjectTemplate(template: InsertProjectTemplate): Promise<ProjectTemplate>;
-  getProjectTemplate(id: string): Promise<ProjectTemplate | undefined>;
-  getProjectTemplates(category?: string): Promise<ProjectTemplate[]>;
-  updateProjectTemplate(id: string, updates: Partial<ProjectTemplate>): Promise<ProjectTemplate | undefined>;
-  deleteProjectTemplate(id: string): Promise<boolean>;
+  // createProjectTemplate(template: InsertProjectTemplate): Promise<ProjectTemplate>;
+  // getProjectTemplate(id: string): Promise<ProjectTemplate | undefined>;
+  // getProjectTemplates(category?: string): Promise<ProjectTemplate[]>;
+  // updateProjectTemplate(id: string, updates: Partial<ProjectTemplate>): Promise<ProjectTemplate | undefined>;
+  // deleteProjectTemplate(id: string): Promise<boolean>;
 
   // Code Analysis operations
-  createCodeAnalysis(analysis: InsertCodeAnalysis): Promise<CodeAnalysis>;
-  getCodeAnalysis(id: string): Promise<CodeAnalysis | undefined>;
-  getProjectCodeAnalysis(projectId: string): Promise<CodeAnalysis[]>;
-  updateCodeAnalysis(id: string, updates: Partial<CodeAnalysis>): Promise<CodeAnalysis | undefined>;
+  // createCodeAnalysis(analysis: InsertCodeAnalysis): Promise<CodeAnalysis>;
+  // getCodeAnalysis(id: string): Promise<CodeAnalysis | undefined>;
+  // getProjectCodeAnalysis(projectId: string): Promise<CodeAnalysis[]>;
+  // updateCodeAnalysis(id: string, updates: Partial<CodeAnalysis>): Promise<CodeAnalysis | undefined>;
 
   // Generation History operations
-  createGenerationHistory(history: Omit<GenerationHistory, 'id' | 'createdAt'>): Promise<GenerationHistory>;
-  getGenerationHistory(projectId: string): Promise<GenerationHistory[]>;
-  getCurrentVersion(projectId: string): Promise<GenerationHistory | undefined>;
+  // createGenerationHistory(history: Omit<GenerationHistory, 'id' | 'createdAt'>): Promise<GenerationHistory>;
+  // getGenerationHistory(projectId: string): Promise<GenerationHistory[]>;
+  // getCurrentVersion(projectId: string): Promise<GenerationHistory | undefined>;
 
   // Code Review operations
-  createCodeReview(review: InsertCodeReview): Promise<CodeReview>;
-  getCodeReviews(projectId: string): Promise<CodeReview[]>;
-  updateCodeReview(id: string, updates: Partial<CodeReview>): Promise<CodeReview | undefined>;
+  // createCodeReview(review: InsertCodeReview): Promise<CodeReview>;
+  // getCodeReviews(projectId: string): Promise<CodeReview[]>;
+  // updateCodeReview(id: string, updates: Partial<CodeReview>): Promise<CodeReview | undefined>;
 
   // API Documentation operations
-  createApiDocumentation(doc: Omit<ApiDocumentation, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiDocumentation>;
-  getApiDocumentation(projectId: string): Promise<ApiDocumentation | undefined>;
-  updateApiDocumentation(id: string, updates: Partial<ApiDocumentation>): Promise<ApiDocumentation | undefined>;
+  // createApiDocumentation(doc: Omit<ApiDocumentation, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiDocumentation>;
+  // getApiDocumentation(projectId: string): Promise<ApiDocumentation | undefined>;
+  // updateApiDocumentation(id: string, updates: Partial<ApiDocumentation>): Promise<ApiDocumentation | undefined>;
 
-  // Enhanced code generation operations
-  updateCodeGeneration(id: string, updates: Partial<CodeGeneration>): Promise<CodeGeneration | undefined>;
-  getCodeGeneration(id: string): Promise<CodeGeneration | undefined>;
+  // Enhanced code generation operations - these are valid since CodeGeneration is defined  
+  // NOTE: updateCodeGeneration and getCodeGeneration are already defined above
 
+  // COMMENTED OUT: Types below not defined in schema
   // Anomaly Detection operations
-  createAnomalyDetectionModel(model: InsertAnomalyDetectionModel): Promise<AnomalyDetectionModel>;
-  getAnomalyDetectionModels(projectId: string, metricName?: string): Promise<AnomalyDetectionModel[]>;
-  updateAnomalyDetectionModel(id: string, updates: Partial<AnomalyDetectionModel>): Promise<AnomalyDetectionModel | undefined>;
+  // createAnomalyDetectionModel(model: InsertAnomalyDetectionModel): Promise<AnomalyDetectionModel>;
+  // getAnomalyDetectionModels(projectId: string, metricName?: string): Promise<AnomalyDetectionModel[]>;
+  // updateAnomalyDetectionModel(id: string, updates: Partial<AnomalyDetectionModel>): Promise<AnomalyDetectionModel | undefined>;
   
   // Anomaly Detection Results
-  createAnomalyDetection(anomaly: InsertAnomalyDetection): Promise<AnomalyDetection>;
-  getProjectAnomalies(projectId: string, days?: number): Promise<AnomalyDetection[]>;
-  updateAnomalyDetection(id: string, updates: Partial<AnomalyDetection>): Promise<AnomalyDetection | undefined>;
+  // createAnomalyDetection(anomaly: InsertAnomalyDetection): Promise<AnomalyDetection>;
+  // getProjectAnomalies(projectId: string, days?: number): Promise<AnomalyDetection[]>;
+  // updateAnomalyDetection(id: string, updates: Partial<AnomalyDetection>): Promise<AnomalyDetection | undefined>;
 
   // Alert Rules operations
-  createAlertRule(rule: InsertAlertRule): Promise<AlertRule>;
-  getAlertRules(projectId: string): Promise<AlertRule[]>;
-  updateAlertRule(id: string, updates: Partial<AlertRule>): Promise<AlertRule | undefined>;
-  deleteAlertRule(id: string): Promise<boolean>;
+  // createAlertRule(rule: InsertAlertRule): Promise<AlertRule>;
+  // getAlertRules(projectId: string): Promise<AlertRule[]>;
+  // updateAlertRule(id: string, updates: Partial<AlertRule>): Promise<AlertRule | undefined>;
+  // deleteAlertRule(id: string): Promise<boolean>;
 
   // Alert Notifications operations
-  createAlertNotification(notification: InsertAlertNotification): Promise<AlertNotification>;
-  getAlertNotifications(alertRuleId?: string, projectId?: string): Promise<AlertNotification[]>;
-  updateAlertNotification(id: string, updates: Partial<AlertNotification>): Promise<AlertNotification | undefined>;
+  // createAlertNotification(notification: InsertAlertNotification): Promise<AlertNotification>;
+  // getAlertNotifications(alertRuleId?: string, projectId?: string): Promise<AlertNotification[]>;
+  // updateAlertNotification(id: string, updates: Partial<AlertNotification>): Promise<AlertNotification | undefined>;
 
   // Time Series Metrics operations (enhanced)
-  createTimeSeriesMetric(metric: InsertTimeSeriesMetric): Promise<TimeSeriesMetric>;
-  getTimeSeriesMetrics(projectId: string, resourceId: string | null, startTime: Date, endTime: Date): Promise<TimeSeriesMetric[]>;
+  // createTimeSeriesMetric(metric: InsertTimeSeriesMetric): Promise<TimeSeriesMetric>;
+  // getTimeSeriesMetrics(projectId: string, resourceId: string | null, startTime: Date, endTime: Date): Promise<TimeSeriesMetric[]>;
 
   // Performance Baselines operations (enhanced)
-  createPerformanceBaseline(baseline: InsertPerformanceBaseline): Promise<PerformanceBaseline>;
-  getPerformanceBaselines(projectId: string): Promise<PerformanceBaseline[]>;
+  // createPerformanceBaseline(baseline: InsertPerformanceBaseline): Promise<PerformanceBaseline>;
+  // getPerformanceBaselines(projectId: string): Promise<PerformanceBaseline[]>;
 
-  // Enhanced Infrastructure Operations
+  // COMMENTED OUT: Enhanced Infrastructure Operations - types not defined in schema
   // Deployment Environment operations
-  createDeploymentEnvironment(env: InsertDeploymentEnvironment): Promise<DeploymentEnvironment>;
-  getDeploymentEnvironment(id: string): Promise<DeploymentEnvironment | undefined>;
-  getProjectEnvironments(projectId: string): Promise<DeploymentEnvironment[]>;
-  updateDeploymentEnvironment(id: string, updates: Partial<DeploymentEnvironment>): Promise<DeploymentEnvironment | undefined>;
-  deleteDeploymentEnvironment(id: string): Promise<boolean>;
+  // createDeploymentEnvironment(env: InsertDeploymentEnvironment): Promise<DeploymentEnvironment>;
+  // getDeploymentEnvironment(id: string): Promise<DeploymentEnvironment | undefined>;
+  // getProjectEnvironments(projectId: string): Promise<DeploymentEnvironment[]>;
+  // updateDeploymentEnvironment(id: string, updates: Partial<DeploymentEnvironment>): Promise<DeploymentEnvironment | undefined>;
+  // deleteDeploymentEnvironment(id: string): Promise<boolean>;
 
   // Health Check operations
-  createHealthCheck(check: InsertHealthCheck): Promise<HealthCheck>;
-  getHealthCheck(id: string): Promise<HealthCheck | undefined>;
-  getDeploymentHealthChecks(deploymentId: string): Promise<HealthCheck[]>;
-  updateHealthCheck(id: string, updates: Partial<HealthCheck>): Promise<HealthCheck | undefined>;
-  deleteHealthCheck(id: string): Promise<boolean>;
+  // createHealthCheck(check: InsertHealthCheck): Promise<HealthCheck>;
+  // getHealthCheck(id: string): Promise<HealthCheck | undefined>;
+  // getDeploymentHealthChecks(deploymentId: string): Promise<HealthCheck[]>;
+  // updateHealthCheck(id: string, updates: Partial<HealthCheck>): Promise<HealthCheck | undefined>;
+  // deleteHealthCheck(id: string): Promise<boolean>;
 
   // Load Balancer operations
-  createLoadBalancer(lb: InsertLoadBalancer): Promise<LoadBalancer>;
-  getLoadBalancer(id: string): Promise<LoadBalancer | undefined>;
-  getProjectLoadBalancers(projectId: string): Promise<LoadBalancer[]>;
-  updateLoadBalancer(id: string, updates: Partial<LoadBalancer>): Promise<LoadBalancer | undefined>;
-  deleteLoadBalancer(id: string): Promise<boolean>;
+  // createLoadBalancer(lb: InsertLoadBalancer): Promise<LoadBalancer>;
+  // getLoadBalancer(id: string): Promise<LoadBalancer | undefined>;
+  // getProjectLoadBalancers(projectId: string): Promise<LoadBalancer[]>;
+  // updateLoadBalancer(id: string, updates: Partial<LoadBalancer>): Promise<LoadBalancer | undefined>;
+  // deleteLoadBalancer(id: string): Promise<boolean>;
 
   // Auto Scaling Policy operations
-  createAutoScalingPolicy(policy: InsertAutoScalingPolicy): Promise<AutoScalingPolicy>;
-  getAutoScalingPolicy(id: string): Promise<AutoScalingPolicy | undefined>;
-  getProjectAutoScalingPolicies(projectId: string): Promise<AutoScalingPolicy[]>;
-  updateAutoScalingPolicy(id: string, updates: Partial<AutoScalingPolicy>): Promise<AutoScalingPolicy | undefined>;
-  deleteAutoScalingPolicy(id: string): Promise<boolean>;
+  // createAutoScalingPolicy(policy: InsertAutoScalingPolicy): Promise<AutoScalingPolicy>;
+  // getAutoScalingPolicy(id: string): Promise<AutoScalingPolicy | undefined>;
+  // getProjectAutoScalingPolicies(projectId: string): Promise<AutoScalingPolicy[]>;
+  // updateAutoScalingPolicy(id: string, updates: Partial<AutoScalingPolicy>): Promise<AutoScalingPolicy | undefined>;
+  // deleteAutoScalingPolicy(id: string): Promise<boolean>;
 
   // =====================================================
-  // Enterprise Migration System Operations
+  // COMMENTED OUT: Enterprise Migration System Operations - types not defined in schema
   // =====================================================
 
   // Legacy System Assessment operations
-  createLegacySystemAssessment(assessment: InsertLegacySystemAssessment): Promise<LegacySystemAssessment>;
-  getLegacySystemAssessment(id: string): Promise<LegacySystemAssessment | undefined>;
-  getProjectLegacyAssessments(projectId: string): Promise<LegacySystemAssessment[]>;
-  getMigrationProjectAssessments(migrationProjectId: string): Promise<LegacySystemAssessment[]>;
-  updateLegacySystemAssessment(id: string, updates: Partial<LegacySystemAssessment>): Promise<LegacySystemAssessment | undefined>;
-  deleteLegacySystemAssessment(id: string): Promise<boolean>;
+  // createLegacySystemAssessment(assessment: InsertLegacySystemAssessment): Promise<LegacySystemAssessment>;
+  // getLegacySystemAssessment(id: string): Promise<LegacySystemAssessment | undefined>;
+  // getProjectLegacyAssessments(projectId: string): Promise<LegacySystemAssessment[]>;
+  // getMigrationProjectAssessments(migrationProjectId: string): Promise<LegacySystemAssessment[]>;
+  // updateLegacySystemAssessment(id: string, updates: Partial<LegacySystemAssessment>): Promise<LegacySystemAssessment | undefined>;
+  // deleteLegacySystemAssessment(id: string): Promise<boolean>;
 
   // Code Modernization Task operations
-  createCodeModernizationTask(task: InsertCodeModernizationTask): Promise<CodeModernizationTask>;
-  getCodeModernizationTask(id: string): Promise<CodeModernizationTask | undefined>;
-  getProjectModernizationTasks(projectId: string): Promise<CodeModernizationTask[]>;
-  getMigrationProjectTasks(migrationProjectId: string): Promise<CodeModernizationTask[]>;
-  getLegacySystemTasks(legacySystemId: string): Promise<CodeModernizationTask[]>;
-  getUserAssignedTasks(userId: string): Promise<CodeModernizationTask[]>;
-  updateCodeModernizationTask(id: string, updates: Partial<CodeModernizationTask>): Promise<CodeModernizationTask | undefined>;
-  deleteCodeModernizationTask(id: string): Promise<boolean>;
+  // createCodeModernizationTask(task: InsertCodeModernizationTask): Promise<CodeModernizationTask>;
+  // getCodeModernizationTask(id: string): Promise<CodeModernizationTask | undefined>;
+  // getProjectModernizationTasks(projectId: string): Promise<CodeModernizationTask[]>;
+  // getMigrationProjectTasks(migrationProjectId: string): Promise<CodeModernizationTask[]>;
+  // getLegacySystemTasks(legacySystemId: string): Promise<CodeModernizationTask[]>;
+  // getUserAssignedTasks(userId: string): Promise<CodeModernizationTask[]>;
+  // updateCodeModernizationTask(id: string, updates: Partial<CodeModernizationTask>): Promise<CodeModernizationTask | undefined>;
+  // deleteCodeModernizationTask(id: string): Promise<boolean>;
 
   // Custom AI Model operations
-  createCustomAiModel(model: InsertCustomAiModel): Promise<CustomAiModel>;
-  getCustomAiModel(id: string): Promise<CustomAiModel | undefined>;
-  getProjectCustomModels(projectId: string): Promise<CustomAiModel[]>;
-  getActiveCustomModels(projectId: string): Promise<CustomAiModel[]>;
-  getCustomModelsByType(projectId: string, modelType: string): Promise<CustomAiModel[]>;
-  updateCustomAiModel(id: string, updates: Partial<CustomAiModel>): Promise<CustomAiModel | undefined>;
-  deleteCustomAiModel(id: string): Promise<boolean>;
+  // createCustomAiModel(model: InsertCustomAiModel): Promise<CustomAiModel>;
+  // getCustomAiModel(id: string): Promise<CustomAiModel | undefined>;
+  // getProjectCustomModels(projectId: string): Promise<CustomAiModel[]>;
+  // getActiveCustomModels(projectId: string): Promise<CustomAiModel[]>;
+  // getCustomModelsByType(projectId: string, modelType: string): Promise<CustomAiModel[]>;
+  // updateCustomAiModel(id: string, updates: Partial<CustomAiModel>): Promise<CustomAiModel | undefined>;
+  // deleteCustomAiModel(id: string): Promise<boolean>;
 
   // Migration Execution Log operations
-  createMigrationExecutionLog(log: InsertMigrationExecutionLog): Promise<MigrationExecutionLog>;
-  getMigrationExecutionLog(id: string): Promise<MigrationExecutionLog | undefined>;
-  getMigrationProjectLogs(migrationProjectId: string): Promise<MigrationExecutionLog[]>;
-  getMigrationLogsByPhase(migrationProjectId: string, phase: string): Promise<MigrationExecutionLog[]>;
-  getMigrationLogsByStatus(migrationProjectId: string, status: string): Promise<MigrationExecutionLog[]>;
-  updateMigrationExecutionLog(id: string, updates: Partial<MigrationExecutionLog>): Promise<MigrationExecutionLog | undefined>;
+  // createMigrationExecutionLog(log: InsertMigrationExecutionLog): Promise<MigrationExecutionLog>;
+  // getMigrationExecutionLog(id: string): Promise<MigrationExecutionLog | undefined>;
+  // getMigrationProjectLogs(migrationProjectId: string): Promise<MigrationExecutionLog[]>;
+  // getMigrationLogsByPhase(migrationProjectId: string, phase: string): Promise<MigrationExecutionLog[]>;
+  // getMigrationLogsByStatus(migrationProjectId: string, status: string): Promise<MigrationExecutionLog[]>;
+  // updateMigrationExecutionLog(id: string, updates: Partial<MigrationExecutionLog>): Promise<MigrationExecutionLog | undefined>;
 
   // Migration Assessment Finding operations
-  createMigrationAssessmentFinding(finding: InsertMigrationAssessmentFinding): Promise<MigrationAssessmentFinding>;
-  getMigrationAssessmentFinding(id: string): Promise<MigrationAssessmentFinding | undefined>;
-  getAssessmentFindings(assessmentId: string): Promise<MigrationAssessmentFinding[]>;
-  getFindingsBySeverity(assessmentId: string, severity: string): Promise<MigrationAssessmentFinding[]>;
-  getFindingsByType(assessmentId: string, findingType: string): Promise<MigrationAssessmentFinding[]>;
-  getOpenFindings(assessmentId: string): Promise<MigrationAssessmentFinding[]>;
-  updateMigrationAssessmentFinding(id: string, updates: Partial<MigrationAssessmentFinding>): Promise<MigrationAssessmentFinding | undefined>;
-  deleteMigrationAssessmentFinding(id: string): Promise<boolean>;
+  // createMigrationAssessmentFinding(finding: InsertMigrationAssessmentFinding): Promise<MigrationAssessmentFinding>;
+  // getMigrationAssessmentFinding(id: string): Promise<MigrationAssessmentFinding | undefined>;
+  // getAssessmentFindings(assessmentId: string): Promise<MigrationAssessmentFinding[]>;
+  // getFindingsBySeverity(assessmentId: string, severity: string): Promise<MigrationAssessmentFinding[]>;
+  // getFindingsByType(assessmentId: string, findingType: string): Promise<MigrationAssessmentFinding[]>;
+  // getOpenFindings(assessmentId: string): Promise<MigrationAssessmentFinding[]>;
+  // updateMigrationAssessmentFinding(id: string, updates: Partial<MigrationAssessmentFinding>): Promise<MigrationAssessmentFinding | undefined>;
+  // deleteMigrationAssessmentFinding(id: string): Promise<boolean>;
 
   // Migration Cost Analysis operations
-  createMigrationCostAnalysis(analysis: InsertMigrationCostAnalysis): Promise<MigrationCostAnalysis>;
-  getMigrationCostAnalysis(id: string): Promise<MigrationCostAnalysis | undefined>;
-  getMigrationProjectCostAnalyses(migrationProjectId: string): Promise<MigrationCostAnalysis[]>;
-  getLatestCostAnalysis(migrationProjectId: string): Promise<MigrationCostAnalysis | undefined>;
-  getCostAnalysesByType(migrationProjectId: string, analysisType: string): Promise<MigrationCostAnalysis[]>;
-  updateMigrationCostAnalysis(id: string, updates: Partial<MigrationCostAnalysis>): Promise<MigrationCostAnalysis | undefined>;
-  deleteMigrationCostAnalysis(id: string): Promise<boolean>;
+  // createMigrationCostAnalysis(analysis: InsertMigrationCostAnalysis): Promise<MigrationCostAnalysis>;
+  // getMigrationCostAnalysis(id: string): Promise<MigrationCostAnalysis | undefined>;
+  // getMigrationProjectCostAnalyses(migrationProjectId: string): Promise<MigrationCostAnalysis[]>;
+  // getLatestCostAnalysis(migrationProjectId: string): Promise<MigrationCostAnalysis | undefined>;
+  // getCostAnalysesByType(migrationProjectId: string, analysisType: string): Promise<MigrationCostAnalysis[]>;
+  // updateMigrationCostAnalysis(id: string, updates: Partial<MigrationCostAnalysis>): Promise<MigrationCostAnalysis | undefined>;
+  // deleteMigrationCostAnalysis(id: string): Promise<boolean>;
 
   // Enhanced Migration Project operations
-  createMigrationProject(migrationProject: InsertMigrationProject): Promise<MigrationProject>;
-  getMigrationProject(id: string): Promise<MigrationProject | undefined>;
-  getProjectMigrationProjects(projectId: string): Promise<MigrationProject[]>;
-  getUserMigrationProjects(userId: string): Promise<MigrationProject[]>;
-  getMigrationProjectsByStatus(status: string): Promise<MigrationProject[]>;
-  updateMigrationProject(id: string, updates: Partial<MigrationProject>): Promise<MigrationProject | undefined>;
-  deleteMigrationProject(id: string): Promise<boolean>;
+  // createMigrationProject(migrationProject: InsertMigrationProject): Promise<MigrationProject>;
+  // getMigrationProject(id: string): Promise<MigrationProject | undefined>;
+  // getProjectMigrationProjects(projectId: string): Promise<MigrationProject[]>;
+  // getUserMigrationProjects(userId: string): Promise<MigrationProject[]>;
+  // getMigrationProjectsByStatus(status: string): Promise<MigrationProject[]>;
+  // updateMigrationProject(id: string, updates: Partial<MigrationProject>): Promise<MigrationProject | undefined>;
+  // deleteMigrationProject(id: string): Promise<boolean>;
 
   // =====================================================
   // INTEGRATIONS HUB OPERATIONS
@@ -440,146 +440,146 @@ export interface IStorage {
   deleteApiRateLimit(id: string): Promise<boolean>;
   getRateLimitsByService(service: string): Promise<ApiRateLimit[]>;
 
-  // Performance Analytics operations
-  createApmTransaction(transaction: InsertApmTransaction): Promise<ApmTransaction>;
-  getApmTransactions(projectId: string, startTime: Date, endTime: Date): Promise<ApmTransaction[]>;
-  createDatabasePerformanceMetric(metric: InsertDatabasePerformanceMetric): Promise<DatabasePerformanceMetric>;
-  getDatabasePerformanceMetrics(projectId: string, startTime: Date, endTime: Date): Promise<DatabasePerformanceMetric[]>;
-  createRumMetric(metric: InsertRumMetric): Promise<RumMetric>;
-  getRumMetrics(projectId: string, startTime: Date, endTime: Date): Promise<RumMetric[]>;
-  createTimeSeriesMetric(metric: InsertTimeSeriesMetric): Promise<TimeSeriesMetric>;
-  getTimeSeriesMetrics(projectId: string, resourceId: string | null, startTime: Date, endTime: Date): Promise<TimeSeriesMetric[]>;
-  createPerformanceBaseline(baseline: InsertPerformanceBaseline): Promise<PerformanceBaseline>;
-  getPerformanceBaselines(projectId: string): Promise<PerformanceBaseline[]>;
-  createLogEntry(logEntry: InsertLogEntry): Promise<LogEntry>;
+  // COMMENTED OUT: Performance Analytics operations - types not defined in schema
+  // createApmTransaction(transaction: InsertApmTransaction): Promise<ApmTransaction>;
+  // getApmTransactions(projectId: string, startTime: Date, endTime: Date): Promise<ApmTransaction[]>;
+  // createDatabasePerformanceMetric(metric: InsertDatabasePerformanceMetric): Promise<DatabasePerformanceMetric>;
+  // getDatabasePerformanceMetrics(projectId: string, startTime: Date, endTime: Date): Promise<DatabasePerformanceMetric[]>;
+  // createRumMetric(metric: InsertRumMetric): Promise<RumMetric>;
+  // getRumMetrics(projectId: string, startTime: Date, endTime: Date): Promise<RumMetric[]>;
+  // createTimeSeriesMetric(metric: InsertTimeSeriesMetric): Promise<TimeSeriesMetric>;
+  // getTimeSeriesMetrics(projectId: string, resourceId: string | null, startTime: Date, endTime: Date): Promise<TimeSeriesMetric[]>;
+  // createPerformanceBaseline(baseline: InsertPerformanceBaseline): Promise<PerformanceBaseline>;
+  // getPerformanceBaselines(projectId: string): Promise<PerformanceBaseline[]>;
+  // createLogEntry(logEntry: InsertLogEntry): Promise<LogEntry>;
 
   // =====================================================
-  // Enterprise User Management Operations
+  // COMMENTED OUT: Enterprise User Management Operations - types not defined in schema
   // =====================================================
 
   // Organization operations
-  createOrganization(org: InsertOrganization): Promise<Organization>;
-  getOrganization(id: string): Promise<Organization | undefined>;
-  getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
-  getUserOrganizations(userId: string): Promise<Organization[]>;
-  updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization | undefined>;
-  deleteOrganization(id: string): Promise<boolean>;
+  // createOrganization(org: InsertOrganization): Promise<Organization>;
+  // getOrganization(id: string): Promise<Organization | undefined>;
+  // getOrganizationBySlug(slug: string): Promise<Organization | undefined>;
+  // getUserOrganizations(userId: string): Promise<Organization[]>;
+  // updateOrganization(id: string, updates: Partial<Organization>): Promise<Organization | undefined>;
+  // deleteOrganization(id: string): Promise<boolean>;
 
   // Organization member operations
-  addOrganizationMember(member: InsertOrganizationMember): Promise<OrganizationMember>;
-  getOrganizationMember(organizationId: string, userId: string): Promise<OrganizationMember | undefined>;
-  getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]>;
-  updateOrganizationMember(id: string, updates: Partial<OrganizationMember>): Promise<OrganizationMember | undefined>;
-  removeOrganizationMember(organizationId: string, userId: string): Promise<boolean>;
+  // addOrganizationMember(member: InsertOrganizationMember): Promise<OrganizationMember>;
+  // getOrganizationMember(organizationId: string, userId: string): Promise<OrganizationMember | undefined>;
+  // getOrganizationMembers(organizationId: string): Promise<OrganizationMember[]>;
+  // updateOrganizationMember(id: string, updates: Partial<OrganizationMember>): Promise<OrganizationMember | undefined>;
+  // removeOrganizationMember(organizationId: string, userId: string): Promise<boolean>;
 
   // Team operations
-  createTeam(team: InsertTeam): Promise<Team>;
-  getTeam(id: string): Promise<Team | undefined>;
-  getTeamBySlug(organizationId: string, slug: string): Promise<Team | undefined>;
-  getOrganizationTeams(organizationId: string): Promise<Team[]>;
-  getUserTeams(userId: string): Promise<Team[]>;
-  updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined>;
-  deleteTeam(id: string): Promise<boolean>;
+  // createTeam(team: InsertTeam): Promise<Team>;
+  // getTeam(id: string): Promise<Team | undefined>;
+  // getTeamBySlug(organizationId: string, slug: string): Promise<Team | undefined>;
+  // getOrganizationTeams(organizationId: string): Promise<Team[]>;
+  // getUserTeams(userId: string): Promise<Team[]>;
+  // updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined>;
+  // deleteTeam(id: string): Promise<boolean>;
 
   // Team member operations
-  addTeamMember(member: InsertTeamMember): Promise<TeamMember>;
-  getTeamMember(teamId: string, userId: string): Promise<TeamMember | undefined>;
-  getTeamMembers(teamId: string): Promise<TeamMember[]>;
-  updateTeamMember(id: string, updates: Partial<TeamMember>): Promise<TeamMember | undefined>;
-  removeTeamMember(teamId: string, userId: string): Promise<boolean>;
+  // addTeamMember(member: InsertTeamMember): Promise<TeamMember>;
+  // getTeamMember(teamId: string, userId: string): Promise<TeamMember | undefined>;
+  // getTeamMembers(teamId: string): Promise<TeamMember[]>;
+  // updateTeamMember(id: string, updates: Partial<TeamMember>): Promise<TeamMember | undefined>;
+  // removeTeamMember(teamId: string, userId: string): Promise<boolean>;
 
   // Role and permission operations
-  createRole(role: InsertRole): Promise<Role>;
-  getRole(id: string): Promise<Role | undefined>;
-  getRoleByName(name: string): Promise<Role | undefined>;
-  getRoles(scope?: string): Promise<Role[]>;
-  updateRole(id: string, updates: Partial<Role>): Promise<Role | undefined>;
-  deleteRole(id: string): Promise<boolean>;
+  // createRole(role: InsertRole): Promise<Role>;
+  // getRole(id: string): Promise<Role | undefined>;
+  // getRoleByName(name: string): Promise<Role | undefined>;
+  // getRoles(scope?: string): Promise<Role[]>;
+  // updateRole(id: string, updates: Partial<Role>): Promise<Role | undefined>;
+  // deleteRole(id: string): Promise<boolean>;
 
-  createPermission(permission: InsertPermission): Promise<Permission>;
-  getPermission(id: string): Promise<Permission | undefined>;
-  getPermissionByName(name: string): Promise<Permission | undefined>;
-  getPermissions(category?: string): Promise<Permission[]>;
-  updatePermission(id: string, updates: Partial<Permission>): Promise<Permission | undefined>;
-  deletePermission(id: string): Promise<boolean>;
+  // createPermission(permission: InsertPermission): Promise<Permission>;
+  // getPermission(id: string): Promise<Permission | undefined>;
+  // getPermissionByName(name: string): Promise<Permission | undefined>;
+  // getPermissions(category?: string): Promise<Permission[]>;
+  // updatePermission(id: string, updates: Partial<Permission>): Promise<Permission | undefined>;
+  // deletePermission(id: string): Promise<boolean>;
 
   // User role assignment operations
-  assignUserRole(assignment: InsertUserRole): Promise<UserRole>;
-  getUserRole(userId: string, roleId: string, scope: string, scopeId?: string): Promise<UserRole | undefined>;
-  getUserRoles(userId: string, scope?: string, scopeId?: string): Promise<UserRole[]>;
-  revokeUserRole(userId: string, roleId: string, scope: string, scopeId?: string): Promise<boolean>;
+  // assignUserRole(assignment: InsertUserRole): Promise<UserRole>;
+  // getUserRole(userId: string, roleId: string, scope: string, scopeId?: string): Promise<UserRole | undefined>;
+  // getUserRoles(userId: string, scope?: string, scopeId?: string): Promise<UserRole[]>;
+  // revokeUserRole(userId: string, roleId: string, scope: string, scopeId?: string): Promise<boolean>;
 
   // Project collaboration operations
-  addProjectCollaborator(collaborator: InsertProjectCollaborator): Promise<ProjectCollaborator>;
-  getProjectCollaborator(projectId: string, userId: string): Promise<ProjectCollaborator | undefined>;
-  getProjectCollaborators(projectId: string): Promise<ProjectCollaborator[]>;
-  getUserProjectCollaborations(userId: string): Promise<ProjectCollaborator[]>;
-  updateProjectCollaborator(id: string, updates: Partial<ProjectCollaborator>): Promise<ProjectCollaborator | undefined>;
-  removeProjectCollaborator(projectId: string, userId: string): Promise<boolean>;
+  // addProjectCollaborator(collaborator: InsertProjectCollaborator): Promise<ProjectCollaborator>;
+  // getProjectCollaborator(projectId: string, userId: string): Promise<ProjectCollaborator | undefined>;
+  // getProjectCollaborators(projectId: string): Promise<ProjectCollaborator[]>;
+  // getUserProjectCollaborations(userId: string): Promise<ProjectCollaborator[]>;
+  // updateProjectCollaborator(id: string, updates: Partial<ProjectCollaborator>): Promise<ProjectCollaborator | undefined>;
+  // removeProjectCollaborator(projectId: string, userId: string): Promise<boolean>;
 
   // Audit log operations
-  createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
-  getAuditLogs(organizationId?: string, userId?: string, limit?: number): Promise<AuditLog[]>;
-  getAuditLogsByResource(resource: string, resourceId?: string, limit?: number): Promise<AuditLog[]>;
+  // createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+  // getAuditLogs(organizationId?: string, userId?: string, limit?: number): Promise<AuditLog[]>;
+  // getAuditLogsByResource(resource: string, resourceId?: string, limit?: number): Promise<AuditLog[]>;
 
   // Authorization helper methods
-  hasPermission(userId: string, permission: string, scope: string, scopeId?: string): Promise<boolean>;
-  canAccessProject(userId: string, projectId: string): Promise<boolean>;
-  getUserPermissions(userId: string, scope: string, scopeId?: string): Promise<string[]>;
+  // hasPermission(userId: string, permission: string, scope: string, scopeId?: string): Promise<boolean>;
+  // canAccessProject(userId: string, projectId: string): Promise<boolean>;
+  // getUserPermissions(userId: string, scope: string, scopeId?: string): Promise<string[]>;
 
   // =====================================================
-  // Real-time Collaboration Operations
+  // COMMENTED OUT: Real-time Collaboration Operations - types not defined in schema
   // =====================================================
 
   // Collaboration session operations
-  createCollaborationSession(session: InsertCollaborationSession): Promise<CollaborationSession>;
-  getCollaborationSession(id: string): Promise<CollaborationSession | undefined>;
-  getCollaborationSessionBySessionId(sessionId: string): Promise<CollaborationSession | undefined>;
-  getProjectCollaborationSessions(projectId: string): Promise<CollaborationSession[]>;
-  updateCollaborationSession(sessionId: string, updates: Partial<CollaborationSession>): Promise<CollaborationSession | undefined>;
-  deleteCollaborationSession(id: string): Promise<boolean>;
+  // createCollaborationSession(session: InsertCollaborationSession): Promise<CollaborationSession>;
+  // getCollaborationSession(id: string): Promise<CollaborationSession | undefined>;
+  // getCollaborationSessionBySessionId(sessionId: string): Promise<CollaborationSession | undefined>;
+  // getProjectCollaborationSessions(projectId: string): Promise<CollaborationSession[]>;
+  // updateCollaborationSession(sessionId: string, updates: Partial<CollaborationSession>): Promise<CollaborationSession | undefined>;
+  // deleteCollaborationSession(id: string): Promise<boolean>;
 
   // User presence operations
-  createUserPresence(presence: InsertUserPresence): Promise<UserPresence>;
-  getUserPresence(id: string): Promise<UserPresence | undefined>;
-  getUserPresenceByConnection(connectionId: string): Promise<UserPresence | undefined>;
-  getSessionUserPresence(sessionId: string): Promise<UserPresence[]>;
-  updateUserPresence(connectionId: string, updates: Partial<UserPresence>): Promise<UserPresence | undefined>;
-  removeUserPresence(connectionId: string): Promise<boolean>;
-  getActiveUserPresence(sessionId: string): Promise<UserPresence[]>;
+  // createUserPresence(presence: InsertUserPresence): Promise<UserPresence>;
+  // getUserPresence(id: string): Promise<UserPresence | undefined>;
+  // getUserPresenceByConnection(connectionId: string): Promise<UserPresence | undefined>;
+  // getSessionUserPresence(sessionId: string): Promise<UserPresence[]>;
+  // updateUserPresence(connectionId: string, updates: Partial<UserPresence>): Promise<UserPresence | undefined>;
+  // removeUserPresence(connectionId: string): Promise<boolean>;
+  // getActiveUserPresence(sessionId: string): Promise<UserPresence[]>;
 
   // Cursor position operations
-  createCursorPosition(cursor: InsertCursorPosition): Promise<CursorPosition>;
-  updateCursorPosition(presenceId: string, cursor: Partial<InsertCursorPosition>): Promise<CursorPosition | undefined>;
-  getCursorPositions(sessionId: string, fileName?: string): Promise<CursorPosition[]>;
-  getUserCursorPosition(presenceId: string, fileName: string): Promise<CursorPosition | undefined>;
-  deleteCursorPosition(id: string): Promise<boolean>;
-  deleteUserCursorPositions(presenceId: string): Promise<boolean>;
+  // createCursorPosition(cursor: InsertCursorPosition): Promise<CursorPosition>;
+  // updateCursorPosition(presenceId: string, cursor: Partial<InsertCursorPosition>): Promise<CursorPosition | undefined>;
+  // getCursorPositions(sessionId: string, fileName?: string): Promise<CursorPosition[]>;
+  // getUserCursorPosition(presenceId: string, fileName: string): Promise<CursorPosition | undefined>;
+  // deleteCursorPosition(id: string): Promise<boolean>;
+  // deleteUserCursorPositions(presenceId: string): Promise<boolean>;
 
   // Edit operation operations
-  createEditOperation(operation: InsertEditOperation): Promise<EditOperation>;
-  getEditOperation(id: string): Promise<EditOperation | undefined>;
-  getSessionEditOperations(sessionId: string, fileName?: string): Promise<EditOperation[]>;
-  getFileEditOperations(sessionId: string, fileName: string, limit?: number): Promise<EditOperation[]>;
-  updateEditOperation(id: string, updates: Partial<EditOperation>): Promise<EditOperation | undefined>;
-  markEditOperationApplied(operationId: string): Promise<EditOperation | undefined>;
+  // createEditOperation(operation: InsertEditOperation): Promise<EditOperation>;
+  // getEditOperation(id: string): Promise<EditOperation | undefined>;
+  // getSessionEditOperations(sessionId: string, fileName?: string): Promise<EditOperation[]>;
+  // getFileEditOperations(sessionId: string, fileName: string, limit?: number): Promise<EditOperation[]>;
+  // updateEditOperation(id: string, updates: Partial<EditOperation>): Promise<EditOperation | undefined>;
+  // markEditOperationApplied(operationId: string): Promise<EditOperation | undefined>;
 
   // File lock operations
-  createFileLock(lock: InsertFileLock): Promise<FileLock>;
-  getFileLock(sessionId: string, fileName: string): Promise<FileLock | undefined>;
-  getSessionFileLocks(sessionId: string): Promise<FileLock[]>;
-  getUserFileLocks(sessionId: string, userId: string): Promise<FileLock[]>;
-  removeFileLock(sessionId: string, fileName: string): Promise<boolean>;
-  removeUserFileLocks(sessionId: string, userId: string): Promise<boolean>;
-  isFileLocked(sessionId: string, fileName: string): Promise<boolean>;
+  // createFileLock(lock: InsertFileLock): Promise<FileLock>;
+  // getFileLock(sessionId: string, fileName: string): Promise<FileLock | undefined>;
+  // getSessionFileLocks(sessionId: string): Promise<FileLock[]>;
+  // getUserFileLocks(sessionId: string, userId: string): Promise<FileLock[]>;
+  // removeFileLock(sessionId: string, fileName: string): Promise<boolean>;
+  // removeUserFileLocks(sessionId: string, userId: string): Promise<boolean>;
+  // isFileLocked(sessionId: string, fileName: string): Promise<boolean>;
 
   // Collaboration message operations
-  createCollaborationMessage(message: InsertCollaborationMessage): Promise<CollaborationMessage>;
-  getCollaborationMessage(id: string): Promise<CollaborationMessage | undefined>;
-  getSessionMessages(sessionId: string, limit?: number): Promise<CollaborationMessage[]>;
-  getFileMessages(sessionId: string, fileName: string, limit?: number): Promise<CollaborationMessage[]>;
-  updateCollaborationMessage(id: string, updates: Partial<CollaborationMessage>): Promise<CollaborationMessage | undefined>;
-  deleteCollaborationMessage(id: string): Promise<boolean>;
+  // createCollaborationMessage(message: InsertCollaborationMessage): Promise<CollaborationMessage>;
+  // getCollaborationMessage(id: string): Promise<CollaborationMessage | undefined>;
+  // getSessionMessages(sessionId: string, limit?: number): Promise<CollaborationMessage[]>;
+  // getFileMessages(sessionId: string, fileName: string, limit?: number): Promise<CollaborationMessage[]>;
+  // updateCollaborationMessage(id: string, updates: Partial<CollaborationMessage>): Promise<CollaborationMessage | undefined>;
+  // deleteCollaborationMessage(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -666,7 +666,22 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(codeGenerations).where(eq(codeGenerations.projectId, projectId));
   }
 
-  // AI Agent operations
+  async updateCodeGeneration(id: string, updates: Partial<CodeGeneration>): Promise<CodeGeneration | undefined> {
+    const [updatedGeneration] = await db
+      .update(codeGenerations)
+      .set(updates)
+      .where(eq(codeGenerations.id, id))
+      .returning();
+    return updatedGeneration;
+  }
+
+  async getCodeGeneration(id: string): Promise<CodeGeneration | undefined> {
+    const [generation] = await db.select().from(codeGenerations).where(eq(codeGenerations.id, id));
+    return generation;
+  }
+
+  // COMMENTED OUT: AI Agent operations - types/tables not defined in schema
+  /*
   async createAiAgent(agent: InsertAiAgent): Promise<AiAgent> {
     const [newAgent] = await db
       .insert(aiAgents)
@@ -700,7 +715,10 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(aiAgents).where(eq(aiAgents.id, id));
     return result.rowCount > 0;
   }
+  */
 
+  // COMMENTED OUT: All operations below use undefined tables/types - commenting out until line 1617
+  /*
   // Deployment operations
   async createDeployment(deployment: InsertDeployment): Promise<Deployment> {
     const [newDeployment] = await db
@@ -1300,35 +1318,7 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount > 0;
   }
 
-  // Integration operations
-  async getUserIntegrations(userId: string, filters?: { projectId?: string, type?: string, service?: string, status?: string }): Promise<any[]> {
-    let query = db.select().from(integrations).where(eq(integrations.userId, userId));
-    
-    // Apply filters if provided
-    // This would be expanded with actual integration table schema
-    
-    return [];
-  }
-
-  async createIntegration(integration: any): Promise<any> {
-    // This would create an actual integration record
-    return { id: 'temp-id', ...integration };
-  }
-
-  async getIntegration(id: string): Promise<any | undefined> {
-    // This would fetch a specific integration
-    return undefined;
-  }
-
-  async updateIntegration(id: string, updates: any): Promise<any | undefined> {
-    // This would update an integration
-    return undefined;
-  }
-
-  async deleteIntegration(id: string): Promise<boolean> {
-    // This would delete an integration
-    return false;
-  }
+  // Integration operations removed - proper implementations are below in the INTEGRATIONS HUB section
 
   async getUserCredentials(userId: string, service: string): Promise<any | undefined> {
     // Get stored credentials for a service
@@ -1639,6 +1629,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(migrationProjects.id, id));
     return result.rowCount > 0;
   }
+  */
 
   // =====================================================
   // INTEGRATIONS HUB OPERATIONS IMPLEMENTATION
@@ -2035,6 +2026,8 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(apiRateLimits.createdAt));
   }
 
+  // COMMENTED OUT: Performance Analytics operations and everything below - types/tables not defined in schema
+  /*
   // Performance Analytics operations
   async createApmTransaction(transaction: InsertApmTransaction): Promise<ApmTransaction> {
     const [newTransaction] = await db
@@ -2635,6 +2628,7 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return updatedNotification;
   }
+  */
 }
 
 export const storage = new DatabaseStorage();

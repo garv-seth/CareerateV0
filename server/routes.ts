@@ -2,7 +2,7 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe"; // From javascript_stripe blueprint
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./azureAuth";
 import { 
   insertProjectSchema, 
   insertCodeGenerationSchema,

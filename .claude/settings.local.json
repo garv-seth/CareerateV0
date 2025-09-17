@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(az login:*)",
+      "Bash(az:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run check:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(DATABASE_URL=secretref:database-url )",
+      "Bash(AZURE_CLIENT_ID=secretref:azure-client-id )",
+      "Bash(AZURE_TENANT_ID=secretref:azure-tenant-id )",
+      "Bash(B2C_TENANT_NAME=secretref:b2c-tenant-name )",
+      "Bash(B2C_SIGNUP_SIGNIN_POLICY_NAME=secretref:b2c-signup-signin-policy-name )",
+      "Bash(SESSION_SECRET=secretref:session-secret )",
+      "Bash(NODE_ENV=production )",
+      "Bash(PORT=5000)",
+      "Bash(AZURE_TENANT_ID=\"f6ccb4c3-52b8-4969-a5d8-af88c8b6c7df\" )",
+      "Bash(docker build:*)",
+      "Bash(PORT=8080)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
