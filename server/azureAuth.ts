@@ -172,8 +172,13 @@ export async function setupAuth(app: Express) {
     if (!clientId) {
       return res.status(500).send("GitHub auth not configured");
     }
-    const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/callback/github`);
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=read:user user:email`;
+
+    // Use the configured redirect URI from environment or fallback to request host
+    const configuredRedirectUri = process.env.GITHUB_REDIRECT_URI;
+    const redirectUri = configuredRedirectUri || `${req.protocol}://${req.get('host')}/api/callback/github`;
+
+    console.log('GitHub OAuth redirect URI:', redirectUri);
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user user:email`;
     res.redirect(authUrl);
   });
 

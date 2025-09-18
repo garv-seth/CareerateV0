@@ -11,9 +11,21 @@ interface LoginModalProps {
 export function LoginModal({ isOpen, onClose }: LoginModalProps) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (provider: 'microsoft' | 'github') => {
+  const handleLogin = async (provider: 'microsoft' | 'github') => {
     setIsLoading(true);
+
     if (provider === 'microsoft') {
+      // Check if Microsoft auth is available
+      try {
+        const response = await fetch('/api/login', { method: 'HEAD', redirect: 'manual' });
+        if (response.status === 500) {
+          alert('Microsoft authentication is temporarily unavailable. Please use GitHub to sign in.');
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Microsoft auth check failed:', error);
+      }
       window.location.href = '/api/login';
     } else {
       window.location.href = '/api/login/github';
