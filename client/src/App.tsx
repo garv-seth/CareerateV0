@@ -20,6 +20,9 @@ import MigrationPlanning from "@/pages/migration-planning";
 import ModernizationWorkflows from "@/pages/modernization-workflows";
 import MigrationExecution from "@/pages/migration-execution";
 import MigrationRecommendations from "@/pages/migration-recommendations";
+import EnterpriseMigration from "@/pages/enterprise-migration";
+import VibeCoding from "@/pages/vibe-coding";
+import VibeHosting from "@/pages/vibe-hosting";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import TermsOfService from "@/pages/TermsOfService";
 import { CookieConsent } from "@/components/CookieConsent";
@@ -46,8 +49,13 @@ function Router() {
           <Route path="/integrations" component={IntegrationsPage} />
           <Route path="/billing" component={BillingDashboard} />
           <Route path="/admin" component={AdminDashboard} />
+          {/* Vibe Coding and Hosting Routes */}
+          <Route path="/projects/:id/coding" component={VibeCoding} />
+          <Route path="/projects/:id/hosting" component={VibeHosting} />
           {/* Migration Tools Routes */}
           <Route path="/migration" component={MigrationDashboard} />
+          <Route path="/enterprise-migration" component={EnterpriseMigration} />
+          <Route path="/projects/:id/migration" component={EnterpriseMigration} />
           <Route path="/migration/analysis" component={LegacyAnalysis} />
           <Route path="/migration/new-assessment" component={LegacyAnalysis} />
           <Route path="/migration/planning" component={MigrationPlanning} />

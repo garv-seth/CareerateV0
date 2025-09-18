@@ -21,31 +21,71 @@ export interface UsageCheckOptions {
   errorMessage?: string;
 }
 
+// Owner whitelist - these emails have unrestricted access
+const OWNER_WHITELIST = [
+  'garvseth@outlook.com',
+  'garv.seth@gmail.com',
+  'garvseth@uw.edu',
+  'thesm2018@gmail.com',
+  'garvytp@gmail.com'
+];
+
+function isOwnerWhitelisted(email: string): boolean {
+  return OWNER_WHITELIST.includes(email.toLowerCase());
+}
+
 // Generic usage tracking middleware factory
 export function createUsageTrackingMiddleware(options: UsageCheckOptions) {
   return async (req: UsageCheckRequest, res: Response, next: NextFunction) => {
     try {
       // Skip if user is not authenticated
       if (!req.user?.claims?.sub && !req.user?.id) {
-        return res.status(401).json({ 
+        return res.status(401).json({
           message: "Authentication required",
           code: "AUTHENTICATION_REQUIRED"
         });
       }
 
       const userId = req.user.claims?.sub || req.user.id;
+      const userEmail = req.user.claims?.email || req.user.email;
       const { metricType, increment = 1, skipIncrement = false, errorMessage } = options;
 
-      // Check current usage against plan limits
-      const usageCheck = await subscriptionService.checkUsageLimit(userId, metricType);
-      
+      // Check if user is in owner whitelist - bypass all usage limits
+      if (userEmail && isOwnerWhitelisted(userEmail)) {
+        req.usageCheck = {
+          allowed: true,
+          usage: 0,
+          limit: -1, // unlimited
+          plan: 'owner'
+        };
+        next();
+        return;
+      }
+
+      let usageCheck;
+      try {
+        // Check current usage against plan limits
+        usageCheck = await subscriptionService.checkUsageLimit(userId, metricType);
+      } catch (error) {
+        // If usage check fails, allow operation but log the error
+        console.error('Usage check failed, allowing operation:', error);
+        req.usageCheck = {
+          allowed: true,
+          usage: 0,
+          limit: -1,
+          plan: 'unknown'
+        };
+        next();
+        return;
+      }
+
       // Store usage check results for use in route handlers
       req.usageCheck = usageCheck;
 
       // If usage would exceed limit, block the request
       if (!usageCheck.allowed) {
         const limitText = usageCheck.limit === -1 ? "unlimited" : usageCheck.limit.toString();
-        
+
         return res.status(403).json({
           message: errorMessage || `${metricType} limit exceeded. Your ${usageCheck.plan} plan allows ${limitText} ${metricType} per month.`,
           code: "USAGE_LIMIT_EXCEEDED",
@@ -60,16 +100,25 @@ export function createUsageTrackingMiddleware(options: UsageCheckOptions) {
 
       // If not skipping increment, update usage after successful check
       if (!skipIncrement) {
-        await subscriptionService.incrementUsage(userId, metricType, increment);
+        try {
+          await subscriptionService.incrementUsage(userId, metricType, increment);
+        } catch (error) {
+          // Don't fail the request if usage increment fails
+          console.error('Usage increment failed:', error);
+        }
       }
 
       next();
     } catch (error) {
+      // Don't fail the request for usage tracking errors
       console.error('Usage tracking middleware error:', error);
-      res.status(500).json({ 
-        message: "Failed to check usage limits",
-        code: "USAGE_CHECK_FAILED"
-      });
+      req.usageCheck = {
+        allowed: true,
+        usage: 0,
+        limit: -1,
+        plan: 'unknown'
+      };
+      next();
     }
   };
 }
@@ -232,7 +281,7 @@ export function usageSummaryMiddleware(req: UsageCheckRequest, res: Response, ne
 }
 
 // Validation helper for checking specific usage without middleware
-export async function validateUsage(userId: string, metricType: string): Promise<{
+export async function validateUsage(userId: string, metricType: string, userEmail?: string): Promise<{
   allowed: boolean;
   usage: number;
   limit: number;
@@ -240,19 +289,30 @@ export async function validateUsage(userId: string, metricType: string): Promise
   error?: string;
 }> {
   try {
+    // Check if user is in owner whitelist - bypass all usage limits
+    if (userEmail && isOwnerWhitelisted(userEmail)) {
+      return {
+        allowed: true,
+        usage: 0,
+        limit: -1, // unlimited
+        plan: 'owner'
+      };
+    }
+
     const usageCheck = await subscriptionService.checkUsageLimit(userId, metricType);
-    
+
     return {
       ...usageCheck,
       error: !usageCheck.allowed ? `${metricType} limit exceeded` : undefined
     };
   } catch (error) {
+    // Return allowed: true for usage check failures (graceful degradation)
     return {
-      allowed: false,
+      allowed: true,
       usage: 0,
-      limit: 0,
+      limit: -1,
       plan: 'unknown',
-      error: `Failed to check usage: ${error instanceof Error ? error.message : String(error)}`
+      error: `Usage check failed but allowing operation: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }

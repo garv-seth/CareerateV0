@@ -237,7 +237,7 @@ export default function Dashboard() {
                 AI-powered migration tools for modernizing your infrastructure and applications
               </p>
             </div>
-            <Link href="/migration">
+            <Link href="/enterprise-migration">
               <Button variant="outline" data-testid="button-view-all-migration">
                 View Migration Dashboard
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -460,26 +460,50 @@ export default function Dashboard() {
 
                   <div className="space-y-2">
                     <div className="flex space-x-2">
-                      <Link href={`/editor/${project.id}`} className="flex-1">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                      <Link href={`/projects/${project.id}/coding`} className="flex-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
                           className="w-full"
-                          data-testid={`button-open-project-${index}`}
+                          data-testid={`button-vibe-coding-${index}`}
                         >
                           <Code className="mr-2 h-3 w-3" />
-                          Code Editor
+                          Vibe Coding
                         </Button>
                       </Link>
-                      <Link href={`/devops/${project.id}`} className="flex-1">
-                        <Button 
-                          variant="default" 
-                          size="sm" 
+                      <Link href={`/projects/${project.id}/hosting`} className="flex-1">
+                        <Button
+                          variant="default"
+                          size="sm"
                           className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                          data-testid={`button-devops-project-${index}`}
+                          data-testid={`button-vibe-hosting-${index}`}
                         >
-                          <Activity className="mr-2 h-3 w-3" />
-                          AI DevOps
+                          <Cloud className="mr-2 h-3 w-3" />
+                          Vibe Hosting
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Link href={`/projects/${project.id}/migration`} className="flex-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          data-testid={`button-migration-${index}`}
+                        >
+                          <Settings className="mr-2 h-3 w-3" />
+                          Migration
+                        </Button>
+                      </Link>
+                      <Link href={`/editor/${project.id}`} className="flex-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full"
+                          data-testid={`button-legacy-editor-${index}`}
+                        >
+                          <Code className="mr-2 h-3 w-3" />
+                          Legacy Editor
                         </Button>
                       </Link>
                     </div>

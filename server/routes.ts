@@ -129,7 +129,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = getUserId(req);
       const projects = await storage.getProjectsByUserId(userId);
-      res.json(projects);
+
+      // Flatten metadata for easier frontend consumption
+      const enhancedProjects = projects.map(project => ({
+        ...project,
+        framework: project.metadata?.framework || "unknown",
+        status: project.metadata?.status || "created",
+        deploymentUrl: project.metadata?.deploymentUrl
+      }));
+
+      res.json(enhancedProjects);
     } catch (error) {
       console.error('Get projects error:', error);
       res.status(500).json({ message: "Failed to get projects" });
@@ -155,14 +164,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/projects", isAuthenticated, projectCreationMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
-      const data = insertProjectSchema.parse(req.body);
-      const project = await storage.createProject({
-        ...data,
-        userId
-      });
-      res.status(201).json(project);
+      const { name, description, framework } = req.body;
+
+      // Validate required fields
+      if (!name || !framework) {
+        return res.status(400).json({ message: "Name and framework are required" });
+      }
+
+      const projectData = {
+        userId,
+        name,
+        description: description || "",
+        metadata: {
+          framework,
+          status: "created",
+          createdAt: new Date().toISOString(),
+          ...(req.body.metadata || {})
+        }
+      };
+
+      const project = await storage.createProject(projectData);
+
+      // Return project with flattened metadata for easier frontend consumption
+      const responseProject = {
+        ...project,
+        framework: project.metadata?.framework || framework,
+        status: project.metadata?.status || "created"
+      };
+
+      res.status(201).json(responseProject);
     } catch (error) {
-      res.status(400).json({ message: "Invalid project data" });
+      console.error('Project creation error:', error);
+      res.status(400).json({ message: "Failed to create project", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -240,6 +273,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get current subscription error:', error);
       res.status(500).json({ message: "Failed to get subscription details" });
+    }
+  });
+
+  // Health endpoint for usage checking
+  app.post("/api/auth/usage-check", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const userEmail = (req.user as any)?.claims?.email || (req.user as any)?.email;
+      const { metricType = 'projects' } = req.body;
+
+      const usageResult = await validateUsage(userId, metricType, userEmail);
+
+      res.json({
+        allowed: usageResult.allowed,
+        reason: usageResult.error,
+        limits: {
+          usage: usageResult.usage,
+          limit: usageResult.limit,
+          plan: usageResult.plan
+        }
+      });
+    } catch (error) {
+      console.error('Usage check endpoint error:', error);
+      // Return allowed: true for health endpoint failures
+      res.json({
+        allowed: true,
+        reason: 'Usage check service unavailable, allowing operation',
+        limits: {
+          usage: 0,
+          limit: -1,
+          plan: 'unknown'
+        }
+      });
     }
   });
 
@@ -2797,6 +2863,419 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+
+  // =====================================================
+  // Vibe Coding API Endpoints
+  // =====================================================
+
+  // AI Intent Parsing for Coding Actions
+  app.post("/api/coding/intent", isAuthenticated, aiGenerationMiddleware, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const userEmail = (req.user as any)?.claims?.email || (req.user as any)?.email;
+      const { projectId, message, contextRefs = [] } = req.body;
+
+      if (!projectId || !message) {
+        return res.status(400).json({ message: "Project ID and message are required" });
+      }
+
+      // Validate project ownership
+      await validateProjectOwnership(projectId, userId);
+
+      // Parse natural language intent
+      const intent = message.toLowerCase();
+      const actions = [];
+      const safetyChecks = [];
+
+      // Intent parsing logic
+      if (intent.includes("create") && intent.includes("component")) {
+        actions.push({
+          type: "create_file",
+          description: "Create new React component",
+          file: extractComponentName(intent) + ".tsx",
+          content: generateReactComponent(extractComponentName(intent))
+        });
+        safetyChecks.push("New component will be created in src/components/");
+      }
+
+      if (intent.includes("api") || intent.includes("fetch")) {
+        actions.push({
+          type: "create_file",
+          description: "Create API service file",
+          file: "services/api.ts",
+          content: generateApiService()
+        });
+        safetyChecks.push("API service will handle data fetching");
+      }
+
+      if (intent.includes("test")) {
+        actions.push({
+          type: "create_file",
+          description: "Generate test files",
+          file: "tests/component.test.tsx",
+          content: generateTestFile()
+        });
+        safetyChecks.push("Test files will be created with Jest");
+      }
+
+      // Mock preview diff URL
+      const previewDiffUrl = `https://api.github.com/repos/user/repo/pulls/preview-${Date.now()}`;
+
+      res.json({
+        plan: `I'll help you ${intent}. Here's what I'll do:`,
+        actions,
+        safetyChecks,
+        previewDiffUrl
+      });
+    } catch (error) {
+      console.error('Coding intent error:', error);
+      res.status(500).json({ message: "Failed to parse coding intent" });
+    }
+  });
+
+  // Apply Coding Actions
+  app.post("/api/coding/apply", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, actions = [], branch, commitMessage } = req.body;
+
+      if (!projectId || !actions.length) {
+        return res.status(400).json({ message: "Project ID and actions are required" });
+      }
+
+      // Validate project ownership
+      await validateProjectOwnership(projectId, userId);
+
+      // Create new branch if specified
+      const targetBranch = branch || `feature/vibe-coding-${Date.now()}`;
+
+      // Apply actions (mock implementation)
+      const appliedActions = [];
+      for (const action of actions) {
+        appliedActions.push({
+          ...action,
+          status: "applied",
+          path: action.file
+        });
+      }
+
+      // Mock commit
+      const commitSha = `abc${Date.now()}`;
+      const prUrl = `https://github.com/user/repo/pull/${Math.floor(Math.random() * 1000)}`;
+
+      res.json({
+        branch: targetBranch,
+        commitSha,
+        prUrl,
+        appliedActions
+      });
+    } catch (error) {
+      console.error('Apply coding actions error:', error);
+      res.status(500).json({ message: "Failed to apply coding actions" });
+    }
+  });
+
+  // Run Development Server
+  app.post("/api/coding/run", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, command = "npm start" } = req.body;
+
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID is required" });
+      }
+
+      // Validate project ownership
+      await validateProjectOwnership(projectId, userId);
+
+      // Mock dev server startup
+      const previewUrl = `http://localhost:3000?project=${projectId}`;
+
+      res.json({
+        status: "started",
+        previewUrl,
+        logs: [
+          "Starting development server...",
+          "webpack compiled successfully",
+          `Local:   ${previewUrl}`,
+          "Network: http://192.168.1.100:3000"
+        ]
+      });
+    } catch (error) {
+      console.error('Run coding server error:', error);
+      res.status(500).json({ message: "Failed to start development server" });
+    }
+  });
+
+  // Get Project Files
+  app.get("/api/coding/projects/:projectId/files", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId } = req.params;
+
+      // Validate project ownership
+      await validateProjectOwnership(projectId, userId);
+
+      // Mock file tree
+      const fileTree = [
+        {
+          name: "src",
+          type: "folder",
+          path: "src",
+          children: [
+            {
+              name: "App.tsx",
+              type: "file",
+              path: "src/App.tsx",
+              content: "import React from 'react';\n\nfunction App() {\n  return <div>Hello World</div>;\n}\n\nexport default App;"
+            },
+            {
+              name: "index.tsx",
+              type: "file",
+              path: "src/index.tsx",
+              content: "import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\n\nReactDOM.createRoot(document.getElementById('root')!).render(<App />);"
+            }
+          ]
+        },
+        {
+          name: "package.json",
+          type: "file",
+          path: "package.json",
+          content: '{\n  "name": "vibe-coding-project",\n  "version": "0.1.0",\n  "dependencies": {\n    "react": "^18.2.0"\n  }\n}'
+        }
+      ];
+
+      res.json(fileTree);
+    } catch (error) {
+      console.error('Get project files error:', error);
+      res.status(500).json({ message: "Failed to get project files" });
+    }
+  });
+
+  // Save File Content
+  app.put("/api/coding/projects/:projectId/files", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId } = req.params;
+      const { filePath, content } = req.body;
+
+      if (!filePath || content === undefined) {
+        return res.status(400).json({ message: "File path and content are required" });
+      }
+
+      // Validate project ownership
+      await validateProjectOwnership(projectId, userId);
+
+      // Mock file save
+      res.json({
+        success: true,
+        filePath,
+        lastModified: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Save file error:', error);
+      res.status(500).json({ message: "Failed to save file" });
+    }
+  });
+
+  // =====================================================
+  // Vibe Hosting API Endpoints
+  // =====================================================
+
+  // Parse Hosting Intent
+  app.post("/api/hosting/intent", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, message, constraints = {} } = req.body;
+
+      if (!projectId || !message) {
+        return res.status(400).json({ message: "Project ID and message are required" });
+      }
+
+      // Validate project ownership
+      await validateProjectOwnership(projectId, userId);
+
+      // Parse natural language intent
+      const intent = message.toLowerCase();
+      let provider = constraints.provider || "azure";
+      let region = constraints.region || "West US 2";
+      let strategy = "blue-green";
+
+      if (intent.includes("aws")) provider = "aws";
+      if (intent.includes("gcp") || intent.includes("google")) provider = "gcp";
+      if (intent.includes("canary")) strategy = "canary";
+      if (intent.includes("rolling")) strategy = "rolling";
+
+      // Cost estimation
+      const baseCost = provider === "azure" ? 45.67 : provider === "aws" ? 48.20 : 42.30;
+      const costEstimate = {
+        monthly: baseCost,
+        compute: baseCost * 0.7,
+        storage: baseCost * 0.2,
+        bandwidth: baseCost * 0.1
+      };
+
+      const steps = [
+        "Build application Docker image",
+        `Deploy to ${provider} ${region}`,
+        "Configure load balancer",
+        "Set up monitoring and alerts",
+        "Run health checks",
+        "Route traffic to new deployment"
+      ];
+
+      res.json({
+        plan: `I'll deploy your application to ${provider} in ${region} using ${strategy} deployment strategy.`,
+        providerDecision: {
+          provider,
+          region,
+          strategy,
+          reasoning: `${provider} selected for optimal cost-performance ratio in ${region}`
+        },
+        costEstimate,
+        steps
+      });
+    } catch (error) {
+      console.error('Hosting intent error:', error);
+      res.status(500).json({ message: "Failed to parse hosting intent" });
+    }
+  });
+
+  // Deploy Application
+  app.post("/api/hosting/deploy", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, environment, providerDecision, artifactRef, strategy = "blue-green" } = req.body;
+
+      if (!projectId || !environment || !providerDecision) {
+        return res.status(400).json({ message: "Project ID, environment, and provider decision are required" });
+      }
+
+      // Validate project ownership
+      await validateProjectOwnership(projectId, userId);
+
+      // Create deployment record
+      const deploymentId = `deploy-${Date.now()}`;
+      const statusUrl = `/api/hosting/deployments/${deploymentId}`;
+
+      // Mock deployment process
+      res.status(202).json({
+        deploymentId,
+        statusUrl,
+        status: "started",
+        message: `Deployment started to ${providerDecision.provider} using ${strategy} strategy`
+      });
+    } catch (error) {
+      console.error('Deploy application error:', error);
+      res.status(500).json({ message: "Failed to start deployment" });
+    }
+  });
+
+  // Get Deployment Status
+  app.get("/api/hosting/deployments/:deploymentId", isAuthenticated, async (req, res) => {
+    try {
+      const { deploymentId } = req.params;
+
+      // Mock deployment status
+      const deployment = {
+        id: deploymentId,
+        status: "success",
+        url: `https://app-${deploymentId}.azurewebsites.net`,
+        metrics: {
+          cpu: 25,
+          memory: 60,
+          requests: 1250,
+          responseTime: 180,
+          uptime: 99.9
+        },
+        logs: [
+          "Building Docker image...",
+          "Pushing to registry...",
+          "Creating deployment...",
+          "Configuring load balancer...",
+          "Running health checks...",
+          "Deployment successful!"
+        ],
+        rollbackPlan: {
+          available: true,
+          previousVersion: "v1.2.3",
+          estimatedTime: "2 minutes"
+        },
+        createdAt: new Date().toISOString(),
+        completedAt: new Date().toISOString()
+      };
+
+      res.json(deployment);
+    } catch (error) {
+      console.error('Get deployment status error:', error);
+      res.status(500).json({ message: "Failed to get deployment status" });
+    }
+  });
+
+  // Helper functions for Vibe Coding
+  function extractComponentName(intent: string): string {
+    const match = intent.match(/component\s+(\w+)|(\w+)\s+component/i);
+    return match ? (match[1] || match[2]) : "NewComponent";
+  }
+
+  function generateReactComponent(name: string): string {
+    return `import React from 'react';
+
+interface ${name}Props {
+  // Add your props here
+}
+
+const ${name}: React.FC<${name}Props> = (props) => {
+  return (
+    <div>
+      <h2>${name}</h2>
+      <p>Start building your component here!</p>
+    </div>
+  );
+};
+
+export default ${name};`;
+  }
+
+  function generateApiService(): string {
+    return `// API Service for data fetching
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+
+export class ApiService {
+  static async get<T>(endpoint: string): Promise<T> {
+    const response = await fetch(\`\${API_BASE_URL}\${endpoint}\`);
+    if (!response.ok) {
+      throw new Error(\`HTTP error! status: \${response.status}\`);
+    }
+    return response.json();
+  }
+
+  static async post<T>(endpoint: string, data: any): Promise<T> {
+    const response = await fetch(\`\${API_BASE_URL}\${endpoint}\`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      throw new Error(\`HTTP error! status: \${response.status}\`);
+    }
+    return response.json();
+  }
+}`;
+  }
+
+  function generateTestFile(): string {
+    return `import { render, screen } from '@testing-library/react';
+import App from '../App';
+
+test('renders learn react link', () => {
+  render(<App />);
+  const linkElement = screen.getByText(/learn react/i);
+  expect(linkElement).toBeInTheDocument();
+});`;
+  }
 
   return server;
 }
