@@ -70,50 +70,48 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  // Azure B2C login redirect
+  // Microsoft OAuth login redirect (using Azure AD instead of B2C)
   app.get("/api/login", (req, res) => {
-    const tenantName = process.env.B2C_TENANT_NAME;
-    const policyName = process.env.B2C_SIGNUP_SIGNIN_POLICY_NAME;
+    const tenantId = process.env.AZURE_TENANT_ID;
     const clientId = process.env.AZURE_CLIENT_ID;
     const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/callback`);
 
-    console.log('B2C Login attempt:', { tenantName, policyName, clientId: clientId ? 'set' : 'missing', redirectUri });
-    console.log('B2C Policy Name from env:', process.env.B2C_SIGNUP_SIGNIN_POLICY_NAME);
+    console.log('Microsoft OAuth Login attempt:', { tenantId, clientId: clientId ? 'set' : 'missing', redirectUri });
 
-    if (!tenantName || !policyName || !clientId) {
-      console.error("Azure B2C env vars missing. Expected B2C_TENANT_NAME, B2C_SIGNUP_SIGNIN_POLICY_NAME, AZURE_CLIENT_ID");
+    if (!tenantId || !clientId) {
+      console.error("Azure AD env vars missing. Expected AZURE_TENANT_ID, AZURE_CLIENT_ID");
       return res.status(500).json({
         error: "Microsoft authentication is temporarily unavailable",
-        details: "B2C configuration incomplete"
+        details: "Azure AD configuration incomplete"
       });
     }
 
-    const authUrl = `https://${tenantName}.b2clogin.com/${tenantName}.onmicrosoft.com/oauth2/v2.0/authorize?` +
+    // Use standard Azure AD OAuth instead of B2C
+    const authUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?` +
       `client_id=${clientId}&` +
       `response_type=code&` +
       `redirect_uri=${redirectUri}&` +
       `response_mode=query&` +
       `scope=openid%20profile%20email%20offline_access&` +
-      `state=12345&` +
-      `p=${policyName}`;
+      `state=12345`;
 
-    console.log('B2C Auth URL:', authUrl);
+    console.log('Azure AD Auth URL:', authUrl);
     res.redirect(authUrl);
   });
 
-  // Azure B2C callback
+  // Microsoft OAuth callback (Azure AD)
   app.get("/api/callback", async (req, res) => {
     const { code, state } = req.query;
-    
+
     if (!code) {
       return res.status(400).json({ error: "Authorization code not received" });
     }
 
     try {
-      // Exchange code for tokens
-      const tokenUrl = `https://${process.env.B2C_TENANT_NAME}.b2clogin.com/${process.env.B2C_TENANT_NAME}.onmicrosoft.com/oauth2/v2.0/token?p=${process.env.B2C_SIGNUP_SIGNIN_POLICY_NAME}`;
+      // Exchange code for tokens using Azure AD
+      const tokenUrl = `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/oauth2/v2.0/token`;
       const redirectUri = `${req.protocol}://${req.get('host')}/api/callback`;
-      
+
       const tokenParams = new URLSearchParams({
         client_id: process.env.AZURE_CLIENT_ID!,
         client_secret: process.env.AZURE_CLIENT_SECRET!,
@@ -132,7 +130,7 @@ export async function setupAuth(app: Express) {
       });
 
       const tokens = await tokenResponse.json();
-      
+
       if (tokens.error) {
         console.error('Token exchange error:', tokens);
         return res.status(400).json({ error: tokens.error_description });
@@ -141,9 +139,9 @@ export async function setupAuth(app: Express) {
       // Decode the ID token to get user info
       const idToken = tokens.id_token;
       const payload: UserPayload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
-      
+
       await upsertUser(payload);
-      
+
       // Store user in session
       req.login(payload, (err) => {
         if (err) {
@@ -158,10 +156,10 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Azure B2C logout
+  // Microsoft OAuth logout (Azure AD)
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
-      const logoutUrl = `https://${process.env.B2C_TENANT_NAME}.b2clogin.com/${process.env.B2C_TENANT_NAME}.onmicrosoft.com/oauth2/v2.0/logout?` +
+      const logoutUrl = `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/oauth2/v2.0/logout?` +
         `post_logout_redirect_uri=${encodeURIComponent(`${req.protocol}://${req.get('host')}`)}`;
       res.redirect(logoutUrl);
     });
