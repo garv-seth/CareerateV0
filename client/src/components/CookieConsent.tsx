@@ -75,17 +75,17 @@ export function CookieConsent() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4">
-      <Card className="mx-auto max-w-4xl shadow-lg border-2 bg-background/95 backdrop-blur-md">
+      <Card className="mx-auto max-w-4xl shadow-2xl border-2 border-gray-300 bg-white">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
-            <Cookie className="w-6 h-6 text-primary mt-1 flex-shrink-0" />
+            <Cookie className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
 
             <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-2">We value your privacy</h3>
+              <h3 className="text-lg font-semibold mb-2 text-gray-900">We value your privacy</h3>
 
               {!showDetails ? (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-gray-700 mb-4">
                     We use cookies to enhance your experience, analyze site traffic, and personalize content.
                     You can choose which cookies to accept.
                   </p>
@@ -93,7 +93,7 @@ export function CookieConsent() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={handleAcceptAll}
-                      className="bg-primary text-primary-foreground"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
                       data-testid="accept-all-cookies"
                     >
                       Accept All
@@ -102,6 +102,7 @@ export function CookieConsent() {
                     <Button
                       onClick={handleRejectAll}
                       variant="outline"
+                      className="border-2 border-gray-900 text-gray-900 hover:bg-gray-100 font-medium"
                       data-testid="reject-all-cookies"
                     >
                       Reject All
@@ -110,7 +111,7 @@ export function CookieConsent() {
                     <Button
                       onClick={() => setShowDetails(true)}
                       variant="ghost"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 font-medium"
                       data-testid="customize-cookies"
                     >
                       <Settings className="w-4 h-4" />
@@ -120,7 +121,7 @@ export function CookieConsent() {
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-gray-700 mb-4">
                     Choose which cookies you'd like to accept. You can change these settings at any time.
                   </p>
 
@@ -197,7 +198,7 @@ export function CookieConsent() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       onClick={handleAcceptSelected}
-                      className="bg-primary text-primary-foreground"
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
                       data-testid="save-cookie-preferences"
                     >
                       Save Preferences
@@ -206,6 +207,7 @@ export function CookieConsent() {
                     <Button
                       onClick={() => setShowDetails(false)}
                       variant="outline"
+                      className="border-2 border-gray-900 text-gray-900 hover:bg-gray-100 font-medium"
                       data-testid="back-cookie-banner"
                     >
                       Back
@@ -214,13 +216,13 @@ export function CookieConsent() {
                 </div>
               )}
 
-              <div className="mt-3 text-xs text-muted-foreground">
+              <div className="mt-3 text-xs text-gray-600">
                 Learn more in our{' '}
-                <Link href="/privacy" className="underline hover:text-primary">
+                <Link href="/privacy" className="underline text-blue-600 hover:text-blue-800 font-medium">
                   Privacy Policy
                 </Link>
                 {' '}and{' '}
-                <Link href="/terms" className="underline hover:text-primary">
+                <Link href="/terms" className="underline text-blue-600 hover:text-blue-800 font-medium">
                   Terms of Service
                 </Link>
               </div>
@@ -230,7 +232,7 @@ export function CookieConsent() {
               onClick={() => setIsVisible(false)}
               variant="ghost"
               size="sm"
-              className="p-1"
+              className="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
               data-testid="close-cookie-banner"
             >
               <X className="w-4 h-4" />
