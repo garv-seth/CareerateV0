@@ -183,12 +183,19 @@ export function planFeatureMiddleware(requiredPlan: string, featureName: string)
   return async (req: UsageCheckRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.user?.claims?.sub || req.user?.id;
-      
+      const userEmail = req.user?.claims?.email || req.user?.email;
+
       if (!userId) {
-        return res.status(401).json({ 
+        return res.status(401).json({
           message: "Authentication required",
           code: "AUTHENTICATION_REQUIRED"
         });
+      }
+
+      // Check if user is in owner whitelist - bypass all plan restrictions
+      if (userEmail && isOwnerWhitelisted(userEmail)) {
+        next();
+        return;
       }
 
       // Get user's current subscription

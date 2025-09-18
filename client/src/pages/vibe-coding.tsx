@@ -86,102 +86,49 @@ export default function VibeCoding() {
     untracked: [],
     staged: []
   });
+  const [gitIntegration, setGitIntegration] = useState<any>(null);
 
   const terminalRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLTextAreaElement>(null);
 
-  // Mock file tree
-  const [fileTree, setFileTree] = useState<FileNode[]>([
-    {
-      name: "src",
-      type: "folder",
-      path: "src",
-      children: [
-        {
-          name: "App.tsx",
-          type: "file",
-          path: "src/App.tsx",
-          content: `import React from 'react';
-import './App.css';
+  const [fileTree, setFileTree] = useState<FileNode[]>([]);
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <h1>Welcome to Vibe Coding</h1>
-        <p>Start building your amazing application!</p>
-      </header>
-    </div>
-  );
-}
-
-export default App;`
-        },
-        {
-          name: "index.tsx",
-          type: "file",
-          path: "src/index.tsx",
-          content: `import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);`
-        }
-      ]
+  // Fetch file tree on mount
+  const { data: fileTreeData } = useQuery({
+    queryKey: ["fileTree", projectId],
+    queryFn: async () => {
+      const response = await fetch(`/api/coding/projects/${projectId}/files`);
+      if (!response.ok) throw new Error("Failed to fetch file tree");
+      return response.json();
     },
-    {
-      name: "package.json",
-      type: "file",
-      path: "package.json",
-      content: `{
-  "name": "vibe-coding-project",
-  "version": "0.1.0",
-  "private": true,
-  "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "typescript": "^4.9.5"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
-  }
-}`
-    },
-    {
-      name: "README.md",
-      type: "file",
-      path: "README.md",
-      content: `# Vibe Coding Project
+    enabled: !!projectId
+  });
 
-This project was bootstrapped with Vibe Coding AI assistant.
-
-## Available Scripts
-
-In the project directory, you can run:
-
-### \`npm start\`
-
-Runs the app in development mode.
-
-### \`npm run build\`
-
-Builds the app for production.
-`
+  useEffect(() => {
+    if (fileTreeData) {
+      setFileTree(fileTreeData);
     }
-  ]);
+  }, [fileTreeData]);
 
-  // Mock initial chat message
+  // Fetch git integration status
+  const { data: gitIntegrationData } = useQuery({
+    queryKey: ["gitIntegration", projectId],
+    queryFn: async () => {
+      const response = await fetch(`/api/integrations?type=repository`);
+      if (!response.ok) return null;
+      const integrations = await response.json();
+      return integrations.find((i: any) => i.service === 'github');
+    },
+    enabled: !!projectId
+  });
+
+  useEffect(() => {
+    if (gitIntegrationData) {
+      setGitIntegration(gitIntegrationData);
+    }
+  }, [gitIntegrationData]);
+
+  // Initialize chat with welcome message
   useEffect(() => {
     setChatMessages([
       {
@@ -217,86 +164,147 @@ Builds the app for production.
 
   const handleFileContentChange = (content: string) => {
     setFileContent(content);
-    // Auto-save after 2 seconds of inactivity
-    // In a real implementation, this would save to the backend
+    // Mark file as modified for git status
+    if (selectedFile && !gitStatus.modified.includes(selectedFile)) {
+      setGitStatus(prev => ({
+        ...prev,
+        modified: [...prev.modified, selectedFile]
+      }));
+    }
   };
 
-  const handleSaveFile = () => {
-    if (selectedFile) {
-      // Update file content in tree
-      const updateFileContent = (nodes: FileNode[], path: string, content: string): FileNode[] => {
-        return nodes.map(node => {
-          if (node.path === path && node.type === 'file') {
-            return { ...node, content };
-          }
-          if (node.children) {
-            return { ...node, children: updateFileContent(node.children, path, content) };
-          }
-          return node;
-        });
-      };
-
-      setFileTree(prev => updateFileContent(prev, selectedFile, fileContent));
+  const saveFileMutation = useMutation({
+    mutationFn: async ({ filePath, content }: { filePath: string; content: string }) => {
+      const response = await fetch(`/api/coding/projects/${projectId}/files`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filePath, content })
+      });
+      if (!response.ok) throw new Error("Failed to save file");
+      return response.json();
+    },
+    onSuccess: () => {
       toast({
         title: "File saved",
         description: `${selectedFile} has been saved successfully.`
       });
+      // Update file content in local tree
+      if (selectedFile) {
+        const updateFileContent = (nodes: FileNode[], path: string, content: string): FileNode[] => {
+          return nodes.map(node => {
+            if (node.path === path && node.type === 'file') {
+              return { ...node, content };
+            }
+            if (node.children) {
+              return { ...node, children: updateFileContent(node.children, path, content) };
+            }
+            return node;
+          });
+        };
+        setFileTree(prev => updateFileContent(prev, selectedFile, fileContent));
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error saving file",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleSaveFile = () => {
+    if (selectedFile && projectId) {
+      saveFileMutation.mutate({ filePath: selectedFile, content: fileContent });
     }
   };
 
   // Terminal operations
+  const runCommandMutation = useMutation({
+    mutationFn: async (command: string) => {
+      const response = await fetch(`/api/coding/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, command })
+      });
+      if (!response.ok) throw new Error("Failed to run command");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.logs) {
+        data.logs.forEach((line: string, index: number) => {
+          setTimeout(() => {
+            setTerminalOutput(prev => [...prev, line]);
+          }, (index + 1) * 200);
+        });
+      }
+      if (data.previewUrl) {
+        setTimeout(() => {
+          setPreviewUrl(data.previewUrl);
+        }, 1000);
+      }
+    },
+    onError: (error) => {
+      setTerminalOutput(prev => [...prev, `Error: ${(error as Error).message}`]);
+    }
+  });
+
   const handleRunCommand = async (command: string) => {
+    if (!projectId) return;
+
     setTerminalOutput(prev => [...prev, `$ ${command}`]);
     setIsRunning(true);
-
-    // Simulate command execution
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Mock command responses
-    const mockResponses: Record<string, string[]> = {
-      "npm start": [
-        "Starting development server...",
-        "webpack compiled successfully",
-        "Local:   http://localhost:3000",
-        "Network: http://192.168.1.100:3000"
-      ],
-      "npm install": [
-        "Installing dependencies...",
-        "added 1500 packages in 45s"
-      ],
-      "git status": [
-        "On branch main",
-        "Changes not staged for commit:",
-        "  modified:   src/App.tsx",
-        "  modified:   src/index.tsx"
-      ],
-      "npm run build": [
-        "Building for production...",
-        "Build completed successfully",
-        "Output written to build/"
-      ]
-    };
-
-    const response = mockResponses[command] || ["Command executed"];
-    response.forEach((line, index) => {
-      setTimeout(() => {
-        setTerminalOutput(prev => [...prev, line]);
-      }, (index + 1) * 200);
-    });
-
-    if (command === "npm start") {
-      setTimeout(() => {
-        setPreviewUrl("http://localhost:3000");
-      }, 2000);
-    }
-
-    setIsRunning(false);
     setCurrentCommand("");
+
+    try {
+      await runCommandMutation.mutateAsync(command);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   // AI Chat operations
+  const sendMessageMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const response = await fetch(`/api/coding/intent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          message,
+          contextRefs: selectedFile ? [{ type: "file", path: selectedFile }] : []
+        })
+      });
+      if (!response.ok) throw new Error("Failed to send message");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      const aiResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.response || "I understand. Let me help you with that.",
+        timestamp: new Date(),
+        actions: data.actions?.map((action: any) => ({
+          type: action.type,
+          description: action.description,
+          data: action
+        })) || []
+      };
+      setChatMessages(prev => [...prev, aiResponse]);
+    },
+    onError: (error) => {
+      const errorResponse: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `I'm sorry, I encountered an error: ${(error as Error).message}. Please try again.`,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorResponse]);
+    }
+  });
+
   const handleSendMessage = async () => {
-    if (!currentMessage.trim()) return;
+    if (!currentMessage.trim() || !projectId) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -306,126 +314,171 @@ Builds the app for production.
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const messageToSend = currentMessage;
     setCurrentMessage("");
     setIsAiTyping(true);
 
-    // Simulate AI response
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    const aiResponse: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: getAiResponse(currentMessage),
-      timestamp: new Date(),
-      actions: getAiActions(currentMessage)
-    };
-
-    setChatMessages(prev => [...prev, aiResponse]);
-    setIsAiTyping(false);
+    try {
+      await sendMessageMutation.mutateAsync(messageToSend);
+    } finally {
+      setIsAiTyping(false);
+    }
   };
 
-  const getAiResponse = (message: string): string => {
-    const lowerMessage = message.toLowerCase();
 
-    if (lowerMessage.includes("create") && lowerMessage.includes("component")) {
-      return "I'll help you create a new React component! Let me generate the boilerplate code for you.";
+  const applyActionMutation = useMutation({
+    mutationFn: async (actions: any[]) => {
+      const response = await fetch(`/api/coding/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          actions,
+          commitMessage: "AI-generated changes from Vibe Coding"
+        })
+      });
+      if (!response.ok) throw new Error("Failed to apply action");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Action Applied",
+        description: data.message || "Changes have been applied successfully."
+      });
+      // Refresh file tree
+      window.location.reload(); // Simple refresh for now
+    },
+    onError: (error) => {
+      toast({
+        title: "Error applying action",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
     }
-    if (lowerMessage.includes("api") || lowerMessage.includes("fetch")) {
-      return "I can help you set up API calls and data fetching. Would you like me to create a service file and add fetch logic?";
-    }
-    if (lowerMessage.includes("style") || lowerMessage.includes("css")) {
-      return "I can help you add styling! Should I create CSS modules, styled-components, or regular CSS?";
-    }
-    if (lowerMessage.includes("test")) {
-      return "I'll help you write tests for your components. Let me create some Jest test files.";
-    }
-
-    return "I understand you want to work on your project. I can help you create files, write code, run commands, or explain concepts. What specific task would you like assistance with?";
-  };
-
-  const getAiActions = (message: string): ChatMessage['actions'] => {
-    const lowerMessage = message.toLowerCase();
-
-    if (lowerMessage.includes("create") && lowerMessage.includes("component")) {
-      return [
-        {
-          type: "create_file",
-          description: "Create new React component",
-          data: { filename: "NewComponent.tsx", template: "react-component" }
-        }
-      ];
-    }
-
-    return [];
-  };
+  });
 
   const handleApplyAction = (action: NonNullable<ChatMessage['actions']>[0]) => {
-    if (action.type === "create_file") {
-      const newFile: FileNode = {
-        name: action.data.filename,
-        type: "file",
-        path: `src/${action.data.filename}`,
-        content: generateFileTemplate(action.data.template)
-      };
-
-      setFileTree(prev => {
-        const srcFolder = prev.find(node => node.name === "src");
-        if (srcFolder && srcFolder.children) {
-          srcFolder.children.push(newFile);
-        }
-        return [...prev];
-      });
-
-      toast({
-        title: "File created",
-        description: `${action.data.filename} has been created successfully.`
-      });
-    }
+    if (!projectId) return;
+    applyActionMutation.mutate([action.data]);
   };
 
-  const generateFileTemplate = (template: string): string => {
-    if (template === "react-component") {
-      return `import React from 'react';
-
-interface Props {
-  // Add your props here
-}
-
-const NewComponent: React.FC<Props> = (props) => {
-  return (
-    <div>
-      <h2>New Component</h2>
-      <p>Start building your component here!</p>
-    </div>
-  );
-};
-
-export default NewComponent;`;
-    }
-    return "";
-  };
 
   // Git operations
-  const handleCommit = () => {
-    const commitMessage = prompt("Enter commit message:");
-    if (commitMessage) {
+  const commitMutation = useMutation({
+    mutationFn: async (commitMessage: string) => {
+      const response = await fetch(`/api/coding/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          actions: [],
+          commitMessage,
+          branch: gitStatus.branch
+        })
+      });
+      if (!response.ok) throw new Error("Failed to commit changes");
+      return response.json();
+    },
+    onSuccess: (data) => {
       toast({
         title: "Committed",
-        description: `Changes committed with message: "${commitMessage}"`
+        description: data.message || "Changes committed successfully."
       });
       setGitStatus(prev => ({
         ...prev,
         modified: [],
         staged: []
       }));
+    },
+    onError: (error) => {
+      toast({
+        title: "Error committing changes",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleCommit = () => {
+    const commitMessage = prompt("Enter commit message:");
+    if (commitMessage && projectId) {
+      commitMutation.mutate(commitMessage);
     }
   };
 
+  const createPRMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/coding/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          actions: [],
+          commitMessage: "Changes from Vibe Coding",
+          createPullRequest: true,
+          branch: `vibe-coding-${Date.now()}`
+        })
+      });
+      if (!response.ok) throw new Error("Failed to create pull request");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Pull Request Created",
+        description: data.prUrl ? `PR created: ${data.prUrl}` : "Pull request created successfully."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error creating pull request",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const connectGitHubMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/integrations/github/oauth/initiate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scopes: ['repo', 'user:email'],
+          redirectUri: `${window.location.origin}/dashboard`
+        })
+      });
+      if (!response.ok) throw new Error("Failed to initiate GitHub OAuth");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Redirect to GitHub OAuth
+      window.location.href = data.authUrl;
+    },
+    onError: (error) => {
+      toast({
+        title: "Error connecting GitHub",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleCreatePR = () => {
-    toast({
-      title: "Pull Request Created",
-      description: "PR #123 created successfully. View it in your repository."
-    });
+    if (!gitIntegration) {
+      connectGitHubMutation.mutate();
+      return;
+    }
+
+    if (gitStatus.modified.length === 0) {
+      toast({
+        title: "No Changes to Commit",
+        description: "Please make some changes before creating a pull request.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    createPRMutation.mutate();
   };
 
   // File tree rendering
@@ -471,32 +524,70 @@ export default NewComponent;`;
             <GitBranch className="h-3 w-3 mr-1" />
             {gitStatus.branch}
           </Badge>
+          {gitIntegration ? (
+            <Badge variant="outline" className="text-green-600 border-green-600">
+              GitHub Connected
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+              Git Not Connected
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" onClick={handleSaveFile} disabled={!selectedFile}>
-            <Save className="h-4 w-4 mr-1" />
-            Save
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSaveFile}
+            disabled={!selectedFile || saveFileMutation.isPending}
+          >
+            {saveFileMutation.isPending ? (
+              <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-1" />
+            )}
+            {saveFileMutation.isPending ? "Saving..." : "Save"}
           </Button>
           <Button
             variant="default"
             size="sm"
             onClick={() => handleRunCommand("npm start")}
-            disabled={isRunning}
+            disabled={isRunning || runCommandMutation.isPending}
           >
-            {isRunning ? (
+            {(isRunning || runCommandMutation.isPending) ? (
               <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
             ) : (
               <Play className="h-4 w-4 mr-1" />
             )}
-            Run
+            {(isRunning || runCommandMutation.isPending) ? "Running..." : "Run"}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleCommit}>
-            <GitCommit className="h-4 w-4 mr-1" />
-            Commit
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCommit}
+            disabled={commitMutation.isPending || gitStatus.modified.length === 0}
+          >
+            {commitMutation.isPending ? (
+              <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <GitCommit className="h-4 w-4 mr-1" />
+            )}
+            {commitMutation.isPending ? "Committing..." : "Commit"}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleCreatePR}>
-            Create PR
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCreatePR}
+            disabled={createPRMutation.isPending}
+          >
+            {createPRMutation.isPending ? (
+              <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+            ) : gitIntegration ? (
+              "Create PR"
+            ) : (
+              "Connect GitHub"
+            )}
           </Button>
         </div>
       </header>

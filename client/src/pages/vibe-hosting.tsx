@@ -174,60 +174,100 @@ export default function VibeHosting() {
     return Math.round(total * 100) / 100;
   };
 
-  // Natural language deployment
+  // Natural language deployment mutations
+  const deploymentIntentMutation = useMutation({
+    mutationFn: async (message: string) => {
+      const response = await fetch(`/api/hosting/intent`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          message,
+          constraints: { budget: 100, region: "us-west-2" }
+        })
+      });
+      if (!response.ok) throw new Error("Failed to process deployment intent");
+      return response.json();
+    },
+    onSuccess: async (intentData) => {
+      // Now trigger actual deployment with the parsed intent
+      if (intentData.providerDecision) {
+        await deployMutation.mutateAsync({
+          environment: "production",
+          providerDecision: intentData.providerDecision,
+          artifactRef: "latest",
+          strategy: intentData.strategy || "blue-green"
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Error processing deployment",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deployMutation = useMutation({
+    mutationFn: async (deployData: any) => {
+      const response = await fetch(`/api/hosting/deploy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          ...deployData
+        })
+      });
+      if (!response.ok) throw new Error("Failed to start deployment");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Deployment Started",
+        description: data.message || "Deployment has been initiated successfully."
+      });
+
+      // Create new deployment entry
+      const newDeployment: Deployment = {
+        id: data.deploymentId,
+        name: `Deploy-${Date.now()}`,
+        status: "running",
+        url: data.url || `https://app-${data.deploymentId}.azurewebsites.net`,
+        provider: data.provider || "azure",
+        region: data.region || "West US 2",
+        cost: calculateCost(selectedProviderData!, false),
+        metrics: {
+          cpu: 0,
+          memory: 0,
+          requests: 0,
+          responseTime: 0
+        },
+        createdAt: new Date().toISOString().split('T')[0],
+        lastDeployed: new Date().toISOString()
+      };
+
+      setDeployments(prev => [newDeployment, ...prev]);
+      setDeploymentIntent("");
+    },
+    onError: (error) => {
+      toast({
+        title: "Deployment Failed",
+        description: (error as Error).message,
+        variant: "destructive"
+      });
+    }
+  });
+
   const handleDeploymentIntent = async () => {
-    if (!deploymentIntent.trim()) return;
+    if (!deploymentIntent.trim() || !projectId) return;
 
     setIsDeploying(true);
-
-    // Parse natural language intent
-    const intent = deploymentIntent.toLowerCase();
-    let provider = selectedProvider;
-    let strategy = "blue-green";
-    let autoScale = false;
-
-    if (intent.includes("aws")) provider = "aws";
-    if (intent.includes("gcp") || intent.includes("google")) provider = "gcp";
-    if (intent.includes("azure")) provider = "azure";
-
-    if (intent.includes("canary")) strategy = "canary";
-    if (intent.includes("rolling")) strategy = "rolling";
-    if (intent.includes("scale") || intent.includes("autoscale")) autoScale = true;
-
-    toast({
-      title: "Deployment Started",
-      description: `Deploying to ${provider} using ${strategy} strategy...`
-    });
-
-    // Simulate deployment process
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    const newDeployment: Deployment = {
-      id: Date.now().toString(),
-      name: `Deploy-${Date.now()}`,
-      status: "running",
-      url: `https://myapp-${Date.now()}.${provider === 'azure' ? 'azurewebsites' : provider === 'aws' ? 'amazonaws' : 'googleapis'}.${provider === 'gcp' ? 'com' : 'net'}`,
-      provider,
-      region: selectedProviderData?.defaultRegion || "West US 2",
-      cost: calculateCost(selectedProviderData!, autoScale),
-      metrics: {
-        cpu: Math.floor(Math.random() * 30) + 10,
-        memory: Math.floor(Math.random() * 40) + 30,
-        requests: Math.floor(Math.random() * 500) + 100,
-        responseTime: Math.floor(Math.random() * 100) + 150
-      },
-      createdAt: new Date().toISOString().split('T')[0],
-      lastDeployed: new Date().toISOString()
-    };
-
-    setDeployments(prev => [newDeployment, ...prev]);
-    setIsDeploying(false);
-    setDeploymentIntent("");
-
-    toast({
-      title: "Deployment Successful",
-      description: `Your application is now live at ${newDeployment.url}`
-    });
+    try {
+      await deploymentIntentMutation.mutateAsync(deploymentIntent);
+    } finally {
+      setIsDeploying(false);
+    }
   };
 
   const handleRollback = async (deploymentId: string) => {
@@ -365,11 +405,11 @@ export default function VibeHosting() {
 
                 <Button
                   onClick={handleDeploymentIntent}
-                  disabled={!deploymentIntent.trim() || isDeploying}
+                  disabled={!deploymentIntent.trim() || isDeploying || deploymentIntentMutation.isPending || deployMutation.isPending}
                   className="w-full"
                   size="lg"
                 >
-                  {isDeploying ? (
+                  {(isDeploying || deploymentIntentMutation.isPending || deployMutation.isPending) ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                       Deploying...

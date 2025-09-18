@@ -52,19 +52,20 @@ function Router() {
           {/* Vibe Coding and Hosting Routes */}
           <Route path="/projects/:id/coding" component={VibeCoding} />
           <Route path="/projects/:id/hosting" component={VibeHosting} />
-          {/* Migration Tools Routes */}
-          <Route path="/migration" component={MigrationDashboard} />
+          {/* Enterprise Migration - Unified Dashboard */}
+          <Route path="/migration" component={EnterpriseMigration} />
           <Route path="/enterprise-migration" component={EnterpriseMigration} />
           <Route path="/projects/:id/migration" component={EnterpriseMigration} />
-          <Route path="/migration/analysis" component={LegacyAnalysis} />
-          <Route path="/migration/new-assessment" component={LegacyAnalysis} />
-          <Route path="/migration/planning" component={MigrationPlanning} />
-          <Route path="/migration/modernization" component={ModernizationWorkflows} />
-          <Route path="/migration/execution" component={MigrationExecution} />
-          <Route path="/migration/execution/:projectId" component={MigrationExecution} />
-          <Route path="/migration/recommendations" component={MigrationRecommendations} />
-          <Route path="/migration/project/:projectId" component={MigrationPlanning} />
-          <Route path="/migration/reports" component={MigrationRecommendations} />
+          {/* Legacy migration routes redirect to unified dashboard */}
+          <Route path="/migration/analysis" component={EnterpriseMigration} />
+          <Route path="/migration/new-assessment" component={EnterpriseMigration} />
+          <Route path="/migration/planning" component={EnterpriseMigration} />
+          <Route path="/migration/modernization" component={EnterpriseMigration} />
+          <Route path="/migration/execution" component={EnterpriseMigration} />
+          <Route path="/migration/execution/:projectId" component={EnterpriseMigration} />
+          <Route path="/migration/recommendations" component={EnterpriseMigration} />
+          <Route path="/migration/project/:projectId" component={EnterpriseMigration} />
+          <Route path="/migration/reports" component={EnterpriseMigration} />
         </>
       )}
       <Route component={NotFound} />
