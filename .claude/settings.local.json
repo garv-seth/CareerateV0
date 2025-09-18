@@ -36,7 +36,9 @@
       "Bash(gh secret set:*)",
       "Bash(git pull:*)",
       "WebSearch",
-      "WebFetch(domain:careerate.b2clogin.com)"
+      "WebFetch(domain:careerate.b2clogin.com)",
+      "Bash(gh run watch:*)",
+      "WebFetch(domain:login.microsoftonline.com)"
     ],
     "deny": [],
     "ask": []
