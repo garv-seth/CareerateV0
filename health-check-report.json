@@ -1,0 +1,43 @@
+{
+  "timestamp": "2025-09-18T11:23:28.958Z",
+  "environment": "production",
+  "baseUrl": "https://careerate-web.politetree-6f564ad5.westus2.azurecontainerapps.io",
+  "summary": {
+    "total": 6,
+    "passed": 6,
+    "failed": 0,
+    "successRate": 100
+  },
+  "tests": [
+    {
+      "name": "Projects API (GET /api/projects)",
+      "status": "PASS",
+      "message": "OK"
+    },
+    {
+      "name": "Coding Intent API (POST /api/coding/intent)",
+      "status": "PASS",
+      "message": "OK"
+    },
+    {
+      "name": "Hosting Intent API (POST /api/hosting/intent)",
+      "status": "PASS",
+      "message": "OK"
+    },
+    {
+      "name": "GitHub OAuth Initiate (POST /api/integrations/github/oauth/initiate)",
+      "status": "PASS",
+      "message": "OK"
+    },
+    {
+      "name": "Usage Check API (POST /api/auth/usage-check)",
+      "status": "PASS",
+      "message": "OK"
+    },
+    {
+      "name": "Health Check (GET /api/health)",
+      "status": "PASS",
+      "message": "OK"
+    }
+  ]
+}
