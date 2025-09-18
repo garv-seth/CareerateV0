@@ -3,14 +3,20 @@ import { createServer, type Server } from "http";
 import Stripe from "stripe"; // From javascript_stripe blueprint
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./azureAuth";
-import { 
-  insertProjectSchema, 
+import {
+  insertProjectSchema,
   insertCodeGenerationSchema,
   insertIntegrationSchema,
+  insertAiAgentSchema,
+  insertAgentTaskSchema,
+  insertAgentCommunicationSchema,
   type User,
   type Project,
   type CodeGeneration,
-  type Integration
+  type Integration,
+  type AiAgent,
+  type AgentTask,
+  type AgentCommunication
 } from "@shared/schema";
 import { 
   generateCodeFromPrompt, 
@@ -23,6 +29,7 @@ import {
   type StreamingUpdate
 } from "./services/ai";
 import { agentManager } from "./services/agentManager";
+import { enhancedAgentManager } from "./services/enhancedAgentManager";
 import { legacyAssessmentService } from "./services/legacyAssessment";
 import { integrationService } from "./services/integrationService";
 import { repositoryIntegrationService } from "./services/repositoryIntegrationService";
@@ -971,6 +978,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(decision);
     } catch (error) {
       res.status(500).json({ message: "Failed to make decision", error: (error as Error).message });
+    }
+  });
+
+  // Enhanced AI Agent Management Endpoints
+  app.post("/api/projects/:projectId/enhanced-agents", isAuthenticated, async (req, res) => {
+    try {
+      await enhancedAgentManager.initialize(req.params.projectId);
+
+      const agent = await enhancedAgentManager.createAgent({
+        ...req.body,
+        projectId: req.params.projectId
+      });
+
+      res.status(201).json(agent);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to create enhanced agent", error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/enhanced-agents/:agentId/tasks", isAuthenticated, async (req, res) => {
+    try {
+      const task = await enhancedAgentManager.assignTask(req.params.agentId, {
+        ...req.body,
+        agentId: req.params.agentId
+      });
+
+      res.status(201).json(task);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to assign enhanced task", error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/enhanced-agents/:agentId/sub-agents", isAuthenticated, async (req, res) => {
+    try {
+      const subAgent = await enhancedAgentManager.createSubAgent(req.params.agentId, req.body);
+      res.status(201).json(subAgent);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to create sub-agent", error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/enhanced-agents/:agentId/delegate", isAuthenticated, async (req, res) => {
+    try {
+      const subTask = await enhancedAgentManager.delegateToSubAgent(req.params.agentId, req.body);
+      res.status(201).json(subTask);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to delegate task", error: (error as Error).message });
+    }
+  });
+
+  app.get("/api/enhanced-agents/:agentId/communications", isAuthenticated, async (req, res) => {
+    try {
+      const communications = await storage.getAgentCommunications(req.params.agentId);
+      res.json(communications);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to get agent communications" });
+    }
+  });
+
+  app.post("/api/enhanced-agents/:agentId/message", isAuthenticated, async (req, res) => {
+    try {
+      const message = await enhancedAgentManager.sendAgentMessage({
+        fromAgentId: req.params.agentId,
+        ...req.body
+      });
+      res.status(201).json(message);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to send message", error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/enhanced-agents/:agentId/decisions", isAuthenticated, async (req, res) => {
+    try {
+      const { context, options } = req.body;
+      const decision = await enhancedAgentManager.makeIntelligentDecision(
+        req.params.agentId,
+        context,
+        options || []
+      );
+      res.json(decision);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to make enhanced decision", error: (error as Error).message });
+    }
+  });
+
+  app.post("/api/projects/:projectId/autonomous-management", isAuthenticated, async (req, res) => {
+    try {
+      await enhancedAgentManager.startAutonomousManagement(req.params.projectId);
+      res.json({ message: "Autonomous management started", projectId: req.params.projectId });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to start autonomous management", error: (error as Error).message });
     }
   });
 

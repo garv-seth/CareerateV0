@@ -33,14 +33,21 @@ import {
   type InsertWebhookConfiguration,
   type ApiRateLimit,
   type InsertApiRateLimit,
-  type ApiUsageAnalytics
-  
+  type ApiUsageAnalytics,
+  aiAgents,
+  agentTasks,
+  agentCommunications,
+  type AiAgent,
+  type InsertAiAgent,
+  type AgentTask,
+  type InsertAgentTask,
+  type AgentCommunication,
+  type InsertAgentCommunication
+
   // ====================================================================
   // COMMENTED OUT - THESE TABLES/TYPES ARE NOT YET DEFINED IN SCHEMA.TS
   // ====================================================================
   /*
-  type AiAgent,
-  type InsertAiAgent,
   type Deployment,
   type InsertDeployment,
   type Incident,
@@ -145,7 +152,7 @@ import {
   */
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, or, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -166,12 +173,22 @@ export interface IStorage {
   updateCodeGeneration(id: string, updates: Partial<CodeGeneration>): Promise<CodeGeneration | undefined>;
   getCodeGeneration(id: string): Promise<CodeGeneration | undefined>;
 
-  // AI Agent operations - COMMENTED OUT: AiAgent type not defined in schema
-  // createAiAgent(agent: InsertAiAgent): Promise<AiAgent>;
-  // getAiAgent(id: string): Promise<AiAgent | undefined>;
-  // getProjectAgents(projectId: string): Promise<AiAgent[]>;
-  // updateAiAgent(id: string, updates: Partial<AiAgent>): Promise<AiAgent | undefined>;
-  // deleteAiAgent(id: string): Promise<boolean>;
+  // AI Agent operations
+  createAiAgent(agent: InsertAiAgent): Promise<AiAgent>;
+  getAiAgent(id: string): Promise<AiAgent | undefined>;
+  getProjectAgents(projectId: string): Promise<AiAgent[]>;
+  updateAiAgent(id: string, updates: Partial<AiAgent>): Promise<AiAgent | undefined>;
+  deleteAiAgent(id: string): Promise<boolean>;
+
+  // Agent Task operations
+  createAgentTask(task: InsertAgentTask): Promise<AgentTask>;
+  getAgentTask(id: string): Promise<AgentTask | undefined>;
+  updateAgentTask(id: string, updates: Partial<AgentTask>): Promise<AgentTask | undefined>;
+  getAgentTasks(agentId: string): Promise<AgentTask[]>;
+
+  // Agent Communication operations
+  createAgentCommunication(message: InsertAgentCommunication): Promise<AgentCommunication>;
+  getAgentCommunications(agentId: string): Promise<AgentCommunication[]>;
 
   // Deployment operations - COMMENTED OUT: Deployment type not defined in schema
   // createDeployment(deployment: InsertDeployment): Promise<Deployment>;
@@ -760,8 +777,7 @@ export class DatabaseStorage implements IStorage {
     return generation;
   }
 
-  // COMMENTED OUT: AI Agent operations - types/tables not defined in schema
-  /*
+  // AI Agent operations
   async createAiAgent(agent: InsertAiAgent): Promise<AiAgent> {
     const [newAgent] = await db
       .insert(aiAgents)
@@ -793,9 +809,58 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAiAgent(id: string): Promise<boolean> {
     const result = await db.delete(aiAgents).where(eq(aiAgents.id, id));
-    return result.rowCount > 0;
+    return result.rowCount! > 0;
   }
-  */
+
+  // Agent Task operations
+  async createAgentTask(task: InsertAgentTask): Promise<AgentTask> {
+    const [newTask] = await db
+      .insert(agentTasks)
+      .values(task)
+      .returning();
+    return newTask;
+  }
+
+  async getAgentTask(id: string): Promise<AgentTask | undefined> {
+    const [task] = await db.select().from(agentTasks).where(eq(agentTasks.id, id));
+    return task;
+  }
+
+  async updateAgentTask(id: string, updates: Partial<AgentTask>): Promise<AgentTask | undefined> {
+    const [updatedTask] = await db
+      .update(agentTasks)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(agentTasks.id, id))
+      .returning();
+    return updatedTask;
+  }
+
+  async getAgentTasks(agentId: string): Promise<AgentTask[]> {
+    return await db.select().from(agentTasks).where(eq(agentTasks.agentId, agentId));
+  }
+
+  // Agent Communication operations
+  async createAgentCommunication(message: InsertAgentCommunication): Promise<AgentCommunication> {
+    const [newMessage] = await db
+      .insert(agentCommunications)
+      .values(message)
+      .returning();
+    return newMessage;
+  }
+
+  async getAgentCommunications(agentId: string): Promise<AgentCommunication[]> {
+    return await db
+      .select()
+      .from(agentCommunications)
+      .where(or(
+        eq(agentCommunications.fromAgentId, agentId),
+        eq(agentCommunications.toAgentId, agentId)
+      ))
+      .orderBy(agentCommunications.createdAt);
+  }
 
   // COMMENTED OUT: All operations below use undefined tables/types - commenting out until line 1617
   /*

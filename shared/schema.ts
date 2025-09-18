@@ -237,6 +237,64 @@ export const apiUsageAnalytics = pgTable("api_usage_analytics", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// AI Agents for Autonomous Infrastructure Management
+export const aiAgents = pgTable("ai_agents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // "sre", "security", "performance", "deployment", "code-review"
+  status: text("status").notNull().default("active"), // "active", "inactive", "error", "paused"
+  capabilities: text("capabilities").array().default([]), // list of what this agent can do
+  configuration: jsonb("configuration").default({}),
+  parentAgentId: varchar("parent_agent_id").references(() => aiAgents.id, { onDelete: "set null" }), // for sub-agents
+  agentLevel: integer("agent_level").default(0), // 0 = primary, 1+ = sub-agent levels
+  lastHeartbeat: timestamp("last_heartbeat"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Agent Tasks for tracking AI agent work
+export const agentTasks = pgTable("agent_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentId: varchar("agent_id").notNull().references(() => aiAgents.id, { onDelete: "cascade" }),
+  projectId: varchar("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  taskType: text("task_type").notNull(), // "incident-response", "deployment", "monitoring", "security-scan"
+  priority: text("priority").notNull().default("medium"), // "low", "medium", "high", "critical"
+  status: text("status").notNull().default("pending"), // "pending", "running", "completed", "failed", "cancelled"
+  description: text("description").notNull(),
+  input: jsonb("input").default({}), // task input parameters
+  output: jsonb("output").default({}), // task results
+  errorMessage: text("error_message"),
+  parentTaskId: varchar("parent_task_id").references(() => agentTasks.id, { onDelete: "set null" }), // for sub-tasks
+  assignedToSubAgent: varchar("assigned_to_sub_agent").references(() => aiAgents.id, { onDelete: "set null" }),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  estimatedDuration: integer("estimated_duration"), // minutes
+  actualDuration: integer("actual_duration"), // minutes
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Agent Communication for inter-agent messaging
+export const agentCommunications = pgTable("agent_communications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromAgentId: varchar("from_agent_id").notNull().references(() => aiAgents.id, { onDelete: "cascade" }),
+  toAgentId: varchar("to_agent_id").notNull().references(() => aiAgents.id, { onDelete: "cascade" }),
+  messageType: text("message_type").notNull(), // "task-assignment", "status-update", "request-help", "coordination"
+  content: jsonb("content").notNull(),
+  priority: text("priority").default("normal"), // "low", "normal", "high", "urgent"
+  status: text("status").default("sent"), // "sent", "delivered", "read", "processed"
+  relatedTaskId: varchar("related_task_id").references(() => agentTasks.id, { onDelete: "set null" }),
+  responseToId: varchar("response_to_id").references(() => agentCommunications.id, { onDelete: "set null" }),
+  expiresAt: timestamp("expires_at"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  readAt: timestamp("read_at"),
+  processedAt: timestamp("processed_at"),
+});
+
 // Relations for Integration Hub
 export const integrationsRelations = relations(integrations, ({ one, many }) => ({
   user: one(users, {
@@ -332,6 +390,66 @@ export const apiUsageAnalyticsRelations = relations(apiUsageAnalytics, ({ one })
   apiConnection: one(apiConnections, {
     fields: [apiUsageAnalytics.apiConnectionId],
     references: [apiConnections.id],
+  }),
+}));
+
+// AI Agent Relations
+export const aiAgentsRelations = relations(aiAgents, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [aiAgents.projectId],
+    references: [projects.id],
+  }),
+  parentAgent: one(aiAgents, {
+    fields: [aiAgents.parentAgentId],
+    references: [aiAgents.id],
+    relationName: "parent_agent",
+  }),
+  subAgents: many(aiAgents, { relationName: "parent_agent" }),
+  tasks: many(agentTasks),
+  sentMessages: many(agentCommunications, { relationName: "sent_messages" }),
+  receivedMessages: many(agentCommunications, { relationName: "received_messages" }),
+}));
+
+export const agentTasksRelations = relations(agentTasks, ({ one, many }) => ({
+  agent: one(aiAgents, {
+    fields: [agentTasks.agentId],
+    references: [aiAgents.id],
+  }),
+  project: one(projects, {
+    fields: [agentTasks.projectId],
+    references: [projects.id],
+  }),
+  parentTask: one(agentTasks, {
+    fields: [agentTasks.parentTaskId],
+    references: [agentTasks.id],
+    relationName: "parent_task",
+  }),
+  subTasks: many(agentTasks, { relationName: "parent_task" }),
+  assignedSubAgent: one(aiAgents, {
+    fields: [agentTasks.assignedToSubAgent],
+    references: [aiAgents.id],
+  }),
+  communications: many(agentCommunications),
+}));
+
+export const agentCommunicationsRelations = relations(agentCommunications, ({ one }) => ({
+  fromAgent: one(aiAgents, {
+    fields: [agentCommunications.fromAgentId],
+    references: [aiAgents.id],
+    relationName: "sent_messages",
+  }),
+  toAgent: one(aiAgents, {
+    fields: [agentCommunications.toAgentId],
+    references: [aiAgents.id],
+    relationName: "received_messages",
+  }),
+  relatedTask: one(agentTasks, {
+    fields: [agentCommunications.relatedTaskId],
+    references: [agentTasks.id],
+  }),
+  responseToMessage: one(agentCommunications, {
+    fields: [agentCommunications.responseToId],
+    references: [agentCommunications.id],
   }),
 }));
 
@@ -483,6 +601,51 @@ export type Project = typeof projects.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type CodeGeneration = typeof codeGenerations.$inferSelect;
 export type InsertCodeGeneration = z.infer<typeof insertCodeGenerationSchema>;
+
+// AI Agent Schemas
+export const insertAiAgentSchema = createInsertSchema(aiAgents).pick({
+  projectId: true,
+  name: true,
+  type: true,
+  status: true,
+  capabilities: true,
+  configuration: true,
+  parentAgentId: true,
+  agentLevel: true,
+  metadata: true,
+});
+
+export const insertAgentTaskSchema = createInsertSchema(agentTasks).pick({
+  agentId: true,
+  projectId: true,
+  taskType: true,
+  priority: true,
+  description: true,
+  input: true,
+  parentTaskId: true,
+  assignedToSubAgent: true,
+  estimatedDuration: true,
+  metadata: true,
+});
+
+export const insertAgentCommunicationSchema = createInsertSchema(agentCommunications).pick({
+  fromAgentId: true,
+  toAgentId: true,
+  messageType: true,
+  content: true,
+  priority: true,
+  relatedTaskId: true,
+  responseToId: true,
+  expiresAt: true,
+  metadata: true,
+});
+
+export type AiAgent = typeof aiAgents.$inferSelect;
+export type InsertAiAgent = z.infer<typeof insertAiAgentSchema>;
+export type AgentTask = typeof agentTasks.$inferSelect;
+export type InsertAgentTask = z.infer<typeof insertAgentTaskSchema>;
+export type AgentCommunication = typeof agentCommunications.$inferSelect;
+export type InsertAgentCommunication = z.infer<typeof insertAgentCommunicationSchema>;
 
 // =====================================================
 // Enterprise User Management Zod Schemas (COMMENTED OUT - TABLES NOT DEFINED)
