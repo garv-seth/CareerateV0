@@ -47,21 +47,44 @@ export function getSession() {
 }
 
 async function upsertUser(payload: UserPayload) {
-  const fullName = payload.name || [payload.given_name, payload.family_name].filter(Boolean).join(' ') || (payload.preferred_username || payload.email || '');
-  await storage.upsertUser({
-    id: payload.sub || payload.oid || '',
-    email: payload.preferred_username || payload.email || '',
-    name: fullName,
-    metadata: {
-      authProvider: payload.oid ? 'azure-b2c' : 'oauth',
-      given_name: payload.given_name,
-      family_name: payload.family_name,
-      preferred_username: payload.preferred_username,
-    }
-  } as any);
+  try {
+    console.log('Upserting user with payload:', payload);
+    const fullName = payload.name || [payload.given_name, payload.family_name].filter(Boolean).join(' ') || (payload.preferred_username || payload.email || '');
+
+    const userToUpsert = {
+      id: payload.sub || payload.oid || '',
+      email: payload.preferred_username || payload.email || '',
+      name: fullName,
+      metadata: {
+        authProvider: payload.oid ? 'azure-ad' : (payload.sub?.startsWith('github-') ? 'github' : 'oauth'),
+        given_name: payload.given_name,
+        family_name: payload.family_name,
+        preferred_username: payload.preferred_username,
+      }
+    };
+
+    console.log('User object to upsert:', userToUpsert);
+    await storage.upsertUser(userToUpsert as any);
+    console.log('User upserted successfully');
+  } catch (error) {
+    console.error('Error upserting user:', error);
+    throw error;
+  }
 }
 
 export async function setupAuth(app: Express) {
+  console.log('=== Setting up Authentication ===');
+  console.log('Environment check:', {
+    NODE_ENV: process.env.NODE_ENV,
+    AZURE_TENANT_ID: process.env.AZURE_TENANT_ID ? 'set' : 'missing',
+    AZURE_CLIENT_ID: process.env.AZURE_CLIENT_ID ? 'set' : 'missing',
+    AZURE_CLIENT_SECRET: process.env.AZURE_CLIENT_SECRET ? 'set' : 'missing',
+    GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID ? 'set' : 'missing',
+    GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET ? 'set' : 'missing',
+    DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'missing',
+    SESSION_SECRET: process.env.SESSION_SECRET ? 'set' : 'missing'
+  });
+
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
@@ -69,6 +92,24 @@ export async function setupAuth(app: Express) {
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+  // Auth status endpoint for debugging
+  app.get('/api/auth/status', (req, res) => {
+    res.json({
+      isAuthenticated: req.isAuthenticated(),
+      user: req.user || null,
+      session: {
+        id: req.sessionID,
+        exists: !!req.session
+      },
+      environment: {
+        NODE_ENV: process.env.NODE_ENV,
+        AZURE_TENANT_ID: process.env.AZURE_TENANT_ID ? 'configured' : 'missing',
+        AZURE_CLIENT_ID: process.env.AZURE_CLIENT_ID ? 'configured' : 'missing',
+        GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID ? 'configured' : 'missing'
+      }
+    });
+  });
 
   // Microsoft OAuth login redirect (using Azure AD instead of B2C)
   app.get("/api/login", (req, res) => {
@@ -101,11 +142,29 @@ export async function setupAuth(app: Express) {
 
   // Microsoft OAuth callback (Azure AD)
   app.get("/api/callback", async (req, res) => {
-    const { code, state } = req.query;
+    console.log('=== Microsoft OAuth Callback ===');
+    console.log('Full request URL:', req.url);
+    console.log('Query params:', req.query);
+    console.log('Headers host:', req.get('host'));
+    console.log('Protocol:', req.protocol);
+
+    const { code, state, error, error_description } = req.query;
+
+    // Check for OAuth errors first
+    if (error) {
+      console.error('OAuth error received:', { error, error_description });
+      return res.status(400).json({
+        error: 'OAuth error',
+        details: { error, error_description }
+      });
+    }
 
     if (!code) {
+      console.error('No authorization code received');
       return res.status(400).json({ error: "Authorization code not received" });
     }
+
+    console.log('Authorization code received:', code ? 'YES' : 'NO');
 
     try {
       // Exchange code for tokens using Azure AD
@@ -121,6 +180,14 @@ export async function setupAuth(app: Express) {
         redirect_uri: redirectUri
       });
 
+      console.log('Token exchange attempt:', {
+        tokenUrl,
+        redirectUri,
+        clientId: process.env.AZURE_CLIENT_ID ? 'set' : 'missing',
+        clientSecret: process.env.AZURE_CLIENT_SECRET ? 'set' : 'missing',
+        tenantId: process.env.AZURE_TENANT_ID
+      });
+
       const tokenResponse = await fetch(tokenUrl, {
         method: 'POST',
         headers: {
@@ -129,30 +196,55 @@ export async function setupAuth(app: Express) {
         body: tokenParams
       });
 
+      console.log('Token response status:', tokenResponse.status);
+      console.log('Token response headers:', Object.fromEntries(tokenResponse.headers.entries()));
+
       const tokens = await tokenResponse.json();
+      console.log('Token response body:', tokens);
 
       if (tokens.error) {
         console.error('Token exchange error:', tokens);
-        return res.status(400).json({ error: tokens.error_description });
+        return res.status(400).json({
+          error: 'Token exchange failed',
+          details: tokens
+        });
       }
 
       // Decode the ID token to get user info
       const idToken = tokens.id_token;
-      const payload: UserPayload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
+      if (!idToken) {
+        console.error('No ID token received in response');
+        return res.status(400).json({ error: 'No ID token received' });
+      }
 
+      console.log('ID token received:', idToken ? 'YES' : 'NO');
+
+      const payload: UserPayload = JSON.parse(Buffer.from(idToken.split('.')[1], 'base64').toString());
+      console.log('Decoded user payload:', payload);
+
+      console.log('Upserting user...');
       await upsertUser(payload);
+      console.log('User upserted successfully');
 
       // Store user in session
+      console.log('Attempting session login...');
       req.login(payload, (err) => {
         if (err) {
-          return res.status(500).json({ error: 'Login failed' });
+          console.error('Session login error:', err);
+          return res.status(500).json({ error: 'Login failed', details: err.message });
         }
+        console.log('Session login successful, redirecting to /');
         res.redirect('/');
       });
 
     } catch (error) {
-      console.error('Authentication error:', error);
-      res.status(500).json({ error: 'Authentication failed' });
+      console.error('=== Microsoft OAuth Error ===');
+      console.error('Error:', error);
+      console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({
+        error: 'Authentication failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
@@ -183,12 +275,30 @@ export async function setupAuth(app: Express) {
 
   // GitHub OAuth callback
   app.get("/api/callback/github", async (req, res) => {
-    const { code } = req.query as { code?: string };
+    console.log('=== GitHub OAuth Callback ===');
+    console.log('Full request URL:', req.url);
+    console.log('Query params:', req.query);
+    console.log('Headers host:', req.get('host'));
+    console.log('Protocol:', req.protocol);
+
+    const { code, error, error_description } = req.query as { code?: string; error?: string; error_description?: string };
+
+    // Check for OAuth errors first
+    if (error) {
+      console.error('GitHub OAuth error received:', { error, error_description });
+      return res.status(400).json({
+        error: 'GitHub OAuth error',
+        details: { error, error_description }
+      });
+    }
+
     console.log('GitHub callback received:', { code: code ? 'present' : 'missing', query: req.query });
 
     if (!code) {
+      console.error('No GitHub authorization code received');
       return res.status(400).json({ error: "Authorization code not received" });
     }
+
     try {
       const redirectUri = `${req.protocol}://${req.get('host')}/api/callback/github`;
       console.log('GitHub token exchange attempt:', {
@@ -207,8 +317,12 @@ export async function setupAuth(app: Express) {
           redirect_uri: redirectUri,
         }),
       });
+
+      console.log('GitHub token response status:', tokenRes.status);
+      console.log('GitHub token response headers:', Object.fromEntries(tokenRes.headers.entries()));
+
       const tokenJson = await tokenRes.json();
-      console.log('GitHub token response:', tokenJson);
+      console.log('GitHub token response body:', tokenJson);
 
       if (!tokenJson.access_token) {
         console.error("GitHub token exchange failed:", tokenJson);
@@ -216,10 +330,14 @@ export async function setupAuth(app: Express) {
       }
 
       // Get user info
+      console.log('Fetching GitHub user info...');
       const userRes = await fetch("https://api.github.com/user", {
         headers: { Authorization: `Bearer ${tokenJson.access_token}`, "User-Agent": "careerate-app" },
       });
+
+      console.log('GitHub user response status:', userRes.status);
       const ghUser: any = await userRes.json();
+      console.log('GitHub user info:', ghUser);
 
       // Get primary email (may require separate call)
       let email = ghUser.email || "";
@@ -238,17 +356,28 @@ export async function setupAuth(app: Express) {
         name: ghUser.name || ghUser.login,
       };
 
+      console.log('GitHub user payload:', payload);
+      console.log('Upserting GitHub user...');
       await upsertUser(payload);
+      console.log('GitHub user upserted successfully');
 
+      console.log('Attempting GitHub session login...');
       req.login(payload, (err) => {
         if (err) {
-          return res.status(500).json({ error: "Login failed" });
+          console.error('GitHub session login error:', err);
+          return res.status(500).json({ error: "Login failed", details: err.message });
         }
+        console.log('GitHub session login successful, redirecting to /');
         res.redirect("/");
       });
     } catch (error) {
-      console.error("GitHub auth error:", error);
-      res.status(500).json({ error: "Authentication failed" });
+      console.error('=== GitHub OAuth Error ===');
+      console.error('Error:', error);
+      console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({
+        error: "GitHub authentication failed",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 }

@@ -38,7 +38,12 @@
       "WebSearch",
       "WebFetch(domain:careerate.b2clogin.com)",
       "Bash(gh run watch:*)",
-      "WebFetch(domain:login.microsoftonline.com)"
+      "WebFetch(domain:login.microsoftonline.com)",
+      "Bash(npm run:*)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_1mix0VasGQBp@ep-calm-breeze-aeomoglq.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require\" npm run db:push)",
+      "Bash(set NODE_ENV=development)",
+      "Bash(npx tsx:*)",
+      "Bash(docker tag:*)"
     ],
     "deny": [],
     "ask": []
