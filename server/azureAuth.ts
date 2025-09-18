@@ -78,6 +78,7 @@ export async function setupAuth(app: Express) {
     const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/callback`);
 
     console.log('B2C Login attempt:', { tenantName, policyName, clientId: clientId ? 'set' : 'missing', redirectUri });
+    console.log('B2C Policy Name from env:', process.env.B2C_SIGNUP_SIGNIN_POLICY_NAME);
 
     if (!tenantName || !policyName || !clientId) {
       console.error("Azure B2C env vars missing. Expected B2C_TENANT_NAME, B2C_SIGNUP_SIGNIN_POLICY_NAME, AZURE_CLIENT_ID");
