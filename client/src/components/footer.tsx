@@ -66,10 +66,10 @@ export default function Footer() {
           
           <div className="flex space-x-6">
             {socialLinks.map((social, index) => (
-              <a 
+              <a
                 key={index}
-                href={social.href} 
-                className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700 transition-colors"
+                href={social.href}
+                className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-700/70 hover:shadow-lg hover:scale-105 transition-all duration-200"
                 aria-label={social.label}
                 data-testid={`social-link-${index}`}
               >
@@ -88,9 +88,9 @@ export default function Footer() {
               <ul className="space-y-2 text-gray-300">
                 {section.links.map((link, linkIndex) => (
                   <li key={linkIndex}>
-                    <a 
-                      href={link.href} 
-                      className="hover:text-white transition-colors"
+                    <a
+                      href={link.href}
+                      className="hover:text-white hover:underline hover:underline-offset-2 transition-all duration-200"
                       data-testid={`footer-link-${index}-${linkIndex}`}
                     >
                       {link.name}

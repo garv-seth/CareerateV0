@@ -64,8 +64,9 @@ async function upsertUser(payload: UserPayload) {
     };
 
     console.log('User object to upsert:', userToUpsert);
-    await storage.upsertUser(userToUpsert as any);
-    console.log('User upserted successfully');
+    const dbUser = await storage.upsertUser(userToUpsert as any);
+    console.log('User upserted successfully:', dbUser);
+    return dbUser;
   } catch (error) {
     console.error('Error upserting user:', error);
     throw error;
@@ -223,12 +224,12 @@ export async function setupAuth(app: Express) {
       console.log('Decoded user payload:', payload);
 
       console.log('Upserting user...');
-      await upsertUser(payload);
-      console.log('User upserted successfully');
+      const dbUser = await upsertUser(payload);
+      console.log('User upserted successfully:', dbUser);
 
-      // Store user in session
+      // Store user in session (use the database user object, not the OAuth payload)
       console.log('Attempting session login...');
-      req.login(payload, (err) => {
+      req.login(dbUser, (err) => {
         if (err) {
           console.error('Session login error:', err);
           return res.status(500).json({ error: 'Login failed', details: err.message });
@@ -358,11 +359,11 @@ export async function setupAuth(app: Express) {
 
       console.log('GitHub user payload:', payload);
       console.log('Upserting GitHub user...');
-      await upsertUser(payload);
-      console.log('GitHub user upserted successfully');
+      const dbUser = await upsertUser(payload);
+      console.log('GitHub user upserted successfully:', dbUser);
 
       console.log('Attempting GitHub session login...');
-      req.login(payload, (err) => {
+      req.login(dbUser, (err) => {
         if (err) {
           console.error('GitHub session login error:', err);
           return res.status(500).json({ error: "Login failed", details: err.message });

@@ -30,23 +30,23 @@ export default function Navigation() {
           </Link>
           
           <div className="hidden md:flex items-center space-x-1">
-            <button 
+            <button
               onClick={() => scrollToSection("features")}
-              className="px-4 py-2 rounded-lg hover:bg-muted transition-colors text-sm font-medium"
+              className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium"
               data-testid="nav-features"
             >
               Features
             </button>
-            <button 
+            <button
               onClick={() => scrollToSection("how-it-works")}
-              className="px-4 py-2 rounded-lg hover:bg-muted transition-colors text-sm font-medium"
+              className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium"
               data-testid="nav-how-it-works"
             >
               How it Works
             </button>
-            <button 
+            <button
               onClick={() => scrollToSection("pricing")}
-              className="px-4 py-2 rounded-lg hover:bg-muted transition-colors text-sm font-medium"
+              className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium"
               data-testid="nav-pricing"
             >
               Pricing
@@ -54,15 +54,15 @@ export default function Navigation() {
             {isAuthenticated ? (
               <>
                 <Link href="/dashboard">
-                  <Button 
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                  <Button
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 hover:shadow-md transition-all duration-200"
                     data-testid="button-dashboard"
                   >
                     Dashboard
                   </Button>
                 </Link>
-                <Button 
-                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                <Button
+                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/90 hover:shadow-md transition-all duration-200"
                   data-testid="button-logout"
                   onClick={() => window.location.href = '/api/logout'}
                 >
@@ -71,7 +71,7 @@ export default function Navigation() {
               </>
             ) : (
               <Button
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 hover:shadow-md transition-all duration-200"
                 data-testid="button-login"
                 onClick={() => setIsLoginModalOpen(true)}
                 disabled={isLoading}
@@ -94,23 +94,23 @@ export default function Navigation() {
         {isMenuOpen && (
           <div className="md:hidden mt-4 pt-4 border-t border-border">
             <div className="flex flex-col space-y-2">
-              <button 
+              <button
                 onClick={() => scrollToSection("features")}
-                className="px-4 py-2 rounded-lg hover:bg-muted transition-colors text-sm font-medium text-left"
+                className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium text-left"
                 data-testid="nav-mobile-features"
               >
                 Features
               </button>
-              <button 
+              <button
                 onClick={() => scrollToSection("how-it-works")}
-                className="px-4 py-2 rounded-lg hover:bg-muted transition-colors text-sm font-medium text-left"
+                className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium text-left"
                 data-testid="nav-mobile-how-it-works"
               >
                 How it Works
               </button>
-              <button 
+              <button
                 onClick={() => scrollToSection("pricing")}
-                className="px-4 py-2 rounded-lg hover:bg-muted transition-colors text-sm font-medium text-left"
+                className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium text-left"
                 data-testid="nav-mobile-pricing"
               >
                 Pricing
@@ -118,15 +118,15 @@ export default function Navigation() {
               {isAuthenticated ? (
                 <>
                   <Link href="/dashboard">
-                    <Button 
-                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                    <Button
+                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 hover:shadow-md transition-all duration-200"
                       data-testid="button-mobile-dashboard"
                     >
                       Dashboard
                     </Button>
                   </Link>
-                  <Button 
-                    className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+                  <Button
+                    className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/90 hover:shadow-md transition-all duration-200"
                     data-testid="button-mobile-logout"
                     onClick={() => window.location.href = '/api/logout'}
                   >
@@ -135,7 +135,7 @@ export default function Navigation() {
                 </>
               ) : (
                 <Button
-                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
+                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 hover:shadow-md transition-all duration-200"
                   data-testid="button-mobile-login"
                   onClick={() => {
                     setIsLoginModalOpen(true);
