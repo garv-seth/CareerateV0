@@ -184,10 +184,19 @@ export async function setupAuth(app: Express) {
   // GitHub OAuth callback
   app.get("/api/callback/github", async (req, res) => {
     const { code } = req.query as { code?: string };
+    console.log('GitHub callback received:', { code: code ? 'present' : 'missing', query: req.query });
+
     if (!code) {
       return res.status(400).json({ error: "Authorization code not received" });
     }
     try {
+      const redirectUri = `${req.protocol}://${req.get('host')}/api/callback/github`;
+      console.log('GitHub token exchange attempt:', {
+        clientId: process.env.GITHUB_CLIENT_ID ? 'set' : 'missing',
+        clientSecret: process.env.GITHUB_CLIENT_SECRET ? 'set' : 'missing',
+        redirectUri
+      });
+
       const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
@@ -195,13 +204,15 @@ export async function setupAuth(app: Express) {
           client_id: process.env.GITHUB_CLIENT_ID,
           client_secret: process.env.GITHUB_CLIENT_SECRET,
           code,
-          redirect_uri: `${req.protocol}://${req.get('host')}/api/callback/github`,
+          redirect_uri: redirectUri,
         }),
       });
       const tokenJson = await tokenRes.json();
+      console.log('GitHub token response:', tokenJson);
+
       if (!tokenJson.access_token) {
         console.error("GitHub token exchange failed:", tokenJson);
-        return res.status(400).json({ error: "GitHub authentication failed" });
+        return res.status(400).json({ error: "GitHub authentication failed", details: tokenJson });
       }
 
       // Get user info
