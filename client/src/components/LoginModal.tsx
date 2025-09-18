@@ -22,7 +22,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-background/95 backdrop-blur-md border border-border/50">
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-semibold">
             Sign in to Careerate

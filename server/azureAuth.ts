@@ -76,10 +76,15 @@ export async function setupAuth(app: Express) {
     const policyName = process.env.B2C_SIGNUP_SIGNIN_POLICY_NAME;
     const clientId = process.env.AZURE_CLIENT_ID;
     const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/callback`);
-    
+
+    console.log('B2C Login attempt:', { tenantName, policyName, clientId: clientId ? 'set' : 'missing', redirectUri });
+
     if (!tenantName || !policyName || !clientId) {
       console.error("Azure B2C env vars missing. Expected B2C_TENANT_NAME, B2C_SIGNUP_SIGNIN_POLICY_NAME, AZURE_CLIENT_ID");
-      return res.status(500).send("Authentication not configured");
+      return res.status(500).json({
+        error: "Microsoft authentication is temporarily unavailable",
+        details: "B2C configuration incomplete"
+      });
     }
 
     const authUrl = `https://${tenantName}.b2clogin.com/${tenantName}.onmicrosoft.com/oauth2/v2.0/authorize?` +
@@ -90,7 +95,8 @@ export async function setupAuth(app: Express) {
       `scope=openid%20profile%20email%20offline_access&` +
       `state=12345&` +
       `p=${policyName}`;
-    
+
+    console.log('B2C Auth URL:', authUrl);
     res.redirect(authUrl);
   });
 

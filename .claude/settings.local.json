@@ -34,7 +34,9 @@
       "Bash(gh run view:*)",
       "Bash(nslookup:*)",
       "Bash(gh secret set:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "WebSearch",
+      "WebFetch(domain:careerate.b2clogin.com)"
     ],
     "deny": [],
     "ask": []
