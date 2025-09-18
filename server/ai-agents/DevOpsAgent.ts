@@ -1,7 +1,3 @@
-import { ChatOpenAI } from "@langchain/openai";
-import { StateGraph, StateGraphArgs, START, END } from "@langchain/langgraph";
-import { MemorySaver } from "@langchain/langgraph";
-import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
 import { z } from "zod";
 
 // Agent State Schema
@@ -32,83 +28,20 @@ const AgentState = z.object({
 type AgentStateType = z.infer<typeof AgentState>;
 
 export class DevOpsAgent {
-  private model: ChatOpenAI;
-  private graph: any;
-  private memory: MemorySaver;
-
   constructor() {
-    this.model = new ChatOpenAI({
-      modelName: "gpt-4",
-      temperature: 0.1
-    });
-    this.memory = new MemorySaver();
-    this.setupGraph();
-  }
-
-  private setupGraph() {
-    const workflow = new StateGraph({
-      channels: AgentState.shape
-    });
-
-    // Add nodes
-    workflow.addNode("analyze_repository", this.analyzeRepository.bind(this));
-    workflow.addNode("plan_infrastructure", this.planInfrastructure.bind(this));
-    workflow.addNode("security_scan", this.performSecurityScan.bind(this));
-    workflow.addNode("deploy_application", this.deployApplication.bind(this));
-    workflow.addNode("monitor_performance", this.monitorPerformance.bind(this));
-    workflow.addNode("optimize_resources", this.optimizeResources.bind(this));
-
-    // Define the workflow
-    workflow.addEdge(START, "analyze_repository");
-    workflow.addEdge("analyze_repository", "plan_infrastructure");
-    workflow.addEdge("plan_infrastructure", "security_scan");
-    workflow.addEdge("security_scan", "deploy_application");
-    workflow.addEdge("deploy_application", "monitor_performance");
-    workflow.addEdge("monitor_performance", "optimize_resources");
-    workflow.addEdge("optimize_resources", END);
-
-    this.graph = workflow.compile({ checkpointer: this.memory });
+    // Simplified agent without complex LangChain dependencies
   }
 
   async analyzeRepository(state: AgentStateType): Promise<Partial<AgentStateType>> {
-    const systemPrompt = `You are an expert DevOps engineer analyzing a code repository.
-    Your task is to understand the application architecture, dependencies, and deployment requirements.
-
-    Analyze the following project and provide:
-    1. Technology stack identification
-    2. Deployment requirements
-    3. Scaling considerations
-    4. Security requirements
-    5. Monitoring needs`;
-
-    const response = await this.model.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage(`Analyze repository for project ${state.project_id}. Repository: ${state.repository_url || 'Not provided'}`)
-    ]);
-
+    // Simulate repository analysis
     return {
-      messages: [...state.messages, response],
-      current_task: "Repository analysis completed"
+      current_task: "Repository analysis completed",
+      messages: [...state.messages, { role: 'assistant', content: 'Repository analyzed successfully' }]
     };
   }
 
   async planInfrastructure(state: AgentStateType): Promise<Partial<AgentStateType>> {
-    const systemPrompt = `You are an expert cloud architect planning infrastructure for optimal performance and cost.
-
-    Based on the repository analysis, create an infrastructure plan that includes:
-    1. Azure Container Apps for application hosting
-    2. Azure Database for PostgreSQL for data storage
-    3. Azure Key Vault for secrets management
-    4. Azure Container Registry for image storage
-    5. Azure Monitor for observability
-    6. Cost optimization recommendations`;
-
-    const response = await this.model.invoke([
-      new SystemMessage(systemPrompt),
-      ...state.messages.slice(-3), // Include recent context
-      new HumanMessage("Create detailed infrastructure plan for Azure deployment")
-    ]);
-
+    // Simulate infrastructure planning
     const infrastructure = {
       provider: 'azure' as const,
       resources: [
@@ -123,28 +56,13 @@ export class DevOpsAgent {
     };
 
     return {
-      messages: [...state.messages, response],
       infrastructure,
       current_task: "Infrastructure planning completed"
     };
   }
 
   async performSecurityScan(state: AgentStateType): Promise<Partial<AgentStateType>> {
-    const systemPrompt = `You are a security expert performing comprehensive security analysis.
-
-    Analyze the application for:
-    1. Dependency vulnerabilities
-    2. Code security issues
-    3. Infrastructure security
-    4. Compliance requirements (GDPR, SOC2)
-    5. Security best practices`;
-
-    const response = await this.model.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage("Perform security scan and provide recommendations")
-    ]);
-
-    // Simulate security scan results
+    // Simulate security scan
     const security_scan = {
       vulnerabilities: [
         "Outdated dependency: lodash@4.17.20 (CVE-2021-23337)",
@@ -162,51 +80,21 @@ export class DevOpsAgent {
     };
 
     return {
-      messages: [...state.messages, response],
       security_scan,
       current_task: "Security scan completed"
     };
   }
 
   async deployApplication(state: AgentStateType): Promise<Partial<AgentStateType>> {
-    const systemPrompt = `You are an expert DevOps engineer handling automated deployments.
-
-    Execute deployment plan:
-    1. Build Docker image
-    2. Push to Azure Container Registry
-    3. Deploy to Azure Container Apps
-    4. Configure environment variables
-    5. Set up health checks
-    6. Configure auto-scaling`;
-
-    const response = await this.model.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage("Execute deployment to Azure Container Apps")
-    ]);
-
+    // Simulate deployment
     return {
-      messages: [...state.messages, response],
       deployment_status: 'deployed' as const,
       current_task: "Application deployed successfully"
     };
   }
 
   async monitorPerformance(state: AgentStateType): Promise<Partial<AgentStateType>> {
-    const systemPrompt = `You are a Site Reliability Engineer monitoring application performance.
-
-    Set up monitoring for:
-    1. Application performance metrics
-    2. Infrastructure health
-    3. User experience monitoring
-    4. Error tracking
-    5. Alerting and notifications`;
-
-    const response = await this.model.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage("Set up comprehensive monitoring and alerting")
-    ]);
-
-    // Simulate performance metrics
+    // Simulate performance monitoring
     const performance_metrics = {
       response_time: 120, // ms
       throughput: 1500,   // requests/minute
@@ -215,29 +103,14 @@ export class DevOpsAgent {
     };
 
     return {
-      messages: [...state.messages, response],
       performance_metrics,
       current_task: "Performance monitoring established"
     };
   }
 
   async optimizeResources(state: AgentStateType): Promise<Partial<AgentStateType>> {
-    const systemPrompt = `You are an expert in cloud cost optimization and performance tuning.
-
-    Analyze current metrics and provide:
-    1. Cost optimization recommendations
-    2. Performance improvements
-    3. Auto-scaling configurations
-    4. Resource right-sizing
-    5. Long-term optimization strategy`;
-
-    const response = await this.model.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage(`Optimize resources based on performance metrics: ${JSON.stringify(state.performance_metrics)}`)
-    ]);
-
+    // Simulate resource optimization
     return {
-      messages: [...state.messages, response],
       current_task: "Resource optimization completed"
     };
   }
@@ -248,7 +121,7 @@ export class DevOpsAgent {
     user_requirements?: string;
   }): Promise<AgentStateType> {
     const initialState: AgentStateType = {
-      messages: [new HumanMessage(input.user_requirements || "Deploy this application with full DevOps automation")],
+      messages: [{ role: 'user', content: input.user_requirements || "Deploy this application with full DevOps automation" }],
       project_id: input.project_id,
       repository_url: input.repository_url,
       deployment_status: 'pending',
@@ -270,14 +143,16 @@ export class DevOpsAgent {
       }
     };
 
-    const config = {
-      configurable: {
-        thread_id: `devops-${input.project_id}-${Date.now()}`
-      }
-    };
+    // Execute workflow steps
+    let currentState = initialState;
+    currentState = { ...currentState, ...(await this.analyzeRepository(currentState)) };
+    currentState = { ...currentState, ...(await this.planInfrastructure(currentState)) };
+    currentState = { ...currentState, ...(await this.performSecurityScan(currentState)) };
+    currentState = { ...currentState, ...(await this.deployApplication(currentState)) };
+    currentState = { ...currentState, ...(await this.monitorPerformance(currentState)) };
+    currentState = { ...currentState, ...(await this.optimizeResources(currentState)) };
 
-    const result = await this.graph.invoke(initialState, config);
-    return result;
+    return currentState;
   }
 
   async getDeploymentStatus(projectId: string): Promise<{
@@ -286,7 +161,7 @@ export class DevOpsAgent {
     security: any;
     performance: any;
   }> {
-    // In a real implementation, this would query the actual deployment status
+    // Return simulated deployment status
     return {
       status: 'deployed',
       infrastructure: {
@@ -310,13 +185,8 @@ export class DevOpsAgent {
 
 // Enterprise Migration Agent
 export class EnterpriseMigrationAgent {
-  private model: ChatOpenAI;
-
   constructor() {
-    this.model = new ChatOpenAI({
-      modelName: "gpt-4",
-      temperature: 0.1
-    });
+    // Simplified agent without complex dependencies
   }
 
   async analyzeExistingSystem(input: {
@@ -324,29 +194,9 @@ export class EnterpriseMigrationAgent {
     current_infrastructure: string;
     business_requirements: string;
   }) {
-    const systemPrompt = `You are an enterprise migration specialist with expertise in modernizing legacy systems.
-
-    Analyze the existing system and provide:
-    1. Current state assessment
-    2. Migration complexity score (1-10)
-    3. Recommended migration strategy
-    4. Risk assessment
-    5. Timeline estimation
-    6. Cost-benefit analysis`;
-
-    const response = await this.model.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage(`
-        System Description: ${input.system_description}
-        Current Infrastructure: ${input.current_infrastructure}
-        Business Requirements: ${input.business_requirements}
-
-        Please provide comprehensive migration analysis.
-      `)
-    ]);
-
+    // Simulate system analysis
     return {
-      analysis: response.content,
+      analysis: `Comprehensive analysis of ${input.system_description}. Current infrastructure: ${input.current_infrastructure}. Migration complexity assessment completed.`,
       complexity_score: 7,
       strategy: 'Containerization with gradual cloud migration',
       estimated_timeline: '6-12 months',
@@ -355,24 +205,9 @@ export class EnterpriseMigrationAgent {
   }
 
   async createMigrationPlan(analysis: any) {
-    const systemPrompt = `You are creating a detailed migration execution plan.
-
-    Create a phase-by-phase migration plan including:
-    1. Pre-migration preparation
-    2. Infrastructure setup
-    3. Application containerization
-    4. Data migration strategy
-    5. Testing and validation
-    6. Go-live and rollback plans
-    7. Post-migration optimization`;
-
-    const response = await this.model.invoke([
-      new SystemMessage(systemPrompt),
-      new HumanMessage(`Create detailed migration plan based on analysis: ${JSON.stringify(analysis)}`)
-    ]);
-
+    // Simulate migration planning
     return {
-      plan: response.content,
+      plan: `Detailed migration plan based on complexity score ${analysis.complexity_score}. Strategy: ${analysis.strategy}`,
       phases: [
         { name: 'Assessment & Planning', duration: '2-4 weeks', status: 'completed' },
         { name: 'Infrastructure Setup', duration: '3-6 weeks', status: 'in_progress' },

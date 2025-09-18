@@ -31,16 +31,27 @@ import { CookieConsent } from "@/components/CookieConsent";
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
 
+  // Show loading state to prevent flash
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Switch>
       {/* Routes accessible to all users */}
       <Route path="/payment" component={PaymentPage} />
       <Route path="/privacy" component={PrivacyPolicy} />
       <Route path="/terms" component={TermsOfService} />
-      
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
+
+      {/* Authenticated routes */}
+      {isAuthenticated ? (
         <>
           <Route path="/" component={Dashboard} />
           <Route path="/dashboard" component={Dashboard} />
@@ -69,9 +80,14 @@ function Router() {
           <Route path="/migration/recommendations" component={EnterpriseMigration} />
           <Route path="/migration/project/:projectId" component={EnterpriseMigration} />
           <Route path="/migration/reports" component={EnterpriseMigration} />
+          <Route component={NotFound} />
+        </>
+      ) : (
+        <>
+          <Route path="/" component={Landing} />
+          <Route component={Landing} />
         </>
       )}
-      <Route component={NotFound} />
     </Switch>
   );
 }
