@@ -232,7 +232,7 @@ export default function Dashboard() {
         <div className="mb-12">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Vibe Hosting - Cloud Migration</h2>
+              <h2 className="text-2xl font-bold mb-2">Deploy - Cloud Deployment</h2>
               <p className="text-muted-foreground">
                 AI-powered migration tools for modernizing your infrastructure and applications
               </p>
@@ -479,7 +479,7 @@ export default function Dashboard() {
                           data-testid={`button-vibe-hosting-${index}`}
                         >
                           <Cloud className="mr-2 h-3 w-3" />
-                          Vibe Hosting
+                          Deploy
                         </Button>
                       </Link>
                     </div>

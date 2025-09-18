@@ -82,7 +82,7 @@ interface DeploymentRequest {
   budget?: number;
 }
 
-export default function VibeHosting() {
+export default function Deploy() {
   const [match, params] = useRoute("/projects/:id/hosting");
   const projectId = params?.id;
   const { toast } = useToast();
@@ -318,7 +318,7 @@ export default function VibeHosting() {
                 <span>Dashboard</span>
               </Link>
               <Separator orientation="vertical" className="h-6" />
-              <h1 className="text-2xl font-bold">Vibe Hosting</h1>
+              <h1 className="text-2xl font-bold">Deploy</h1>
               <Badge variant="secondary">
                 <Cloud className="h-3 w-3 mr-1" />
                 {deployments.filter(d => d.status === 'running').length} Active
@@ -620,7 +620,7 @@ export default function VibeHosting() {
                       <Cloud className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-medium mb-2">No deployments yet</h3>
                       <p className="text-muted-foreground mb-4">
-                        Deploy your first application to get started with Vibe Hosting.
+                        Deploy your first application to get started with Deploy.
                       </p>
                       <Button onClick={() => setCurrentTab("deploy")}>
                         <Play className="h-4 w-4 mr-2" />

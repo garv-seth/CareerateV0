@@ -635,10 +635,15 @@ export class DatabaseStorage implements IStorage {
     const [newProject] = await db
       .insert(projects)
       .values({
-        ...project,
-        files: {},
-        status: "draft",
-        deploymentUrl: null,
+        name: project.name,
+        description: project.description,
+        userId: project.userId,
+        metadata: {
+          ...project.metadata,
+          files: {},
+          status: "draft",
+          deploymentUrl: null,
+        },
       })
       .returning();
     return newProject;
