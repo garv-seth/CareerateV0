@@ -224,8 +224,27 @@ export async function setupAuth(app: Express) {
       console.log('Decoded user payload:', payload);
 
       console.log('Upserting user...');
-      const dbUser = await upsertUser(payload);
-      console.log('User upserted successfully:', dbUser);
+      let dbUser;
+      try {
+        dbUser = await upsertUser(payload);
+        console.log('User upserted successfully:', dbUser);
+      } catch (upsertError) {
+        console.error('Microsoft user upsert failed:', upsertError);
+
+        // Try to find existing user by email as fallback
+        try {
+          const existingUser = await storage.getUserByEmail(payload.preferred_username || payload.email || '');
+          if (existingUser) {
+            console.log('Found existing user by email, using that instead:', existingUser);
+            dbUser = existingUser;
+          } else {
+            throw upsertError;
+          }
+        } catch (fallbackError) {
+          console.error('Fallback user lookup failed:', fallbackError);
+          throw upsertError;
+        }
+      }
 
       // Store user in session (use the database user object, not the OAuth payload)
       console.log('Attempting session login...');
@@ -359,8 +378,28 @@ export async function setupAuth(app: Express) {
 
       console.log('GitHub user payload:', payload);
       console.log('Upserting GitHub user...');
-      const dbUser = await upsertUser(payload);
-      console.log('GitHub user upserted successfully:', dbUser);
+
+      let dbUser;
+      try {
+        dbUser = await upsertUser(payload);
+        console.log('GitHub user upserted successfully:', dbUser);
+      } catch (upsertError) {
+        console.error('GitHub user upsert failed:', upsertError);
+
+        // Try to find existing user by email as fallback
+        try {
+          const existingUser = await storage.getUserByEmail(payload.preferred_username || '');
+          if (existingUser) {
+            console.log('Found existing user by email, using that instead:', existingUser);
+            dbUser = existingUser;
+          } else {
+            throw upsertError;
+          }
+        } catch (fallbackError) {
+          console.error('Fallback user lookup failed:', fallbackError);
+          throw upsertError;
+        }
+      }
 
       console.log('Attempting GitHub session login...');
       req.login(dbUser, (err) => {

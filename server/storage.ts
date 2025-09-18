@@ -590,18 +590,80 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.email,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+    try {
+      // First, try to find an existing user by ID
+      const existingUserById = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userData.id))
+        .limit(1);
+
+      if (existingUserById.length > 0) {
+        // User exists with this ID, update their data
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            ...userData,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, userData.id))
+          .returning();
+        return updatedUser;
+      }
+
+      // Check if user exists by email
+      const existingUserByEmail = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, userData.email))
+        .limit(1);
+
+      if (existingUserByEmail.length > 0) {
+        // User exists with this email but different ID
+        // Update the existing user's metadata but keep the original ID
+        // This prevents foreign key constraint violations
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            name: userData.name || existingUserByEmail[0].name,
+            metadata: {
+              ...existingUserByEmail[0].metadata,
+              ...userData.metadata,
+            },
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, existingUserByEmail[0].id))
+          .returning();
+        return updatedUser;
+      }
+
+      // No existing user, create new one
+      const [newUser] = await db
+        .insert(users)
+        .values(userData)
+        .returning();
+      return newUser;
+
+    } catch (error) {
+      console.error('Error in upsertUser:', error);
+
+      // If there's still a conflict, try to find and return the existing user
+      try {
+        const existingUser = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, userData.email))
+          .limit(1);
+
+        if (existingUser.length > 0) {
+          return existingUser[0];
+        }
+      } catch (findError) {
+        console.error('Error finding existing user:', findError);
+      }
+
+      throw error;
+    }
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {

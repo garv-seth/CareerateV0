@@ -453,6 +453,7 @@ export type ApiUsageAnalytics = typeof apiUsageAnalytics.$inferSelect;
 // =====================================================
 
 export const insertUserSchema = createInsertSchema(users).pick({
+  id: true,
   email: true,
   name: true,
   metadata: true,
