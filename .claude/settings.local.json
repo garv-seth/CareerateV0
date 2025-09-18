@@ -46,7 +46,8 @@
       "Bash(docker tag:*)",
       "Bash(psql:*)",
       "Bash(node:*)",
-      "Bash(npx drizzle-kit:*)"
+      "Bash(npx drizzle-kit:*)",
+      "Read(//c/**)"
     ],
     "deny": [],
     "ask": []

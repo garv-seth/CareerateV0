@@ -68,20 +68,28 @@ const integrationTemplates: IntegrationTemplate[] = [
     required: true,
     fields: [
       {
+        name: "personalAccessToken",
+        label: "GitHub Personal Access Token",
+        type: "password",
+        placeholder: "ghp_xxxxxxxxxxxxxxxxxxxx",
+        required: true,
+        description: "Personal Access Token from GitHub Settings > Developer Settings > Personal Access Tokens > Tokens (classic)"
+      },
+      {
         name: "clientId",
-        label: "GitHub Client ID",
+        label: "GitHub OAuth Client ID (Optional)",
         type: "text",
         placeholder: "Iv1.abc123def456",
-        required: true,
-        description: "OAuth App Client ID from GitHub Developer Settings"
+        required: false,
+        description: "OAuth App Client ID from GitHub Developer Settings (for OAuth flow)"
       },
       {
         name: "clientSecret",
-        label: "GitHub Client Secret",
+        label: "GitHub OAuth Client Secret (Optional)",
         type: "password",
-        placeholder: "github_pat_...",
-        required: true,
-        description: "OAuth App Client Secret from GitHub"
+        placeholder: "github_oauth_secret...",
+        required: false,
+        description: "OAuth App Client Secret from GitHub (for OAuth flow)"
       }
     ]
   },

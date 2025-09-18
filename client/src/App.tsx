@@ -21,6 +21,7 @@ import ModernizationWorkflows from "@/pages/modernization-workflows";
 import MigrationExecution from "@/pages/migration-execution";
 import MigrationRecommendations from "@/pages/migration-recommendations";
 import EnterpriseMigration from "@/pages/enterprise-migration";
+import EnterpriseDashboard from "@/pages/enterprise-dashboard";
 import VibeCoding from "@/pages/vibe-coding";
 import Deploy from "@/pages/vibe-hosting";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -50,6 +51,7 @@ function Router() {
           <Route path="/integrations/setup" component={IntegrationsSetup} />
           <Route path="/billing" component={BillingDashboard} />
           <Route path="/admin" component={AdminDashboard} />
+          <Route path="/enterprise" component={EnterpriseDashboard} />
           {/* Vibe Coding and Hosting Routes */}
           <Route path="/projects/:id/coding" component={VibeCoding} />
           <Route path="/projects/:id/hosting" component={Deploy} />
