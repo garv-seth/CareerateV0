@@ -2215,6 +2215,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Real Integration Testing Endpoint
+  app.post("/api/integrations/test", isAuthenticated, async (req, res) => {
+    try {
+      const { service, credentials } = req.body;
+
+      if (!service || !credentials) {
+        return res.status(400).json({ message: "Service and credentials are required" });
+      }
+
+      // Test the integration based on service type
+      let testResult;
+      switch (service) {
+        case 'github':
+          testResult = await testGitHubIntegration(credentials);
+          break;
+        case 'gitlab':
+          testResult = await testGitLabIntegration(credentials);
+          break;
+        case 'openai':
+          testResult = await testOpenAIIntegration(credentials);
+          break;
+        case 'stripe':
+          testResult = await testStripeIntegration(credentials);
+          break;
+        case 'sendgrid':
+          testResult = await testSendGridIntegration(credentials);
+          break;
+        case 'twilio':
+          testResult = await testTwilioIntegration(credentials);
+          break;
+        default:
+          return res.status(400).json({ message: "Unsupported service type" });
+      }
+
+      res.json(testResult);
+    } catch (error) {
+      console.error('Integration test error:', error);
+      res.status(500).json({ message: "Integration test failed", error: (error as Error).message });
+    }
+  });
+
   // API Connector Framework
   app.get("/api/api-connectors/available", async (req, res) => {
     try {
@@ -3278,4 +3319,169 @@ test('renders learn react link', () => {
   }
 
   return server;
+}
+
+// Integration Testing Functions
+async function testGitHubIntegration(credentials: any) {
+  try {
+    const response = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `token ${credentials.clientSecret}`,
+        'User-Agent': 'Careerate-Integration-Test'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.statusText}`);
+    }
+
+    const user = await response.json();
+    return {
+      success: true,
+      message: `Successfully connected to GitHub as ${user.login}`,
+      data: { username: user.login, id: user.id }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `GitHub connection failed: ${(error as Error).message}`
+    };
+  }
+}
+
+async function testGitLabIntegration(credentials: any) {
+  try {
+    const baseUrl = credentials.baseUrl || 'https://gitlab.com';
+    const response = await fetch(`${baseUrl}/api/v4/user`, {
+      headers: {
+        'Authorization': `Bearer ${credentials.clientSecret}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`GitLab API error: ${response.statusText}`);
+    }
+
+    const user = await response.json();
+    return {
+      success: true,
+      message: `Successfully connected to GitLab as ${user.username}`,
+      data: { username: user.username, id: user.id }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `GitLab connection failed: ${(error as Error).message}`
+    };
+  }
+}
+
+async function testOpenAIIntegration(credentials: any) {
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: {
+        'Authorization': `Bearer ${credentials.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      message: `Successfully connected to OpenAI API (${data.data?.length || 0} models available)`,
+      data: { modelsCount: data.data?.length || 0 }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `OpenAI connection failed: ${(error as Error).message}`
+    };
+  }
+}
+
+async function testStripeIntegration(credentials: any) {
+  try {
+    // Use Stripe's balance endpoint as a simple test
+    const response = await fetch('https://api.stripe.com/v1/balance', {
+      headers: {
+        'Authorization': `Bearer ${credentials.secretKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Stripe API error: ${response.statusText}`);
+    }
+
+    const balance = await response.json();
+    return {
+      success: true,
+      message: `Successfully connected to Stripe`,
+      data: { currency: balance.available?.[0]?.currency || 'usd' }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Stripe connection failed: ${(error as Error).message}`
+    };
+  }
+}
+
+async function testSendGridIntegration(credentials: any) {
+  try {
+    const response = await fetch('https://api.sendgrid.com/v3/user/profile', {
+      headers: {
+        'Authorization': `Bearer ${credentials.apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`SendGrid API error: ${response.statusText}`);
+    }
+
+    const profile = await response.json();
+    return {
+      success: true,
+      message: `Successfully connected to SendGrid for ${profile.email}`,
+      data: { email: profile.email }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `SendGrid connection failed: ${(error as Error).message}`
+    };
+  }
+}
+
+async function testTwilioIntegration(credentials: any) {
+  try {
+    // Use Twilio's account endpoint as a simple test
+    const auth = Buffer.from(`${credentials.accountSid}:${credentials.authToken}`).toString('base64');
+    const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${credentials.accountSid}.json`, {
+      headers: {
+        'Authorization': `Basic ${auth}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Twilio API error: ${response.statusText}`);
+    }
+
+    const account = await response.json();
+    return {
+      success: true,
+      message: `Successfully connected to Twilio account ${account.friendly_name}`,
+      data: { accountName: account.friendly_name, status: account.status }
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: `Twilio connection failed: ${(error as Error).message}`
+    };
+  }
 }

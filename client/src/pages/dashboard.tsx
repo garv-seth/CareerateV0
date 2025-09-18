@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Plus, Eye, Trash2, Code, ArrowLeft, Activity, Shield, Zap, Settings, Cloud, BarChart3, Target, Cpu, GitBranch, ArrowRight } from "lucide-react";
+import { Plus, Eye, Trash2, Code, ArrowLeft, Activity, Shield, Zap, Settings, Cloud, BarChart3, Target, Cpu, GitBranch, ArrowRight, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -228,6 +229,32 @@ export default function Dashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Real Integrations Setup Section */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold mb-2">🔧 Setup Real Integrations</h2>
+              <p className="text-muted-foreground">
+                Configure your actual API credentials and connect to real services with Azure KeyVault security
+              </p>
+            </div>
+            <Link href="/integrations/setup">
+              <Button size="lg" className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
+                <Key className="mr-2 h-4 w-4" />
+                Configure Integrations
+              </Button>
+            </Link>
+          </div>
+
+          <Alert className="mb-6">
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Real Functionality Required:</strong> Enter your actual API credentials (GitHub, OpenAI, Stripe, etc.)
+              to enable real integrations instead of mock data. All credentials are securely stored in Azure KeyVault.
+            </AlertDescription>
+          </Alert>
+        </div>
+
         {/* Migration Tools Section */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-6">

@@ -11,10 +11,10 @@ import Editor from "@/pages/editor";
 import DevOpsDashboard from "@/pages/devops-dashboard";
 import MonitoringDashboard from "@/pages/monitoring-dashboard";
 import IntegrationsPage from "@/pages/IntegrationsPage";
+import IntegrationsSetup from "@/pages/integrations-setup";
 import BillingDashboard from "@/pages/BillingDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
 import PaymentPage from "@/pages/payment";
-import MigrationDashboard from "@/pages/migration-dashboard";
 import LegacyAnalysis from "@/pages/legacy-analysis";
 import MigrationPlanning from "@/pages/migration-planning";
 import ModernizationWorkflows from "@/pages/modernization-workflows";
@@ -47,6 +47,7 @@ function Router() {
           <Route path="/devops/:projectId" component={DevOpsDashboard} />
           <Route path="/monitoring/:projectId" component={MonitoringDashboard} />
           <Route path="/integrations" component={IntegrationsPage} />
+          <Route path="/integrations/setup" component={IntegrationsSetup} />
           <Route path="/billing" component={BillingDashboard} />
           <Route path="/admin" component={AdminDashboard} />
           {/* Vibe Coding and Hosting Routes */}

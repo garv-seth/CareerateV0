@@ -163,7 +163,7 @@ export default function MigrationDashboard() {
                 Dashboard
               </Link>
               <span className="text-muted-foreground">/</span>
-              <h1 className="text-2xl font-bold">Vibe Hosting - Cloud Migration</h1>
+              <h1 className="text-2xl font-bold">Deploy - Cloud Deployment</h1>
             </div>
             <div className="flex items-center space-x-4">
               <Button 
