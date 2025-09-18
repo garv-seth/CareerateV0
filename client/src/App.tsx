@@ -10,7 +10,7 @@ import Dashboard from "@/pages/dashboard";
 import Editor from "@/pages/editor";
 import DevOpsDashboard from "@/pages/devops-dashboard";
 import MonitoringDashboard from "@/pages/monitoring-dashboard";
-import IntegrationsPage from "@/pages/IntegrationsPage";
+import IntegrationsPage from "@/pages/integrations";
 import IntegrationsSetup from "@/pages/integrations-setup";
 import BillingDashboard from "@/pages/BillingDashboard";
 import AdminDashboard from "@/pages/AdminDashboard";
@@ -22,6 +22,7 @@ import MigrationExecution from "@/pages/migration-execution";
 import MigrationRecommendations from "@/pages/migration-recommendations";
 import EnterpriseMigration from "@/pages/enterprise-migration";
 import EnterpriseDashboard from "@/pages/enterprise-dashboard";
+import AccountSettings from "@/pages/account-settings";
 import VibeCoding from "@/pages/vibe-coding";
 import Deploy from "@/pages/vibe-hosting";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
@@ -63,6 +64,7 @@ function Router() {
           <Route path="/billing" component={BillingDashboard} />
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/enterprise" component={EnterpriseDashboard} />
+          <Route path="/account" component={AccountSettings} />
           {/* Vibe Coding and Hosting Routes */}
           <Route path="/projects/:id/coding" component={VibeCoding} />
           <Route path="/projects/:id/hosting" component={Deploy} />

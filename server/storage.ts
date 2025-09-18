@@ -631,7 +631,7 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(projects).where(eq(projects.userId, userId));
   }
 
-  async createProject(project: InsertProject & { userId: string }): Promise<Project> {
+  async createProject(project: InsertProject & { userId: string, framework?: string }): Promise<Project> {
     const [newProject] = await db
       .insert(projects)
       .values({
@@ -640,6 +640,7 @@ export class DatabaseStorage implements IStorage {
         userId: project.userId,
         metadata: {
           ...project.metadata,
+          framework: project.framework || 'react',
           files: {},
           status: "draft",
           deploymentUrl: null,
