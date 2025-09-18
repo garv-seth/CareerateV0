@@ -45,7 +45,8 @@
       "Bash(npx tsx:*)",
       "Bash(docker tag:*)",
       "Bash(psql:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npx drizzle-kit:*)"
     ],
     "deny": [],
     "ask": []
