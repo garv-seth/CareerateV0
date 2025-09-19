@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation, useRoute } from "wouter";
 import {
@@ -84,6 +84,7 @@ export default function EnterpriseMigration() {
   const { toast } = useToast();
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
 
   const projectId = params?.id;
 
@@ -209,6 +210,34 @@ export default function EnterpriseMigration() {
         description: "Failed to apply recommendation",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchRecommendations = async () => {
+    if (!projectId) return;
+    try {
+      const res = await apiRequest('POST', '/api/recommendations/suggest', { projectId });
+      const data = await res.json();
+      const recs = (data.recommendations || []).map((r: any) => ({ id: r.id, title: r.description, description: r.description, category: 'Code', priority: 'medium', impact: 'medium', effort: 'low', status: 'pending' }));
+      setRecommendations(recs);
+    } catch (e) { /* ignore */ }
+  };
+
+  useEffect(() => { fetchRecommendations(); }, [projectId]);
+
+  const applyRecommendation = async (rec: Recommendation) => {
+    if (!projectId) return;
+    try {
+      const res = await apiRequest('POST', '/api/recommendations/apply', {
+        projectId,
+        repo: { owner: 'your-org-or-user', name: 'your-repo' },
+        commitMessage: rec.title || 'Apply AI Recommendation'
+      });
+      const data = await res.json();
+      // naive success toast substitute
+      console.log('PR created:', data.prUrl);
+    } catch (e) {
+      console.error('Apply rec failed', e);
     }
   };
 
@@ -668,66 +697,15 @@ export default function EnterpriseMigration() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {mockRecommendations.map((rec) => (
-                    <Card key={rec.id} className="border-l-4 border-l-blue-500">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div>
-                              <CardTitle className="text-lg">{rec.title}</CardTitle>
-                              <CardDescription>{rec.description}</CardDescription>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge className={getPriorityColor(rec.impact)}>
-                              {rec.impact} impact
-                            </Badge>
-                            <Badge variant="outline">
-                              {rec.effort} effort
-                            </Badge>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-6">
-                            <div>
-                              <div className="text-sm font-medium">Expected Savings</div>
-                              <div className="text-lg font-bold text-green-600">
-                                ${rec.savings.toLocaleString()}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium">Category</div>
-                              <div className="text-sm text-muted-foreground capitalize">
-                                {rec.category}
-                              </div>
-                            </div>
-                            <div>
-                              <div className="text-sm font-medium">Status</div>
-                              <Badge className={getStatusColor(rec.status)}>
-                                {rec.status}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleApplyRecommendation(rec.id)}
-                              disabled={rec.status === 'completed'}
-                            >
-                              <Code className="mr-2 h-4 w-4" />
-                              Apply Fix
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                <div className="space-y-3">
+                  {recommendations.map((rec) => (
+                    <div key={rec.id} className="flex items-center justify-between p-3 border rounded">
+                      <div>
+                        <div className="font-medium">{rec.title}</div>
+                        <div className="text-sm text-muted-foreground">{rec.description}</div>
+                      </div>
+                      <Button size="sm" onClick={() => applyRecommendation(rec)}>Apply Fix (PR)</Button>
+                    </div>
                   ))}
                 </div>
               </CardContent>

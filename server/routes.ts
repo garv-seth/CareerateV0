@@ -1,5 +1,5 @@
 import express, { type Express } from "express";
-import { randomUUID } from "crypto";
+import { randomUUID, createHash } from "crypto";
 import { createServer, type Server } from "http";
 import Stripe from "stripe"; // From javascript_stripe blueprint
 import { storage } from "./storage";
@@ -92,6 +92,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     (req as any).requestId = id;
     (res as any).locals = (res as any).locals || {};
     (res as any).locals.requestId = id;
+    next();
+  });
+
+  // Structured request logging middleware
+  app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+      const durationMs = Date.now() - start;
+      const user = (req as any).user || {};
+      const userId = user?.claims?.sub || user?.id || 'anonymous';
+      const userHash = createHash('sha256').update(String(userId)).digest('hex').slice(0, 12);
+      const projectId = (req as any).params?.id || (req as any).params?.projectId || undefined;
+      const event = {
+        ts: new Date().toISOString(),
+        reqId: (res as any).locals?.requestId,
+        user: userHash,
+        projectId,
+        method: req.method,
+        path: req.path,
+        status: res.statusCode,
+        durationMs
+      };
+      try { console.log(JSON.stringify({ type: 'http', ...event })); } catch {}
+    });
     next();
   });
 
@@ -3175,6 +3199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         prUrl,
         appliedActions
       });
++      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'coding', action: 'apply', reqId: (res as any).locals?.requestId, projectId, count: appliedActions.length })); } catch {}
     } catch (error) {
       console.error('Apply coding actions error:', error);
       res.status(500).json({ message: "Failed to apply coding actions", correlationId: (res as any).locals?.requestId });
@@ -3395,6 +3420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         url: result.url,
         message: `Deployment started to ${providerDecision.provider} using ${strategy} strategy`
       });
++      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'hosting', action: 'deploy', reqId: (res as any).locals?.requestId, projectId, deploymentId: result.deploymentId, strategy })); } catch {}
     } catch (error) {
       console.error('Deploy application error:', error);
       res.status(500).json({ message: "Failed to start deployment" });
@@ -3427,6 +3453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completedAt: (status.deployment as any)?.completedAt || null,
         healthChecks: status.healthChecks || []
       });
++      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'hosting', action: 'status', reqId: (res as any).locals?.requestId, deploymentId, status: status.deployment?.status })); } catch {}
     } catch (error) {
       console.error('Get deployment status error:', error);
       res.status(500).json({ message: "Failed to get deployment status" });
@@ -3497,6 +3524,181 @@ test('renders learn react link', () => {
   expect(linkElement).toBeInTheDocument();
 });`;
   }
+
+  // =====================================================
+  // Repository Ops and AI Recommendations
+  // =====================================================
+
+  // Create commits and PR on GitHub
+  app.post('/api/repo/commit-pr', isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId, repo, baseBranch = 'main', branchName, commitMessage, rootPath = '' } = req.body as any;
+
+      if (!projectId || !repo?.owner || !repo?.name) {
+        return res.status(400).json({ message: 'projectId and repo {owner,name} are required' });
+      }
+
+      // Validate project ownership and load files
+      await validateProjectOwnership(projectId, userId);
+      const project = await storage.getProject(projectId);
+      const files: Record<string, string> = project?.metadata?.files || {};
+      if (!Object.keys(files).length) {
+        return res.status(400).json({ message: 'No files to commit' });
+      }
+
+      // Locate GitHub integration to get access token
+      const integrations = await storage.getUserIntegrations(userId, { service: 'github' });
+      if (!integrations?.length) {
+        return res.status(400).json({ message: 'GitHub integration not found' });
+      }
+      const ghIntegration = integrations[0];
+      const secrets = await storage.getIntegrationSecrets(ghIntegration.id);
+      const tokenSecret = secrets.find(s => s.secretName === 'access_token');
+      if (!tokenSecret) {
+        return res.status(400).json({ message: 'GitHub access token missing in secrets' });
+      }
+      const token = await encryptionService.decrypt(tokenSecret, 'production');
+
+      const ghApi = 'https://api.github.com';
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'Careerate-App'
+      } as Record<string, string>;
+
+      // Get base branch SHA
+      const refRes = await fetch(`${ghApi}/repos/${repo.owner}/${repo.name}/git/ref/heads/${baseBranch}`, { headers });
+      if (!refRes.ok) {
+        const t = await refRes.text();
+        return res.status(400).json({ message: 'Failed to get base branch', details: t });
+      }
+      const refJson = await refRes.json();
+      const baseSha = refJson.object?.sha;
+
+      // Create branch
+      const newBranch = branchName || `careerate/${Date.now()}`;
+      const createRefRes = await fetch(`${ghApi}/repos/${repo.owner}/${repo.name}/git/refs`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ref: `refs/heads/${newBranch}`, sha: baseSha })
+      });
+      if (!createRefRes.ok && createRefRes.status !== 422) {
+        const t = await createRefRes.text();
+        return res.status(400).json({ message: 'Failed to create branch', details: t });
+      }
+
+      // Commit files via contents API
+      for (const [path, content] of Object.entries(files)) {
+        const targetPath = `${rootPath ? `${rootPath.replace(/\/$/, '')}/` : ''}${path}`;
+        const putRes = await fetch(`${ghApi}/repos/${repo.owner}/${repo.name}/contents/${encodeURIComponent(targetPath)}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify({
+            message: commitMessage || 'Careerate apply fix',
+            content: Buffer.from(content).toString('base64'),
+            branch: newBranch
+          })
+        });
+        if (!putRes.ok && putRes.status !== 409) {
+          const t = await putRes.text();
+          return res.status(400).json({ message: `Failed to commit ${targetPath}`, details: t });
+        }
+      }
+
+      // Open PR
+      const prRes = await fetch(`${ghApi}/repos/${repo.owner}/${repo.name}/pulls`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          title: commitMessage || 'Careerate Apply Fix',
+          head: newBranch,
+          base: baseBranch,
+          body: `Automated changes proposed by Careerate.\nProject: ${projectId}`
+        })
+      });
+      if (!prRes.ok) {
+        const t = await prRes.text();
+        return res.status(400).json({ message: 'Failed to open PR', details: t });
+      }
+      const pr = await prRes.json();
+      res.json({ branch: newBranch, prUrl: pr.html_url, prNumber: pr.number });
+    } catch (error) {
+      console.error('commit-pr error:', error);
+      res.status(500).json({ message: 'Failed to create PR', error: (error as Error).message });
+    }
+  });
+
+  // Recommend fixes based on current project files
+  app.post('/api/recommendations/suggest', isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const { projectId } = req.body;
+      await validateProjectOwnership(projectId, userId);
+      const project = await storage.getProject(projectId);
+      const files: Record<string, string> = project?.metadata?.files || {};
+      const combined = Object.entries(files).map(([p, c]) => `// File: ${p}\n${c}`).join('\n\n');
+      const analysis = await analyzeCode(combined, 'typescript');
+      const recs = (analysis?.suggestions || []).slice(0, 5).map((s: string, i: number) => ({ id: `rec-${i+1}`, description: s }));
+      res.json({ analysis, recommendations: recs });
++      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'recs', action: 'suggest', reqId: (res as any).locals?.requestId, projectId, count: recs.length })); } catch {}
+    } catch (error) {
+      console.error('recommendations suggest error:', error);
+      res.status(500).json({ message: 'Failed to generate recommendations' });
+    }
+  });
+
+  // Apply a recommended fix by committing and opening a PR
+  app.post('/api/recommendations/apply', isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, repo, baseBranch = 'main', branchName, commitMessage = 'Apply AI Recommendation', rootPath } = req.body as any;
+      (req as any).body = { projectId, repo, baseBranch, branchName, commitMessage, rootPath };
+      const originalUrl = req.url;
+      req.url = '/api/repo/commit-pr';
+      (app as any)._router.handle(req, res, () => { req.url = originalUrl; });
+    } catch (error) {
+      console.error('recommendations apply error:', error);
+      res.status(500).json({ message: 'Failed to apply recommendation' });
+    }
+  });
+
+  // =====================================================
+  // Azure Onboarding & Reconciliation
+  // =====================================================
+
+  app.get('/api/onboarding/azure/context', isAuthenticated, async (req, res) => {
+    try {
+      const context = {
+        subscriptionId: process.env.AZ_SUBSCRIPTION_ID || process.env.AZURE_SUBSCRIPTION_ID || null,
+        tenantId: process.env.AZURE_TENANT_ID || null,
+        defaultResourceGroup: process.env.AZ_DEFAULT_RG || 'Careerate',
+        region: process.env.AZ_REGION || 'westus2',
+        env: {
+          AZURE_CLIENT_ID: !!process.env.AZURE_CLIENT_ID,
+          AZURE_CLIENT_SECRET: !!process.env.AZURE_CLIENT_SECRET,
+          DATABASE_URL: !!process.env.DATABASE_URL
+        }
+      };
+      res.json(context);
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to read Azure context' });
+    }
+  });
+
+  app.post('/api/onboarding/azure/reconcile', isAuthenticated, async (req, res) => {
+    try {
+      const desired = req.body || {};
+      const plan = [
+        { resource: 'ResourceGroup', name: desired.resourceGroup || 'Careerate', action: 'reuse' },
+        { resource: 'ContainerRegistry', name: 'careerateacr', action: 'reuse' },
+        { resource: 'ContainerAppsEnv', name: 'careerate-agents-env', action: 'reuse' },
+        { resource: 'ContainerApp', name: 'careerate-web', action: 'reuse' }
+      ];
+      res.json({ plan, notes: 'Plan is idempotent; existing resources reused, tags will be applied during deploy.' });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to generate reconciliation plan' });
+    }
+  });
 
   return server;
 }

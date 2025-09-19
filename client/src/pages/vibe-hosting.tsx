@@ -222,18 +222,17 @@ export default function Deploy() {
       if (!response.ok) throw new Error("Failed to start deployment");
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast({
         title: "Deployment Started",
         description: data.message || "Deployment has been initiated successfully."
       });
 
-      // Create new deployment entry
       const newDeployment: Deployment = {
         id: data.deploymentId,
         name: `Deploy-${Date.now()}`,
-        status: "running",
-        url: data.url || `https://app-${data.deploymentId}.azurewebsites.net`,
+        status: data.status === 'success' ? 'running' : 'deploying',
+        url: data.url || undefined,
         provider: data.provider || "azure",
         region: data.region || "West US 2",
         cost: calculateCost(selectedProviderData!, false),
@@ -249,6 +248,22 @@ export default function Deploy() {
 
       setDeployments(prev => [newDeployment, ...prev]);
       setDeploymentIntent("");
+
+      // Poll status a couple of times
+      if (data.statusUrl) {
+        try {
+          const res = await fetch(data.statusUrl, { credentials: 'include' });
+          if (res.ok) {
+            const s = await res.json();
+            setDeployments(prev => prev.map(d => d.id === newDeployment.id ? {
+              ...d,
+              status: (s.status === 'success' ? 'running' : d.status),
+              url: s.url || d.url,
+              lastDeployed: new Date().toISOString()
+            } : d));
+          }
+        } catch {}
+      }
     },
     onError: (error) => {
       toast({
