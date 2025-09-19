@@ -9,6 +9,9 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").notNull().unique(),
   name: text("name"),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  stripeCustomerId: text("stripe_customer_id").unique(),
   metadata: jsonb("metadata").default({}),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -393,6 +396,115 @@ export const apiUsageAnalyticsRelations = relations(apiUsageAnalytics, ({ one })
     references: [apiConnections.id],
   }),
 }));
+
+// =====================================================
+// Subscription and Billing Tables
+// =====================================================
+
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(), // "free", "starter", "professional", "enterprise"
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  monthlyPrice: decimal("monthly_price", { precision: 10, scale: 2 }).notNull().default("0"),
+  yearlyPrice: decimal("yearly_price", { precision: 10, scale: 2 }).notNull().default("0"),
+  stripeMonthlyPriceId: text("stripe_monthly_price_id"),
+  stripeYearlyPriceId: text("stripe_yearly_price_id"),
+  features: jsonb("features").default([]), // list of included features
+  limits: jsonb("limits").default({}), // usage limits
+  isActive: boolean("is_active").default(true),
+  isPopular: boolean("is_popular").default(false),
+  trialDays: integer("trial_days").default(0),
+  sortOrder: integer("sort_order").default(0),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userSubscriptions = pgTable("user_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  stripeSubscriptionId: text("stripe_subscription_id").unique(),
+  status: text("status").notNull().default("active"), // "active", "canceled", "past_due", "unpaid"
+  billingCycle: text("billing_cycle").notNull().default("monthly"), // "monthly", "yearly"
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  trialStart: timestamp("trial_start"),
+  trialEnd: timestamp("trial_end"),
+  canceledAt: timestamp("canceled_at"),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").default(false),
+  quantity: integer("quantity").default(1),
+  unitAmount: decimal("unit_amount", { precision: 10, scale: 2 }),
+  currency: text("currency").default("usd"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const usageTracking = pgTable("usage_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  organizationId: varchar("organization_id"), // for future organization support
+  subscriptionId: varchar("subscription_id").references(() => userSubscriptions.id, { onDelete: "set null" }),
+  metricType: text("metric_type").notNull(), // "projects", "aiGenerations", "apiCalls", "storageGB", "collaborators"
+  metricValue: integer("metric_value").notNull().default(0),
+  period: text("period").notNull().default("current_month"), // "current_month", "current_year"
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  resetAt: timestamp("reset_at").notNull(),
+  limit: integer("limit").default(-1), // -1 means unlimited
+  lastIncrement: timestamp("last_increment"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const billingHistory = pgTable("billing_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscriptionId: varchar("subscription_id").references(() => userSubscriptions.id, { onDelete: "set null" }),
+  stripeInvoiceId: text("stripe_invoice_id").unique(),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  invoiceNumber: text("invoice_number"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("usd"),
+  status: text("status").notNull(), // "draft", "open", "paid", "past_due", "canceled", "uncollectible"
+  paymentStatus: text("payment_status"), // "succeeded", "pending", "failed"
+  description: text("description"),
+  invoiceUrl: text("invoice_url"),
+  pdfUrl: text("pdf_url"),
+  dueDate: timestamp("due_date"),
+  paidAt: timestamp("paid_at"),
+  attemptedAt: timestamp("attempted_at"),
+  nextPaymentAttempt: timestamp("next_payment_attempt"),
+  failureReason: text("failure_reason"),
+  lineItems: jsonb("line_items").default([]),
+  taxAmount: decimal("tax_amount", { precision: 10, scale: 2 }).default("0"),
+  discountAmount: decimal("discount_amount", { precision: 10, scale: 2 }).default("0"),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const paymentMethods = pgTable("payment_methods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stripePaymentMethodId: text("stripe_payment_method_id").notNull().unique(),
+  type: text("type").notNull(), // "card", "bank_account", "sepa_debit"
+  brand: text("brand"), // "visa", "mastercard", etc.
+  last4: text("last4"),
+  expiryMonth: integer("expiry_month"),
+  expiryYear: integer("expiry_year"),
+  fingerprint: text("fingerprint"),
+  isDefault: boolean("is_default").default(false),
+  isVerified: boolean("is_verified").default(false),
+  billingDetails: jsonb("billing_details").default({}),
+  metadata: jsonb("metadata").default({}),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 
 // AI Agent Relations
 export const aiAgentsRelations = relations(aiAgents, ({ one, many }) => ({

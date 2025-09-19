@@ -342,11 +342,16 @@ export default function AICodeEditor({ projectId }: { projectId: string }) {
   };
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
+    <div className="flex h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
       {/* Left Sidebar - File Explorer & AI Agents */}
-      <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
-        <div className="p-4 border-b border-gray-700">
-          <h2 className="text-lg font-semibold mb-4">AI Development Environment</h2>
+      <div className="w-80 bg-black/40 border-r border-white/10 backdrop-blur-md flex flex-col">
+        <div className="p-4 border-b border-white/10">
+          <div className="flex items-center space-x-2 mb-4">
+            <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+              <Bot className="h-4 w-4 text-white" />
+            </div>
+            <h2 className="text-lg font-semibold text-white">AI Development</h2>
+          </div>
 
           {/* File Explorer */}
           <div className="mb-6">
@@ -377,21 +382,27 @@ export default function AICodeEditor({ projectId }: { projectId: string }) {
             <h3 className="text-sm font-medium mb-2">AI Agents</h3>
             <div className="space-y-2">
               {agents.map(agent => (
-                <Card key={agent.id} className="bg-gray-700 border-gray-600">
+                <Card key={agent.id} className="bg-white/5 border-white/10 hover:bg-white/10 transition-all">
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <Bot className="h-4 w-4" />
-                        <span className="text-sm font-medium">{agent.name}</span>
+                        <Bot className="h-4 w-4 text-purple-400" />
+                        <span className="text-sm font-medium text-white">{agent.name}</span>
                       </div>
-                      <Badge variant={agent.status === 'idle' ? 'outline' : 'default'}>
+                      <Badge 
+                        className={`text-xs ${
+                          agent.status === 'idle' 
+                            ? 'bg-white/10 text-white/70 border-white/20' 
+                            : 'bg-green-500/20 text-green-300 border-green-500/30'
+                        }`}
+                      >
                         {agent.status}
                       </Badge>
                     </div>
-                    <p className="text-xs text-gray-400 mb-2">{agent.description}</p>
+                    <p className="text-xs text-white/60 mb-3">{agent.description}</p>
                     <Button
                       size="sm"
-                      className="w-full"
+                      className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
                       onClick={() => triggerAIAgent(agent.id)}
                     >
                       <Zap className="h-3 w-3 mr-1" />
@@ -408,7 +419,7 @@ export default function AICodeEditor({ projectId }: { projectId: string }) {
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col">
         {/* Top Bar - File Tabs & Actions */}
-        <div className="bg-gray-800 border-b border-gray-700 p-2">
+        <div className="bg-black/40 border-b border-white/10 backdrop-blur-md p-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {files.map(file => (
@@ -465,11 +476,11 @@ export default function AICodeEditor({ projectId }: { projectId: string }) {
       </div>
 
       {/* Right Sidebar - AI Chat & Terminal */}
-      <div className="w-96 bg-gray-800 border-l border-gray-700 flex flex-col">
+      <div className="w-96 bg-black/40 border-l border-white/10 backdrop-blur-md flex flex-col">
         <Tabs defaultValue="chat" className="flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-2 bg-gray-700">
-            <TabsTrigger value="chat">AI Assistant</TabsTrigger>
-            <TabsTrigger value="terminal">Terminal</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-black/20 border-white/10">
+            <TabsTrigger value="chat" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">AI Assistant</TabsTrigger>
+            <TabsTrigger value="terminal" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">Terminal</TabsTrigger>
           </TabsList>
 
           <TabsContent value="chat" className="flex-1 flex flex-col p-0">

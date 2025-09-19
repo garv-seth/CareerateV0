@@ -167,8 +167,9 @@ export class DeploymentManager {
     await fs.mkdir(deploymentPath, { recursive: true });
 
     // Write project files to deployment directory
-    if (project.files && typeof project.files === 'object') {
-      for (const [filePath, content] of Object.entries(project.files)) {
+    const projectFiles = project.metadata?.files || project.files || {};
+    if (projectFiles && typeof projectFiles === 'object') {
+      for (const [filePath, content] of Object.entries(projectFiles)) {
         if (typeof content === 'string') {
           const fullPath = path.join(deploymentPath, filePath);
           await fs.mkdir(path.dirname(fullPath), { recursive: true });

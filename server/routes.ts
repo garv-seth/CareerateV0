@@ -228,10 +228,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         name,
         description: description || "",
+        framework: framework || "react", // Ensure framework is set at top level
         metadata: {
           framework,
           status: "created",
           createdAt: new Date().toISOString(),
+          files: {}, // Initialize empty files object
           ...(req.body.metadata || {})
         }
       };
@@ -925,12 +927,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { improvement } = req.body;
       const project = await storage.getProject(req.params.projectId);
       
-      if (!project?.files) {
+      const projectFiles = project?.metadata?.files || project?.files || {};
+      if (!projectFiles || Object.keys(projectFiles).length === 0) {
         return res.status(404).json({ message: "Project or files not found" });
       }
       
       const improvedCode = await improveCode(
-        project.files as Record<string, string>, 
+        projectFiles as Record<string, string>, 
         improvement
       );
       
@@ -954,12 +957,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { testType = "unit" } = req.body;
       const project = await storage.getProject(req.params.projectId);
       
-      if (!project?.files) {
+      const projectFiles = project?.metadata?.files || project?.files || {};
+      if (!projectFiles || Object.keys(projectFiles).length === 0) {
         return res.status(404).json({ message: "Project or files not found" });
       }
       
       const testFiles = await generateTests(
-        project.files as Record<string, string>, 
+        projectFiles as Record<string, string>, 
         testType as 'unit' | 'integration' | 'e2e'
       );
       

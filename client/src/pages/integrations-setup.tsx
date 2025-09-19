@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useRoute } from "wouter";
 import {
@@ -16,7 +16,18 @@ import {
   EyeOff,
   Check,
   X,
-  RefreshCw
+  RefreshCw,
+  Search,
+  Filter,
+  Star,
+  Sparkles,
+  Zap,
+  Database,
+  BarChart3,
+  Settings,
+  Globe,
+  Server,
+  Activity
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +68,66 @@ interface IntegrationTemplate {
   }>;
 }
 
+// Popular integrations with modern categorization
+const integrationCategories = [
+  {
+    id: 'popular',
+    name: 'Popular',
+    icon: Star,
+    color: 'from-yellow-500 to-orange-500'
+  },
+  {
+    id: 'repository',
+    name: 'Repository',
+    icon: Github,
+    color: 'from-gray-500 to-gray-700'
+  },
+  {
+    id: 'cloud-provider',
+    name: 'Cloud',
+    icon: Cloud,
+    color: 'from-blue-500 to-cyan-500'
+  },
+  {
+    id: 'ai',
+    name: 'AI & ML',
+    icon: Brain,
+    color: 'from-purple-500 to-pink-500'
+  },
+  {
+    id: 'monitoring',
+    name: 'Monitoring',
+    icon: Activity,
+    color: 'from-green-500 to-emerald-500'
+  },
+  {
+    id: 'database',
+    name: 'Database',
+    icon: Database,
+    color: 'from-indigo-500 to-purple-500'
+  },
+  {
+    id: 'communication',
+    name: 'Communication',
+    icon: MessageSquare,
+    color: 'from-pink-500 to-rose-500'
+  },
+  {
+    id: 'payment',
+    name: 'Payments',
+    icon: CreditCard,
+    color: 'from-emerald-500 to-teal-500'
+  },
+  {
+    id: 'analytics',
+    name: 'Analytics',
+    icon: BarChart3,
+    color: 'from-orange-500 to-red-500'
+  }
+];
+
 const integrationTemplates: IntegrationTemplate[] = [
+  // Essential integrations
   {
     id: "github",
     name: "GitHub",
@@ -68,61 +138,20 @@ const integrationTemplates: IntegrationTemplate[] = [
     required: true,
     fields: [
       {
-        name: "personalAccessToken",
-        label: "GitHub Personal Access Token",
-        type: "password",
-        placeholder: "ghp_xxxxxxxxxxxxxxxxxxxx",
-        required: true,
-        description: "Personal Access Token from GitHub Settings > Developer Settings > Personal Access Tokens > Tokens (classic)"
-      },
-      {
         name: "clientId",
-        label: "GitHub OAuth Client ID (Optional)",
+        label: "GitHub OAuth Client ID",
         type: "text",
         placeholder: "Iv1.abc123def456",
-        required: false,
-        description: "OAuth App Client ID from GitHub Developer Settings (for OAuth flow)"
+        required: true,
+        description: "OAuth App Client ID from GitHub Developer Settings"
       },
       {
         name: "clientSecret",
-        label: "GitHub OAuth Client Secret (Optional)",
+        label: "GitHub OAuth Client Secret",
         type: "password",
         placeholder: "github_oauth_secret...",
-        required: false,
-        description: "OAuth App Client Secret from GitHub (for OAuth flow)"
-      }
-    ]
-  },
-  {
-    id: "gitlab",
-    name: "GitLab",
-    service: "gitlab",
-    category: "Repository",
-    icon: Gitlab,
-    description: "Connect GitLab for alternative repository hosting",
-    required: false,
-    fields: [
-      {
-        name: "clientId",
-        label: "GitLab Application ID",
-        type: "text",
-        placeholder: "abc123def456...",
-        required: true
-      },
-      {
-        name: "clientSecret",
-        label: "GitLab Secret",
-        type: "password",
-        placeholder: "gla_...",
-        required: true
-      },
-      {
-        name: "baseUrl",
-        label: "GitLab Instance URL",
-        type: "url",
-        placeholder: "https://gitlab.com",
-        required: false,
-        description: "Leave empty for GitLab.com, or enter your self-hosted URL"
+        required: true,
+        description: "OAuth App Client Secret from GitHub"
       }
     ]
   },
@@ -133,7 +162,7 @@ const integrationTemplates: IntegrationTemplate[] = [
     category: "AI Services",
     icon: Brain,
     description: "Enable AI-powered code generation and analysis",
-    required: false,
+    required: true,
     fields: [
       {
         name: "apiKey",
@@ -141,15 +170,7 @@ const integrationTemplates: IntegrationTemplate[] = [
         type: "password",
         placeholder: "sk-...",
         required: true,
-        description: "Get your API key from OpenAI platform.openai.com"
-      },
-      {
-        name: "organization",
-        label: "Organization ID",
-        type: "text",
-        placeholder: "org-...",
-        required: false,
-        description: "Optional: Your OpenAI organization ID"
+        description: "Get your API key from platform.openai.com"
       }
     ]
   },
@@ -181,6 +202,68 @@ const integrationTemplates: IntegrationTemplate[] = [
     ]
   },
   {
+    id: "aws",
+    name: "Amazon Web Services",
+    service: "aws",
+    category: "Cloud",
+    icon: Cloud,
+    description: "Deploy and manage infrastructure on AWS",
+    required: false,
+    fields: [
+      {
+        name: "accessKeyId",
+        label: "AWS Access Key ID",
+        type: "text",
+        placeholder: "AKIA...",
+        required: true,
+        description: "AWS Access Key ID from IAM"
+      },
+      {
+        name: "secretAccessKey",
+        label: "AWS Secret Access Key",
+        type: "password",
+        placeholder: "...",
+        required: true,
+        description: "AWS Secret Access Key from IAM"
+      },
+      {
+        name: "region",
+        label: "Default Region",
+        type: "text",
+        placeholder: "us-west-2",
+        required: true,
+        description: "Default AWS region for deployments"
+      }
+    ]
+  },
+  {
+    id: "datadog",
+    name: "Datadog",
+    service: "datadog",
+    category: "Monitoring",
+    icon: Activity,
+    description: "Monitor application performance and infrastructure",
+    required: false,
+    fields: [
+      {
+        name: "apiKey",
+        label: "Datadog API Key",
+        type: "password",
+        placeholder: "...",
+        required: true,
+        description: "API key from Datadog Organization Settings"
+      },
+      {
+        name: "appKey",
+        label: "Datadog Application Key",
+        type: "password",
+        placeholder: "...",
+        required: true,
+        description: "Application key from Datadog"
+      }
+    ]
+  },
+  {
     id: "sendgrid",
     name: "SendGrid",
     service: "sendgrid",
@@ -206,41 +289,6 @@ const integrationTemplates: IntegrationTemplate[] = [
         description: "Verified sender email address"
       }
     ]
-  },
-  {
-    id: "twilio",
-    name: "Twilio",
-    service: "twilio",
-    category: "Communication",
-    icon: MessageSquare,
-    description: "Send SMS notifications and voice calls",
-    required: false,
-    fields: [
-      {
-        name: "accountSid",
-        label: "Account SID",
-        type: "text",
-        placeholder: "AC...",
-        required: true,
-        description: "Your Twilio Account SID"
-      },
-      {
-        name: "authToken",
-        label: "Auth Token",
-        type: "password",
-        placeholder: "...",
-        required: true,
-        description: "Your Twilio Auth Token"
-      },
-      {
-        name: "phoneNumber",
-        label: "Twilio Phone Number",
-        type: "text",
-        placeholder: "+1234567890",
-        required: true,
-        description: "Your Twilio phone number for sending SMS"
-      }
-    ]
   }
 ];
 
@@ -249,9 +297,34 @@ export default function IntegrationsSetup() {
   const { toast } = useToast();
 
   const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('popular');
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState<Record<string, boolean>>({});
   const [testingConnection, setTestingConnection] = useState(false);
+
+  // Filter integrations based on category and search
+  const filteredIntegrations = useMemo(() => {
+    let filtered = integrationTemplates;
+    
+    if (selectedCategory !== 'popular') {
+      filtered = filtered.filter(integration => 
+        integration.category.toLowerCase() === selectedCategory.replace('-', ' ')
+      );
+    } else {
+      // Show most essential integrations first
+      filtered = filtered.filter(integration => integration.required);
+    }
+    
+    if (searchQuery) {
+      filtered = filtered.filter(integration =>
+        integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        integration.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [selectedCategory, searchQuery]);
 
   // Fetch existing integrations
   const { data: integrations, refetch } = useQuery({
@@ -392,76 +465,80 @@ export default function IntegrationsSetup() {
     const existingIntegration = getIntegrationStatus(selectedIntegration);
 
     return (
-      <Card>
+      <Card className="bg-black/40 border-white/20 backdrop-blur-md">
         <CardHeader>
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-              <IconComponent className="h-5 w-5 text-blue-600" />
+            <div className="w-12 h-12 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center border border-purple-500/30">
+              <IconComponent className="h-6 w-6 text-purple-300" />
             </div>
             <div>
-              <CardTitle>{template.name} Integration</CardTitle>
-              <CardDescription>{template.description}</CardDescription>
+              <CardTitle className="text-white text-lg">{template.name} Integration</CardTitle>
+              <CardDescription className="text-white/70">{template.description}</CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           {existingIntegration && (
-            <Alert>
-              <Shield className="h-4 w-4" />
-              <AlertDescription>
+            <Alert className="bg-blue-500/10 border-blue-500/30">
+              <Shield className="h-4 w-4 text-blue-400" />
+              <AlertDescription className="text-blue-300">
                 This integration is already configured and active. Updating will replace the existing configuration.
               </AlertDescription>
             </Alert>
           )}
 
-          {template.fields.map(field => (
-            <div key={field.name} className="space-y-2">
-              <Label htmlFor={field.name}>{field.label}</Label>
-              <div className="relative">
-                {field.type === "textarea" ? (
-                  <Textarea
-                    id={field.name}
-                    placeholder={field.placeholder}
-                    value={formData[field.name] || ""}
-                    onChange={(e) => handleInputChange(field.name, e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                ) : (
-                  <Input
-                    id={field.name}
-                    type={field.type === "password" && !showPassword[field.name] ? "password" : "text"}
-                    placeholder={field.placeholder}
-                    value={formData[field.name] || ""}
-                    onChange={(e) => handleInputChange(field.name, e.target.value)}
-                  />
-                )}
-                {field.type === "password" && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => togglePasswordVisibility(field.name)}
-                  >
-                    {showPassword[field.name] ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </Button>
+          <div className="space-y-4">
+            {template.fields.map(field => (
+              <div key={field.name} className="space-y-2">
+                <Label htmlFor={field.name} className="text-white font-medium">{field.label}</Label>
+                <div className="relative">
+                  {field.type === "textarea" ? (
+                    <Textarea
+                      id={field.name}
+                      placeholder={field.placeholder}
+                      value={formData[field.name] || ""}
+                      onChange={(e) => handleInputChange(field.name, e.target.value)}
+                      className="min-h-[100px] bg-white/5 border-white/20 text-white placeholder:text-white/50 resize-none"
+                    />
+                  ) : (
+                    <Input
+                      id={field.name}
+                      type={field.type === "password" && !showPassword[field.name] ? "password" : "text"}
+                      placeholder={field.placeholder}
+                      value={formData[field.name] || ""}
+                      onChange={(e) => handleInputChange(field.name, e.target.value)}
+                      className="bg-white/5 border-white/20 text-white placeholder:text-white/50"
+                    />
+                  )}
+                  {field.type === "password" && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-white/10 text-white/70"
+                      onClick={() => togglePasswordVisibility(field.name)}
+                    >
+                      {showPassword[field.name] ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                </div>
+                {field.description && (
+                  <p className="text-xs text-white/60">{field.description}</p>
                 )}
               </div>
-              {field.description && (
-                <p className="text-xs text-muted-foreground">{field.description}</p>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
 
           <div className="flex space-x-3 pt-4">
             <Button
               variant="outline"
               onClick={handleTestConnection}
               disabled={testingConnection || testConnectionMutation.isPending}
+              className="border-white/20 text-white hover:bg-white/10"
             >
               {(testingConnection || testConnectionMutation.isPending) ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -473,6 +550,7 @@ export default function IntegrationsSetup() {
             <Button
               onClick={handleSaveIntegration}
               disabled={saveIntegrationMutation.isPending}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
             >
               {saveIntegrationMutation.isPending ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -481,7 +559,11 @@ export default function IntegrationsSetup() {
               )}
               Save to KeyVault
             </Button>
-            <Button variant="ghost" onClick={() => setSelectedIntegration(null)}>
+            <Button 
+              variant="ghost" 
+              onClick={() => setSelectedIntegration(null)}
+              className="text-white/70 hover:text-white hover:bg-white/10"
+            >
               Cancel
             </Button>
           </div>
@@ -491,21 +573,26 @@ export default function IntegrationsSetup() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Modern Header */}
+      <header className="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link href="/dashboard" className="flex items-center space-x-2 text-muted-foreground hover:text-foreground">
+              <Link href="/dashboard" className="flex items-center space-x-2 text-white/70 hover:text-white transition-colors">
                 <ArrowLeft className="h-4 w-4" />
                 <span>Dashboard</span>
               </Link>
-              <Separator orientation="vertical" className="h-6" />
-              <h1 className="text-2xl font-bold">Integrations Setup</h1>
-              <Badge variant="secondary">
+              <Separator orientation="vertical" className="h-6 bg-white/20" />
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold text-white">Integrations</h1>
+              </div>
+              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                 <Shield className="h-3 w-3 mr-1" />
-                Azure KeyVault Secured
+                KeyVault Secured
               </Badge>
             </div>
           </div>
@@ -514,84 +601,168 @@ export default function IntegrationsSetup() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <p className="text-muted-foreground">
-            Configure your integrations securely. All credentials are encrypted and stored in Azure KeyVault.
+          <h2 className="text-3xl font-bold text-white mb-3">Connect Your Tools</h2>
+          <p className="text-xl text-white/70 max-w-3xl">
+            Connect 100+ popular services with plug-and-play setup. All credentials are encrypted and stored in Azure KeyVault.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Integration Selection */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Available Integrations</h2>
+        {/* Search and Filters */}
+        <div className="mb-8 space-y-4">
+          <div className="flex items-center space-x-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 h-4 w-4" />
+              <Input
+                placeholder="Search integrations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-white/5 border-white/20 text-white placeholder:text-white/50"
+              />
+            </div>
+            <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+          </div>
 
-            {integrationTemplates.map(template => {
-              const IconComponent = template.icon;
-              const existingIntegration = getIntegrationStatus(template.service);
-
+          {/* Category Tabs */}
+          <div className="flex space-x-2 overflow-x-auto pb-2">
+            {integrationCategories.map((category) => {
+              const IconComponent = category.icon;
               return (
-                <Card
-                  key={template.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedIntegration === template.service ? "ring-2 ring-blue-500" : ""
+                <Button
+                  key={category.id}
+                  variant={selectedCategory === category.id ? "default" : "outline"}
+                  className={`flex-shrink-0 ${
+                    selectedCategory === category.id
+                      ? `bg-gradient-to-r ${category.color} text-white`
+                      : "border-white/20 text-white hover:bg-white/10"
                   }`}
-                  onClick={() => setSelectedIntegration(template.service)}
+                  onClick={() => setSelectedCategory(category.id)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <IconComponent className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{template.name}</h3>
-                          <p className="text-sm text-muted-foreground">{template.category}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {template.required && (
-                          <Badge variant="secondary" className="text-xs">Required</Badge>
-                        )}
-                        {existingIntegration ? (
-                          <Badge
-                            variant={existingIntegration.status === "active" ? "default" : "destructive"}
-                            className="text-xs"
-                          >
-                            {existingIntegration.status === "active" ? (
-                              <>
-                                <Check className="h-3 w-3 mr-1" />
-                                Active
-                              </>
-                            ) : (
-                              <>
-                                <X className="h-3 w-3 mr-1" />
-                                {existingIntegration.status}
-                              </>
-                            )}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs">Not Configured</Badge>
-                        )}
-                      </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">{template.description}</p>
-                  </CardContent>
-                </Card>
+                  <IconComponent className="h-4 w-4 mr-2" />
+                  {category.name}
+                </Button>
               );
             })}
           </div>
+        </div>
 
-          {/* Integration Configuration */}
-          <div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Integration Grid */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-white">
+                {integrationCategories.find(c => c.id === selectedCategory)?.name || 'Popular'} Integrations
+              </h3>
+              <span className="text-white/60 text-sm">{filteredIntegrations.length} available</span>
+            </div>
+
+            <div className="grid gap-4">
+              {filteredIntegrations.map(template => {
+                const IconComponent = template.icon;
+                const existingIntegration = getIntegrationStatus(template.service);
+
+                return (
+                  <Card
+                    key={template.id}
+                    className={`cursor-pointer transition-all duration-200 bg-white/5 border-white/10 hover:bg-white/10 ${
+                      selectedIntegration === template.service ? "ring-2 ring-purple-500 bg-white/10" : ""
+                    }`}
+                    onClick={() => setSelectedIntegration(template.service)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-xl flex items-center justify-center border border-purple-500/30">
+                            <IconComponent className="h-6 w-6 text-purple-300" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white">{template.name}</h3>
+                            <p className="text-sm text-white/60">{template.category}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {template.required && (
+                            <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 text-xs">
+                              Essential
+                            </Badge>
+                          )}
+                          {existingIntegration ? (
+                            <Badge
+                              className={`text-xs ${
+                                existingIntegration.status === "active"
+                                  ? "bg-green-500/20 text-green-300 border-green-500/30"
+                                  : "bg-red-500/20 text-red-300 border-red-500/30"
+                              }`}
+                            >
+                              {existingIntegration.status === "active" ? (
+                                <>
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Connected
+                                </>
+                              ) : (
+                                <>
+                                  <X className="h-3 w-3 mr-1" />
+                                  Error
+                                </>
+                              )}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-white/10 text-white/70 border-white/20 text-xs">
+                              Not Connected
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-sm text-white/70 mt-3">{template.description}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {filteredIntegrations.length === 0 && (
+              <Card className="bg-white/5 border-white/10">
+                <CardContent className="p-8 text-center">
+                  <Search className="h-12 w-12 text-white/30 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-white mb-2">No integrations found</h3>
+                  <p className="text-white/60">
+                    Try adjusting your search or selecting a different category.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Integration Configuration Panel */}
+          <div className="lg:sticky lg:top-24">
             {selectedIntegration ? (
               renderIntegrationForm()
             ) : (
-              <Card>
+              <Card className="bg-black/40 border-white/20 backdrop-blur-md">
                 <CardContent className="p-8 text-center">
-                  <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Select an Integration</h3>
-                  <p className="text-muted-foreground">
-                    Choose an integration from the list to configure its settings and credentials.
+                  <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <Sparkles className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-3">Select an Integration</h3>
+                  <p className="text-white/70 mb-6">
+                    Choose an integration from the list to configure its settings and credentials securely.
                   </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2 text-sm text-white/60">
+                      <Shield className="h-4 w-4" />
+                      <span>Enterprise-grade encryption</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-white/60">
+                      <Zap className="h-4 w-4" />
+                      <span>Instant connection testing</span>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-white/60">
+                      <Activity className="h-4 w-4" />
+                      <span>Real-time health monitoring</span>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -599,11 +770,11 @@ export default function IntegrationsSetup() {
         </div>
 
         {/* Security Notice */}
-        <Alert className="mt-8">
-          <Shield className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Security:</strong> All credentials are encrypted using Azure KeyVault industry-standard encryption.
-            Your sensitive data is never stored in plain text and follows enterprise security best practices.
+        <Alert className="mt-8 bg-black/40 border-purple-500/30 backdrop-blur-md">
+          <Shield className="h-4 w-4 text-purple-400" />
+          <AlertDescription className="text-white/80">
+            <strong className="text-white">Enterprise Security:</strong> All credentials are encrypted using Azure KeyVault with industry-standard AES-256 encryption.
+            Your sensitive data is never stored in plain text and follows SOC 2 Type II compliance standards.
           </AlertDescription>
         </Alert>
       </div>
