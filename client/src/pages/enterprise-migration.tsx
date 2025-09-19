@@ -242,21 +242,26 @@ export default function EnterpriseMigration() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link href="/dashboard" className="flex items-center space-x-2 text-muted-foreground hover:text-foreground">
+              <Link href="/dashboard" className="flex items-center space-x-2 text-white/70 hover:text-white transition-colors">
                 <ArrowLeft className="h-4 w-4" />
                 <span>Dashboard</span>
               </Link>
-              <span className="text-muted-foreground">/</span>
-              <h1 className="text-2xl font-bold">Enterprise Migration</h1>
+              <span className="text-white/50">/</span>
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                  <Bot className="h-5 w-5 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold text-white">Enterprise Migration</h1>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Button>
+              <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
                 <Plus className="mr-2 h-4 w-4" />
                 New Assessment
               </Button>
@@ -267,69 +272,69 @@ export default function EnterpriseMigration() {
 
       <div className="max-w-7xl mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="analysis">Legacy Analysis</TabsTrigger>
-            <TabsTrigger value="planning">Planning</TabsTrigger>
-            <TabsTrigger value="modernization">Modernization</TabsTrigger>
-            <TabsTrigger value="execution">Execution</TabsTrigger>
-            <TabsTrigger value="recommendations">AI Recommendations</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-6 bg-black/20 border-white/10">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-white/70">Overview</TabsTrigger>
+            <TabsTrigger value="analysis" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-white/70">Legacy Analysis</TabsTrigger>
+            <TabsTrigger value="planning" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-white/70">Planning</TabsTrigger>
+            <TabsTrigger value="modernization" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-white/70">Modernization</TabsTrigger>
+            <TabsTrigger value="execution" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-white/70">Execution</TabsTrigger>
+            <TabsTrigger value="recommendations" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-white/70">AI Recommendations</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
+              <Card className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-purple-500/30">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
-                  <GitBranch className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-white">Total Projects</CardTitle>
+                  <GitBranch className="h-4 w-4 text-purple-300" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{mockStats.totalProjects}</div>
-                  <p className="text-xs text-muted-foreground">+2 from last month</p>
+                  <div className="text-2xl font-bold text-white">{mockStats.totalProjects}</div>
+                  <p className="text-xs text-white/60">+2 from last month</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border-blue-500/30">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Migrations</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-white">Active Migrations</CardTitle>
+                  <Clock className="h-4 w-4 text-blue-300" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{mockStats.activeProjects}</div>
-                  <p className="text-xs text-muted-foreground">{mockStats.averageProgress}% avg progress</p>
+                  <div className="text-2xl font-bold text-white">{mockStats.activeProjects}</div>
+                  <p className="text-xs text-white/60">{mockStats.averageProgress}% avg progress</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Budget</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-white">Budget</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-green-300" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${mockStats.totalCostSavings.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">Annual projected savings</p>
+                  <div className="text-2xl font-bold text-white">${mockStats.totalCostSavings.toLocaleString()}</div>
+                  <p className="text-xs text-white/60">Annual projected savings</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-orange-500/20 to-red-500/20 border-orange-500/30">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Issues</CardTitle>
-                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium text-white">Issues</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-orange-300" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{mockStats.criticalIssues}</div>
-                  <p className="text-xs text-muted-foreground">Critical issues</p>
+                  <div className="text-2xl font-bold text-white">{mockStats.criticalIssues}</div>
+                  <p className="text-xs text-white/60">Critical issues</p>
                 </CardContent>
               </Card>
             </div>
 
             {/* Active Projects */}
-            <Card>
+            <Card className="bg-black/40 border-white/20 backdrop-blur-md">
               <CardHeader>
-                <CardTitle>Active Migration Projects</CardTitle>
-                <CardDescription>Track progress and manage ongoing migrations</CardDescription>
+                <CardTitle className="text-white">Active Migration Projects</CardTitle>
+                <CardDescription className="text-white/70">Track progress and manage ongoing migrations</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
