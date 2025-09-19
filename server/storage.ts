@@ -717,9 +717,9 @@ export class DatabaseStorage implements IStorage {
         name: project.name,
         description: project.description,
         userId: project.userId,
+        framework: project.framework || 'react',
         metadata: {
           ...project.metadata,
-          framework: project.framework || 'react',
           files: {},
           status: "draft",
           deploymentUrl: null,

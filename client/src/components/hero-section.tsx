@@ -1,10 +1,14 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function HeroSection() {
   const [terminalLines, setTerminalLines] = useState<string[]>([]);
+  const [idea, setIdea] = useState("");
+  const [, setLocation] = useLocation();
 
   const terminalContent = [
     "$ careerate new-app",
@@ -32,25 +36,49 @@ export default function HeroSection() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleQuickStart = async () => {
+    try {
+      const name = idea?.trim() ? idea.trim().slice(0, 60) : "New Project";
+      const res = await apiRequest("POST", "/api/projects", {
+        name,
+        description: idea || "",
+        framework: "react"
+      });
+      const project = await res.json();
+      setLocation(`/projects/${project.id}/coding`);
+    } catch (e) {
+      alert(`Failed to start: ${(e as Error).message}`);
+    }
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center px-6 pt-24 pb-16">
       <div className="absolute inset-0 gradient-mesh opacity-10"></div>
       <div className="relative z-10 max-w-6xl mx-auto">
-        <div className="text-center mb-16">
+        <div className="text-center mb-12">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            Build & Deploy<br />with AI
+            Vibe Coding + Vibe Hosting
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-            The world's first platform combining AI-powered coding with intelligent hosting. 
-            Build full-stack applications with natural language, then let AI handle all your infrastructure.
+          <p className="text-xl md:text-2xl text-muted-foreground mb-6 max-w-3xl mx-auto">
+            Build apps by chatting with AI, then deploy and operate them with agent-driven DevOps. Enterprise users get a unified Migration suite.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center max-w-2xl mx-auto">
+            <Input
+              value={idea}
+              onChange={(e) => setIdea(e.target.value)}
+              placeholder="Describe what you want to build (e.g., openflix: clone Netflix with open videos)"
+            />
+            <Button onClick={handleQuickStart} className="px-6">
+              Start from Prompt
+            </Button>
+          </div>
+          <div className="mt-4 flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link href="/dashboard">
               <Button 
                 className="px-8 py-4 bg-primary text-primary-foreground rounded-full text-lg font-semibold hover:bg-gray-800 transition-colors shadow-lg"
                 data-testid="button-start-building"
               >
-                Start Building Now
+                Explore Dashboard
               </Button>
             </Link>
             <Button 
