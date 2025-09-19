@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import { randomUUID } from "crypto";
 import { createServer, type Server } from "http";
 import Stripe from "stripe"; // From javascript_stripe blueprint
 import { storage } from "./storage";
@@ -82,6 +83,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create HTTP server and initialize WebSocket collaboration
   const server = createServer(app);
   collaborationServer.initialize(server);
+
+  // Request correlation ID middleware
+  app.use((req, res, next) => {
+    const existing = (req.headers["x-request-id"] as string) || undefined;
+    const id = existing || randomUUID();
+    res.setHeader("x-request-id", id);
+    (req as any).requestId = id;
+    (res as any).locals = (res as any).locals || {};
+    (res as any).locals.requestId = id;
+    next();
+  });
 
   // Helper function to get authenticated user ID
   const getUserId = (req: any): string => {
@@ -3121,17 +3133,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create new branch if specified
       const targetBranch = branch || `feature/vibe-coding-${Date.now()}`;
 
-      // Apply actions (mock implementation)
-      const appliedActions = [];
-      for (const action of actions) {
-        appliedActions.push({
-          ...action,
-          status: "applied",
-          path: action.file
-        });
+      // Load current project
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found", correlationId: (res as any).locals?.requestId });
       }
 
-      // Mock commit
+      // Apply actions to project metadata.files
+      const files: Record<string, string> = {
+        ...(project.metadata?.files || {})
+      };
+
+      const appliedActions = [] as any[];
+      for (const action of actions) {
+        if (action.type === "create_file" && action.file && typeof action.content === "string") {
+          files[action.file] = action.content;
+          appliedActions.push({ ...action, status: "applied", path: action.file });
+        } else if (action.type === "update_file" && action.file && typeof action.content === "string") {
+          files[action.file] = action.content;
+          appliedActions.push({ ...action, status: "updated", path: action.file });
+        }
+      }
+
+      await storage.updateProject(projectId, {
+        metadata: {
+          ...(project.metadata || {}),
+          files,
+          lastCodeApplyAt: new Date().toISOString(),
+          lastBranch: targetBranch,
+          lastCommitMessage: commitMessage || "vibe-coding apply"
+        }
+      } as any);
+
+      // Mock commit/PR details (repo integration can be wired later)
       const commitSha = `abc${Date.now()}`;
       const prUrl = `https://github.com/user/repo/pull/${Math.floor(Math.random() * 1000)}`;
 
@@ -3143,7 +3177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Apply coding actions error:', error);
-      res.status(500).json({ message: "Failed to apply coding actions" });
+      res.status(500).json({ message: "Failed to apply coding actions", correlationId: (res as any).locals?.requestId });
     }
   });
 
@@ -3188,39 +3222,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate project ownership
       await validateProjectOwnership(projectId, userId);
 
-      // Mock file tree
-      const fileTree = [
-        {
-          name: "src",
-          type: "folder",
-          path: "src",
-          children: [
-            {
-              name: "App.tsx",
-              type: "file",
-              path: "src/App.tsx",
-              content: "import React from 'react';\n\nfunction App() {\n  return <div>Hello World</div>;\n}\n\nexport default App;"
-            },
-            {
-              name: "index.tsx",
-              type: "file",
-              path: "src/index.tsx",
-              content: "import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\n\nReactDOM.createRoot(document.getElementById('root')!).render(<App />);"
-            }
-          ]
-        },
-        {
-          name: "package.json",
-          type: "file",
-          path: "package.json",
-          content: '{\n  "name": "vibe-coding-project",\n  "version": "0.1.0",\n  "dependencies": {\n    "react": "^18.2.0"\n  }\n}'
-        }
-      ];
+      const project = await storage.getProject(projectId);
+      const files: Record<string, string> = project?.metadata?.files || {};
 
-      res.json(fileTree);
+      // Build a simple file list; client can render tree or flat list
+      const fileList = Object.entries(files).map(([path, content]) => ({
+        name: path.split('/').pop(),
+        type: 'file',
+        path,
+        content
+      }));
+
+      // If empty, seed with a minimal React app scaffold for convenience
+      if (fileList.length === 0) {
+        const seed = {
+          'src/App.tsx': "import React from 'react';\n\nexport default function App() {\n  return <div>Hello Vibe Coding</div>;\n}\n",
+          'src/index.tsx': "import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App';\n\nReactDOM.createRoot(document.getElementById('root')!).render(<App />);\n",
+          'package.json': '{\n  "name": "vibe-coding-project",\n  "version": "0.1.0",\n  "dependencies": {\n    "react": "^18.2.0"\n  }\n}'
+        } as Record<string, string>;
+
+        await storage.updateProject(projectId, {
+          metadata: {
+            ...(project?.metadata || {}),
+            files: seed,
+            seededAt: new Date().toISOString()
+          }
+        } as any);
+
+        const seededList = Object.entries(seed).map(([path, content]) => ({
+          name: path.split('/').pop(),
+          type: 'file',
+          path,
+          content
+        }));
+        return res.json(seededList);
+      }
+
+      res.json(fileList);
     } catch (error) {
       console.error('Get project files error:', error);
-      res.status(500).json({ message: "Failed to get project files" });
+      res.status(500).json({ message: "Failed to get project files", correlationId: (res as any).locals?.requestId });
     }
   });
 
@@ -3237,16 +3278,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate project ownership
       await validateProjectOwnership(projectId, userId);
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found", correlationId: (res as any).locals?.requestId });
+      }
 
-      // Mock file save
-      res.json({
-        success: true,
-        filePath,
-        lastModified: new Date().toISOString()
-      });
+      const files: Record<string, string> = {
+        ...(project.metadata?.files || {}),
+        [filePath]: content
+      };
+
+      await storage.updateProject(projectId, {
+        metadata: {
+          ...(project.metadata || {}),
+          files,
+          lastFileSaveAt: new Date().toISOString()
+        }
+      } as any);
+
+      res.json({ success: true, filePath, lastModified: new Date().toISOString() });
     } catch (error) {
       console.error('Save file error:', error);
-      res.status(500).json({ message: "Failed to save file" });
+      res.status(500).json({ message: "Failed to save file", correlationId: (res as any).locals?.requestId });
     }
   });
 
@@ -3313,7 +3366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Deploy Application
+  // Deploy Application (Azure-first path; will expand to MultiCloud)
   app.post("/api/hosting/deploy", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
@@ -3326,15 +3379,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate project ownership
       await validateProjectOwnership(projectId, userId);
 
-      // Create deployment record
-      const deploymentId = `deploy-${Date.now()}`;
-      const statusUrl = `/api/hosting/deployments/${deploymentId}`;
+      // Create deployment record and kick off local deployment manager
+      const result = await deploymentManager.deployProject({
+        projectId,
+        version: artifactRef || `v-${Date.now()}`,
+        strategy,
+        environment,
+      });
 
-      // Mock deployment process
+      const statusUrl = `/api/hosting/deployments/${result.deploymentId}`;
       res.status(202).json({
-        deploymentId,
+        deploymentId: result.deploymentId,
         statusUrl,
-        status: "started",
+        status: result.status,
+        url: result.url,
         message: `Deployment started to ${providerDecision.provider} using ${strategy} strategy`
       });
     } catch (error) {
@@ -3347,37 +3405,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hosting/deployments/:deploymentId", isAuthenticated, async (req, res) => {
     try {
       const { deploymentId } = req.params;
-
-      // Mock deployment status
-      const deployment = {
+      const status = await deploymentManager.getDeploymentStatus(deploymentId);
+      res.json({
         id: deploymentId,
-        status: "success",
-        url: `https://app-${deploymentId}.azurewebsites.net`,
+        status: status.deployment?.status || 'unknown',
+        url: (status.deployment as any)?.deploymentUrl,
         metrics: {
-          cpu: 25,
-          memory: 60,
-          requests: 1250,
-          responseTime: 180,
-          uptime: 99.9
+          cpu: 0,
+          memory: 0,
+          requests: 0,
+          responseTime: 0,
+          uptime: 0
         },
-        logs: [
-          "Building Docker image...",
-          "Pushing to registry...",
-          "Creating deployment...",
-          "Configuring load balancer...",
-          "Running health checks...",
-          "Deployment successful!"
-        ],
+        logsUrl: null,
         rollbackPlan: {
           available: true,
-          previousVersion: "v1.2.3",
+          previousVersion: (status.deployment as any)?.rollbackVersion || null,
           estimatedTime: "2 minutes"
         },
-        createdAt: new Date().toISOString(),
-        completedAt: new Date().toISOString()
-      };
-
-      res.json(deployment);
+        createdAt: (status.deployment as any)?.startedAt || null,
+        completedAt: (status.deployment as any)?.completedAt || null,
+        healthChecks: status.healthChecks || []
+      });
     } catch (error) {
       console.error('Get deployment status error:', error);
       res.status(500).json({ message: "Failed to get deployment status" });

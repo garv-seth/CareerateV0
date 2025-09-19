@@ -69,10 +69,9 @@ function Router() {
           <Route path="/projects/:id/coding" component={VibeCoding} />
           <Route path="/projects/:id/hosting" component={Deploy} />
           {/* Enterprise Migration - Unified Dashboard */}
-          <Route path="/migration" component={EnterpriseMigration} />
-          <Route path="/enterprise-migration" component={EnterpriseMigration} />
           <Route path="/projects/:id/migration" component={EnterpriseMigration} />
           {/* Legacy migration routes redirect to unified dashboard */}
+          <Route path="/migration" component={EnterpriseMigration} />
           <Route path="/migration/analysis" component={EnterpriseMigration} />
           <Route path="/migration/new-assessment" component={EnterpriseMigration} />
           <Route path="/migration/planning" component={EnterpriseMigration} />

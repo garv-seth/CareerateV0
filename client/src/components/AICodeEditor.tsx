@@ -24,6 +24,7 @@ import {
   Database,
   Server
 } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 
 interface FileTab {
   id: string;
@@ -95,27 +96,7 @@ const aiAgents: AIAgent[] = [
 ];
 
 export default function AICodeEditor({ projectId }: { projectId: string }) {
-  const [files, setFiles] = useState<FileTab[]>([
-    {
-      id: '1',
-      name: 'App.tsx',
-      content: `import React from 'react';
-
-function App() {
-  return (
-    <div className="App">
-      <h1>Hello World!</h1>
-      <p>Welcome to AI-powered development</p>
-    </div>
-  );
-}
-
-export default App;`,
-      language: 'typescript',
-      path: '/src/App.tsx',
-      modified: false
-    }
-  ]);
+  const [files, setFiles] = useState<FileTab[]>([]);
 
   const [activeFileId, setActiveFileId] = useState('1');
   const [aiMessages, setAiMessages] = useState<ChatMessage[]>([
@@ -133,6 +114,30 @@ export default App;`,
 
   const editorRef = useRef<any>(null);
   const activeFile = files.find(f => f.id === activeFileId);
+
+  useEffect(() => {
+    const loadFiles = async () => {
+      try {
+        const res = await apiRequest('GET', `/api/coding/projects/${projectId}/files`);
+        const data: Array<{ name: string; type: string; path: string; content: string }> = await res.json();
+        const tabs: FileTab[] = data
+          .filter((f) => f.type === 'file')
+          .map((f, idx) => ({
+            id: `${idx}`,
+            name: f.name,
+            content: f.content,
+            language: f.name.endsWith('.ts') || f.name.endsWith('.tsx') ? 'typescript' : 'plaintext',
+            path: f.path.startsWith('/') ? f.path : `/${f.path}`,
+            modified: false,
+          }));
+        setFiles(tabs);
+        if (tabs[0]) setActiveFileId(tabs[0].id);
+      } catch (e) {
+        setTerminalOutput((prev) => [...prev, `Failed to load files: ${(e as Error).message}`]);
+      }
+    };
+    if (projectId) loadFiles();
+  }, [projectId]);
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
@@ -207,14 +212,19 @@ export default App;`,
     ]);
   };
 
-  const saveFile = () => {
-    if (activeFile) {
-      setFiles(files.map(file =>
-        file.id === activeFileId
-          ? { ...file, modified: false }
-          : file
-      ));
-      setTerminalOutput(prev => [...prev, `✅ Saved ${activeFile.name}`]);
+  const handleSave = async () => {
+    try {
+      const dirty = files.filter((f) => f.modified);
+      for (const f of dirty) {
+        await apiRequest('PUT', `/api/coding/projects/${projectId}/files`, {
+          filePath: f.path.replace(/^\//, ''),
+          content: f.content,
+        });
+      }
+      setFiles(files.map((f) => ({ ...f, modified: false })));
+      setTerminalOutput((prev) => [...prev, `Saved ${dirty.length} file(s)`]);
+    } catch (e) {
+      setTerminalOutput((prev) => [...prev, `Save failed: ${(e as Error).message}`]);
     }
   };
 
@@ -267,6 +277,68 @@ export default App;`,
       '✅ Command completed successfully'
     ]);
     setTerminalInput('');
+  };
+
+  const handleIntent = async () => {
+    if (!newMessage.trim()) return;
+    try {
+      const res = await apiRequest('POST', '/api/coding/intent', {
+        projectId,
+        message: newMessage,
+      });
+      const data = await res.json();
+      setAiMessages((prev) => [
+        ...prev,
+        { id: Date.now().toString(), role: 'assistant', content: data.plan || 'Plan created.', timestamp: new Date() },
+      ]);
+      // Show safety checks
+      if (Array.isArray(data.safetyChecks)) {
+        data.safetyChecks.forEach((s: string) =>
+          setTerminalOutput((prev) => [...prev, `Check: ${s}`])
+        );
+      }
+      // Optionally apply immediately
+      if (Array.isArray(data.actions) && data.actions.length) {
+        const applyRes = await apiRequest('POST', '/api/coding/apply', {
+          projectId,
+          actions: data.actions,
+          commitMessage: `Vibe Coding: ${newMessage}`,
+        });
+        const applied = await applyRes.json();
+        setTerminalOutput((prev) => [
+          ...prev,
+          `Applied ${applied.appliedActions?.length || 0} change(s). PR: ${applied.prUrl || 'n/a'}`,
+        ]);
+        // Reload files
+        const reload = await apiRequest('GET', `/api/coding/projects/${projectId}/files`);
+        const list: Array<{ name: string; type: string; path: string; content: string }> = await reload.json();
+        const tabs: FileTab[] = list
+          .filter((f) => f.type === 'file')
+          .map((f, idx) => ({
+            id: `${idx}`,
+            name: f.name,
+            content: f.content,
+            language: f.name.endsWith('.ts') || f.name.endsWith('.tsx') ? 'typescript' : 'plaintext',
+            path: f.path.startsWith('/') ? f.path : `/${f.path}`,
+            modified: false,
+          }));
+        setFiles(tabs);
+        if (tabs[0]) setActiveFileId(tabs[0].id);
+      }
+      setNewMessage('');
+    } catch (e) {
+      setTerminalOutput((prev) => [...prev, `Intent failed: ${(e as Error).message}`]);
+    }
+  };
+
+  const handleRun = async () => {
+    try {
+      const res = await apiRequest('POST', '/api/coding/run', { projectId });
+      const data = await res.json();
+      setTerminalOutput((prev) => [...prev, ...(data.logs || []), `Preview: ${data.previewUrl}`]);
+    } catch (e) {
+      setTerminalOutput((prev) => [...prev, `Run failed: ${(e as Error).message}`]);
+    }
   };
 
   return (
@@ -354,11 +426,11 @@ export default App;`,
             </div>
 
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={saveFile}>
+              <Button size="sm" onClick={handleSave}>
                 <Save className="h-4 w-4 mr-1" />
                 Save
               </Button>
-              <Button size="sm" onClick={runCode}>
+              <Button size="sm" onClick={handleRun}>
                 <Play className="h-4 w-4 mr-1" />
                 Run
               </Button>

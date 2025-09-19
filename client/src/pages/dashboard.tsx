@@ -228,13 +228,18 @@ export default function Dashboard() {
                       </div>
                       <div className="flex items-center space-x-2">
                         <Link href={`/projects/${project.id}/coding`}>
-                          <Button size="sm" variant="ghost">
+                          <Button size="sm" variant="ghost" title="Open Vibe Coding">
                             <Code className="h-4 w-4" />
                           </Button>
                         </Link>
                         <Link href={`/projects/${project.id}/hosting`}>
-                          <Button size="sm" variant="ghost">
+                          <Button size="sm" variant="ghost" title="Open Vibe Hosting">
                             <Play className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Link href={`/projects/${project.id}/migration`}>
+                          <Button size="sm" variant="ghost" title="Enterprise Migration">
+                            <Bot className="h-4 w-4" />
                           </Button>
                         </Link>
                       </div>
