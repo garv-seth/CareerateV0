@@ -89,6 +89,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return user?.claims?.sub || user?.id;
   };
 
+  // Owner whitelist for full-access bypass on plans/usage
+  const OWNER_WHITELIST = [
+    'garvseth@outlook.com',
+    'garv.seth@gmail.com',
+    'garvseth@uw.edu',
+    'thesm2018@gmail.com',
+    'garvytp@gmail.com'
+  ];
+  const isOwnerWhitelisted = (email?: string): boolean => !!email && OWNER_WHITELIST.includes(email.toLowerCase());
+
   // Helper function to validate project ownership
   const validateProjectOwnership = async (projectId: string, userId: string) => {
     const project = await storage.getProject(projectId);
@@ -263,6 +273,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/subscription/current", isAuthenticated, usageSummaryMiddleware, async (req, res) => {
     try {
       const userId = getUserId(req);
+      const userEmail = (req.user as any)?.claims?.email || (req.user as any)?.email;
+
+      // Owners get unlimited plan and bypass limits
+      if (isOwnerWhitelisted(userEmail)) {
+        return res.json({
+          subscription: null,
+          plan: { name: 'owner' },
+          message: "Owner access - usage limits bypassed"
+        });
+      }
       const subscription = await subscriptionService.getUserSubscriptionWithPlan(userId);
       
       if (!subscription) {
@@ -411,6 +431,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/subscription/usage", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
+      const userEmail = (req.user as any)?.claims?.email || (req.user as any)?.email;
+
+      // Owners: return unlimited indicators for common metrics
+      if (isOwnerWhitelisted(userEmail)) {
+        return res.json({
+          usage: {},
+          plan: 'owner',
+          subscription: null
+        });
+      }
+
       const usageSummary = await subscriptionService.getAllUserUsage(userId);
       const subscriptionWithPlan = await subscriptionService.getUserSubscriptionWithPlan(userId);
       
@@ -429,10 +460,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/subscription/usage/:metricType", isAuthenticated, async (req, res) => {
     try {
       const userId = getUserId(req);
+      const userEmail = (req.user as any)?.claims?.email || (req.user as any)?.email;
       const { metricType } = req.params;
-      
-      const usageCheck = await subscriptionService.checkUsageLimit(userId, metricType);
-      
+
+      // Use owner-aware validator which gracefully degrades on errors
+      const usageCheck = await validateUsage(userId, metricType, userEmail);
+
       res.json({
         metricType,
         usage: usageCheck.usage,
