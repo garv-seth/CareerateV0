@@ -3199,7 +3199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         prUrl,
         appliedActions
       });
-+      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'coding', action: 'apply', reqId: (res as any).locals?.requestId, projectId, count: appliedActions.length })); } catch {}
+      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'coding', action: 'apply', reqId: (res as any).locals?.requestId, projectId, count: appliedActions.length })); } catch {}
     } catch (error) {
       console.error('Apply coding actions error:', error);
       res.status(500).json({ message: "Failed to apply coding actions", correlationId: (res as any).locals?.requestId });
@@ -3420,7 +3420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         url: result.url,
         message: `Deployment started to ${providerDecision.provider} using ${strategy} strategy`
       });
-+      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'hosting', action: 'deploy', reqId: (res as any).locals?.requestId, projectId, deploymentId: result.deploymentId, strategy })); } catch {}
+      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'hosting', action: 'deploy', reqId: (res as any).locals?.requestId, projectId, deploymentId: result.deploymentId, strategy })); } catch {}
     } catch (error) {
       console.error('Deploy application error:', error);
       res.status(500).json({ message: "Failed to start deployment" });
@@ -3453,7 +3453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         completedAt: (status.deployment as any)?.completedAt || null,
         healthChecks: status.healthChecks || []
       });
-+      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'hosting', action: 'status', reqId: (res as any).locals?.requestId, deploymentId, status: status.deployment?.status })); } catch {}
+      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'hosting', action: 'status', reqId: (res as any).locals?.requestId, deploymentId, status: status.deployment?.status })); } catch {}
     } catch (error) {
       console.error('Get deployment status error:', error);
       res.status(500).json({ message: "Failed to get deployment status" });
@@ -3641,7 +3641,7 @@ test('renders learn react link', () => {
       const analysis = await analyzeCode(combined, 'typescript');
       const recs = (analysis?.suggestions || []).slice(0, 5).map((s: string, i: number) => ({ id: `rec-${i+1}`, description: s }));
       res.json({ analysis, recommendations: recs });
-+      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'recs', action: 'suggest', reqId: (res as any).locals?.requestId, projectId, count: recs.length })); } catch {}
+      try { console.log(JSON.stringify({ type: 'event', severity: 'info', module: 'recs', action: 'suggest', reqId: (res as any).locals?.requestId, projectId, count: recs.length })); } catch {}
     } catch (error) {
       console.error('recommendations suggest error:', error);
       res.status(500).json({ message: 'Failed to generate recommendations' });
