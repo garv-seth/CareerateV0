@@ -24,7 +24,6 @@ import {
   Database,
   Server
 } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
 
 interface FileTab {
   id: string;
@@ -118,7 +117,8 @@ export default function AICodeEditor({ projectId }: { projectId: string }) {
   useEffect(() => {
     const loadFiles = async () => {
       try {
-        const res = await apiRequest('GET', `/api/coding/projects/${projectId}/files`);
+        const res = await fetch(`/api/coding/projects/${projectId}/files`);
+        if (!res.ok) throw new Error('Failed to load files');
         const data: Array<{ name: string; type: string; path: string; content: string }> = await res.json();
         const tabs: FileTab[] = data
           .filter((f) => f.type === 'file')
@@ -216,9 +216,13 @@ export default function AICodeEditor({ projectId }: { projectId: string }) {
     try {
       const dirty = files.filter((f) => f.modified);
       for (const f of dirty) {
-        await apiRequest('PUT', `/api/coding/projects/${projectId}/files`, {
-          filePath: f.path.replace(/^\//, ''),
-          content: f.content,
+        await fetch(`/api/coding/projects/${projectId}/files`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filePath: f.path.replace(/^\//, ''),
+            content: f.content,
+          }),
         });
       }
       setFiles(files.map((f) => ({ ...f, modified: false })));
@@ -282,10 +286,15 @@ export default function AICodeEditor({ projectId }: { projectId: string }) {
   const handleIntent = async () => {
     if (!newMessage.trim()) return;
     try {
-      const res = await apiRequest('POST', '/api/coding/intent', {
-        projectId,
-        message: newMessage,
+      const res = await fetch('/api/coding/intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          message: newMessage,
+        }),
       });
+      if (!res.ok) throw new Error('Intent request failed');
       const data = await res.json();
       setAiMessages((prev) => [
         ...prev,
@@ -299,18 +308,24 @@ export default function AICodeEditor({ projectId }: { projectId: string }) {
       }
       // Optionally apply immediately
       if (Array.isArray(data.actions) && data.actions.length) {
-        const applyRes = await apiRequest('POST', '/api/coding/apply', {
-          projectId,
-          actions: data.actions,
-          commitMessage: `Vibe Coding: ${newMessage}`,
+        const applyRes = await fetch('/api/coding/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectId,
+            actions: data.actions,
+            commitMessage: `Vibe Coding: ${newMessage}`,
+          }),
         });
+        if (!applyRes.ok) throw new Error('Apply request failed');
         const applied = await applyRes.json();
         setTerminalOutput((prev) => [
           ...prev,
           `Applied ${applied.appliedActions?.length || 0} change(s). PR: ${applied.prUrl || 'n/a'}`,
         ]);
         // Reload files
-        const reload = await apiRequest('GET', `/api/coding/projects/${projectId}/files`);
+        const reload = await fetch(`/api/coding/projects/${projectId}/files`);
+        if (!reload.ok) throw new Error('Failed to reload files');
         const list: Array<{ name: string; type: string; path: string; content: string }> = await reload.json();
         const tabs: FileTab[] = list
           .filter((f) => f.type === 'file')
@@ -333,7 +348,12 @@ export default function AICodeEditor({ projectId }: { projectId: string }) {
 
   const handleRun = async () => {
     try {
-      const res = await apiRequest('POST', '/api/coding/run', { projectId });
+      const res = await fetch('/api/coding/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      });
+      if (!res.ok) throw new Error('Run request failed');
       const data = await res.json();
       setTerminalOutput((prev) => [...prev, ...(data.logs || []), `Preview: ${data.previewUrl}`]);
     } catch (e) {

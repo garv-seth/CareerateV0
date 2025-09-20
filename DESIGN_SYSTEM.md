@@ -63,6 +63,12 @@ Defined in `client/src/index.css`. The system defaults to dark mode.
 - **Inputs/Forms**:
   - Should have a glass border (`border border-input`) and a focused ring effect (`focus:ring-2 ring-ring`).
 
+- **Modals, Pop-ups & Toasts**:
+  - **Container**: All overlays should use the `.glass-pane` style with a higher blur (`backdrop-blur-xl`).
+  - **Entrance**: Animate in with a gentle scale and fade (`scale-95` to `scale-100`, `opacity-0` to `opacity-100`).
+  - **Toasts**: Appear at the bottom of the screen, stacking vertically. Automatically dismiss after 3-5 seconds.
+  - **Cookie Banner**: A specific type of pop-up that sits at the bottom, spanning a large portion of the screen width (`max-w-4xl`).
+
 ## F. Animations & Motion System
 
 - **Library**: Use CSS transitions for simple hover/focus effects. For more complex animations (staggering, timelines), a library like `Framer Motion` or `GSAP` is recommended.

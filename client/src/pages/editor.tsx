@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import CodeEditor from "@/components/code-editor";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 // Streaming state types
@@ -44,10 +43,12 @@ export default function Editor() {
 
   const generateCodeMutation = useMutation({
     mutationFn: async (prompt: string) => {
-      const response = await apiRequest("POST", "/api/generate-code", {
-        projectId,
-        prompt,
+      const response = await fetch("/api/generate-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, prompt }),
       });
+      if (!response.ok) throw new Error("Failed to generate code");
       return response.json();
     },
     onSuccess: (data) => {
@@ -68,7 +69,12 @@ export default function Editor() {
 
   const updateProjectMutation = useMutation({
     mutationFn: async (updates: any) => {
-      const response = await apiRequest("PATCH", `/api/projects/${projectId}`, updates);
+      const response = await fetch(`/api/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!response.ok) throw new Error("Failed to update project");
       return response.json();
     },
     onSuccess: () => {
@@ -104,10 +110,14 @@ export default function Editor() {
       }
       
       // Start streaming generation
-      const response = await apiRequest("POST", "/api/generate-code/stream", {
-        projectId,
-        prompt,
-        generationType: "full-app"
+      const response = await fetch("/api/generate-code/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          prompt,
+          generationType: "full-app"
+        }),
       });
       
       if (!response.ok) {

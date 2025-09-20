@@ -40,7 +40,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 
 interface MigrationProject {
   id: string;
@@ -216,7 +215,12 @@ export default function EnterpriseMigration() {
   const fetchRecommendations = async () => {
     if (!projectId) return;
     try {
-      const res = await apiRequest('POST', '/api/recommendations/suggest', { projectId });
+      const res = await fetch('/api/recommendations/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId })
+      });
+      if (!res.ok) throw new Error('Failed to fetch recommendations');
       const data = await res.json();
       const recs = (data.recommendations || []).map((r: any) => ({ id: r.id, title: r.description, description: r.description, category: 'Code', priority: 'medium', impact: 'medium', effort: 'low', status: 'pending' }));
       setRecommendations(recs);
@@ -228,11 +232,16 @@ export default function EnterpriseMigration() {
   const applyRecommendation = async (rec: Recommendation) => {
     if (!projectId) return;
     try {
-      const res = await apiRequest('POST', '/api/recommendations/apply', {
-        projectId,
-        repo: { owner: 'your-org-or-user', name: 'your-repo' },
-        commitMessage: rec.title || 'Apply AI Recommendation'
+      const res = await fetch('/api/recommendations/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId,
+          repo: { owner: 'your-org-or-user', name: 'your-repo' },
+          commitMessage: rec.title || 'Apply AI Recommendation'
+        })
       });
+      if (!res.ok) throw new Error('Failed to apply recommendation');
       const data = await res.json();
       // naive success toast substitute
       console.log('PR created:', data.prUrl);

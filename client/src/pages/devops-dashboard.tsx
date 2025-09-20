@@ -21,7 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface Agent {
@@ -95,7 +94,8 @@ export default function DevOpsDashboard() {
 
   const initializeAgentsMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/projects/${projectId}/initialize-agents`);
+      const response = await fetch(`/api/projects/${projectId}/initialize-agents`, { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to initialize agents');
       return response.json();
     },
     onSuccess: () => {
@@ -109,7 +109,12 @@ export default function DevOpsDashboard() {
 
   const triggerDeploymentMutation = useMutation({
     mutationFn: async (deploymentData: any) => {
-      const response = await apiRequest("POST", `/api/projects/${projectId}/deployments`, deploymentData);
+      const response = await fetch(`/api/projects/${projectId}/deployments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(deploymentData)
+      });
+      if (!response.ok) throw new Error('Failed to trigger deployment');
       return response.json();
     },
     onSuccess: () => {
@@ -120,7 +125,12 @@ export default function DevOpsDashboard() {
 
   const createIncidentMutation = useMutation({
     mutationFn: async (incidentData: any) => {
-      const response = await apiRequest("POST", `/api/projects/${projectId}/incidents`, incidentData);
+      const response = await fetch(`/api/projects/${projectId}/incidents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(incidentData)
+      });
+      if (!response.ok) throw new Error('Failed to create incident');
       return response.json();
     },
     onSuccess: () => {
