@@ -3704,6 +3704,131 @@ test('renders learn react link', () => {
     }
   });
 
+  // =====================================================
+  // AI Agents (DevOps & Migration) - keep inside registerRoutes
+  // =====================================================
+
+  const devOpsAgent = new (require('./ai-agents/DevOpsAgent').DevOpsAgent)();
+  const migrationAgent = new (require('./ai-agents/DevOpsAgent').EnterpriseMigrationAgent)();
+
+  // DevOps Agent - Full automation workflow
+  app.post("/api/ai-agents/devops/deploy", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId, repositoryUrl, requirements } = req.body;
+
+      const result = await devOpsAgent.executeWorkflow({
+        project_id: projectId,
+        repository_url: repositoryUrl,
+        user_requirements: requirements
+      });
+
+      res.json({
+        success: true,
+        deployment_id: `deploy-${projectId}-${Date.now()}`,
+        status: result.deployment_status,
+        infrastructure: result.infrastructure,
+        security: result.security_scan,
+        performance: result.performance_metrics,
+        estimated_completion: '15-30 minutes'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "DevOps automation failed",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  // Get deployment status
+  app.get("/api/ai-agents/devops/status/:projectId", isAuthenticated, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const status = await devOpsAgent.getDeploymentStatus(projectId);
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Failed to get deployment status",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  // Enterprise Migration Agent
+  app.post("/api/ai-agents/migration/analyze", isAuthenticated, async (req, res) => {
+    try {
+      const { systemDescription, currentInfrastructure, businessRequirements } = req.body;
+
+      const analysis = await migrationAgent.analyzeExistingSystem({
+        system_description: systemDescription,
+        current_infrastructure: currentInfrastructure,
+        business_requirements: businessRequirements
+      });
+
+      res.json({
+        success: true,
+        analysis,
+        next_step: 'Create detailed migration plan'
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Migration analysis failed",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  app.post("/api/ai-agents/migration/plan", isAuthenticated, async (req, res) => {
+    try {
+      const { analysis } = req.body;
+      const plan = await migrationAgent.createMigrationPlan(analysis);
+
+      res.json({
+        success: true,
+        migration_plan: plan,
+        execution_ready: true
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Migration planning failed",
+        error: (error as Error).message
+      });
+    }
+  });
+
+  // Real-time AI Agent status updates
+  app.get("/api/ai-agents/status", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user.id;
+      const agents = await db
+        .select()
+        .from(projects)
+        .where(eq(projects.userId, userId));
+
+      const agentStatus = await Promise.all(
+        agents.map(async (project) => {
+          const status = await devOpsAgent.getDeploymentStatus(project.id);
+          return {
+            project_id: project.id,
+            project_name: project.name,
+            ...status
+          };
+        })
+      );
+
+      res.json({ success: true, agents: agentStatus, total_active: agentStatus.length });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: "Failed to get agent status",
+        error: (error as Error).message
+      });
+    }
+  });
+
   return server;
 }
 
