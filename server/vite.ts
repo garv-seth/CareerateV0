@@ -76,10 +76,42 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Serve static assets but let our catch-all handle index.html
+  app.use(express.static(distPath, { index: false }));
 
   // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // but dynamically rewrite hashed asset names so we always serve the latest build
+  app.use("*", async (_req, res) => {
+    try {
+      const indexPath = path.resolve(distPath, "index.html");
+      let html = await fs.promises.readFile(indexPath, "utf-8");
+
+      const assetsDir = path.resolve(distPath, "assets");
+      const files = await fs.promises.readdir(assetsDir);
+
+      const pickLatest = (pattern: RegExp): string | undefined => {
+        const matches = files.filter((f) => pattern.test(f));
+        if (matches.length === 0) return undefined;
+        // Sort by filename as a stable heuristic (hashes change per build)
+        matches.sort();
+        return matches[matches.length - 1];
+      };
+
+      const latestJs = pickLatest(/^index-.*\.js$/i);
+      const latestCss = pickLatest(/^index-.*\.css$/i);
+
+      if (latestJs) {
+        html = html.replace(/src="\/assets\/index-[^"]+\.js"/g, `src="/assets/${latestJs}"`);
+      }
+      if (latestCss) {
+        html = html.replace(/href="\/assets\/index-[^"]+\.css"/g, `href="/assets/${latestCss}"`);
+      }
+
+      res.setHeader("Cache-Control", "no-store");
+      res.status(200).send(html);
+    } catch (_e) {
+      // As a fallback, serve the original file
+      res.sendFile(path.resolve(distPath, "index.html"));
+    }
   });
 }

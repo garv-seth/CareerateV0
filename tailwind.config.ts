@@ -3,6 +3,28 @@ import type { Config } from "tailwindcss";
 export default {
   darkMode: ["class"],
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
+  // Ensure production builds always contain our new theme utilities
+  safelist: [
+    // Gradient backgrounds and brand colors
+    "bg-gradient-to-br",
+    "bg-gradient-to-r",
+    "from-slate-900",
+    "via-purple-900",
+    "to-slate-900",
+    "from-purple-500",
+    "to-pink-500",
+    // Glass/overlay utilities frequently used in the new UI
+    "bg-black/20",
+    "bg-black/40",
+    "bg-white/5",
+    "bg-white/10",
+    "border-white/10",
+    "border-white/20",
+    // Text color utilities used across headers
+    "text-white",
+    "text-white/70",
+    "text-white/60",
+  ],
   theme: {
     extend: {
       borderRadius: {
