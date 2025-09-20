@@ -1,160 +1,137 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Code, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { LoginModal } from "@/components/LoginModal";
+import { cn } from "@/lib/utils";
+
+// Define a new SVG Logo component to match the design system
+const Logo = () => (
+  <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="transition-transform duration-300 group-hover:scale-110">
+    <path d="M20 0L24.4903 15.5097L40 20L24.4903 24.4903L20 40L15.5097 24.4903L0 20L15.5097 15.5097L20 0Z" fill="url(#logo-gradient)"/>
+    <defs>
+      <linearGradient id="logo-gradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+        <stop stopColor="#A78BFA"/>
+        <stop offset="1" stopColor="#E879F9"/>
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
 
 export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const { isAuthenticated, isLoading } = useAuth();
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
-    setIsMenuOpen(false);
-  };
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+  
+  const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
+    <Link href={href}>
+      <a className="px-4 py-2 rounded-full text-sm font-medium text-foreground/80 transition-all duration-300 hover:text-foreground hover:bg-primary/10">
+        {children}
+      </a>
+    </Link>
+  );
+
+  const AuthButtons = () => (
+    <div className="flex items-center gap-2">
+      {isAuthenticated ? (
+        <>
+          <Link href="/dashboard">
+            <Button variant="ghost" className="rounded-full text-sm">Dashboard</Button>
+          </Link>
+          <Button
+            className="rounded-full text-sm bg-primary/10 border border-primary/20 text-primary-foreground hover:bg-primary/20"
+            onClick={() => window.location.href = '/api/logout'}
+          >
+            Logout
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button variant="ghost" className="rounded-full text-sm" onClick={() => setIsLoginModalOpen(true)} disabled={isLoading}>
+            Sign In
+          </Button>
+          <Button 
+            className="rounded-full text-sm bg-primary/15 text-primary-foreground hover:bg-primary/25 transition-all duration-300 hover:scale-105"
+            onClick={() => setIsLoginModalOpen(true)}
+            disabled={isLoading}
+          >
+            Get Started
+          </Button>
+        </>
+      )}
+    </div>
+  );
 
   return (
-    <nav className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-4xl px-6">
-      <div className="glass rounded-xl px-6 py-3 shadow-lg">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2" data-testid="nav-logo">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Code className="text-primary-foreground text-sm" />
+    <>
+      <header className={cn(
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-out",
+        isScrolled ? "pt-2" : "pt-4 md:pt-6"
+      )}>
+        <div className={cn(
+          "container mx-auto max-w-5xl transition-all duration-300 ease-out",
+        )}>
+          <nav className={cn(
+            "w-full flex items-center justify-between p-2 rounded-full glass-pane transition-all duration-300",
+            isScrolled ? "h-14" : "h-16"
+          )}>
+            <Link href="/" className="flex items-center gap-3 group pl-2">
+              <Logo />
+              <span className="text-display font-bold text-lg text-foreground">Careerate</span>
+              <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-0.5 rounded-full border border-primary/20">v2.0 Live</span>
+            </Link>
+
+            <div className="hidden md:flex items-center gap-2">
+              <NavLink href="#features">Features</NavLink>
+              <NavLink href="#pricing">Pricing</NavLink>
+              <NavLink href="#docs">Docs</NavLink>
             </div>
-            <span className="font-bold text-xl">Careerate</span>
-          </Link>
-          
-          <div className="hidden md:flex items-center space-x-1">
-            <button
-              onClick={() => scrollToSection("features")}
-              className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium"
-              data-testid="nav-features"
-            >
-              Features
-            </button>
-            <button
-              onClick={() => scrollToSection("how-it-works")}
-              className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium"
-              data-testid="nav-how-it-works"
-            >
-              How it Works
-            </button>
-            <button
-              onClick={() => scrollToSection("pricing")}
-              className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium"
-              data-testid="nav-pricing"
-            >
-              Pricing
-            </button>
-            {isAuthenticated ? (
-              <>
-                <Link href="/dashboard">
-                  <Button
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 hover:shadow-md transition-all duration-200"
-                    data-testid="button-dashboard"
-                  >
-                    Dashboard
-                  </Button>
-                </Link>
-                <Button
-                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/90 hover:shadow-md transition-all duration-200"
-                  data-testid="button-logout"
-                  onClick={() => window.location.href = '/api/logout'}
-                >
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <Button
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 hover:shadow-md transition-all duration-200"
-                data-testid="button-login"
-                onClick={() => setIsLoginModalOpen(true)}
-                disabled={isLoading}
-              >
-                {isLoading ? 'Loading...' : 'Login'}
+
+            <div className="hidden md:flex items-center pr-2">
+              <AuthButtons />
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden pr-2">
+              <Button size="icon" variant="ghost" className="rounded-full" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
-            )}
-          </div>
-
-          <button 
-            className="md:hidden p-2"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            data-testid="button-menu-toggle"
-          >
-            {isMenuOpen ? <X className="text-foreground" /> : <Menu className="text-foreground" />}
-          </button>
-        </div>
-
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden mt-4 pt-4 border-t border-border">
-            <div className="flex flex-col space-y-2">
-              <button
-                onClick={() => scrollToSection("features")}
-                className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium text-left"
-                data-testid="nav-mobile-features"
-              >
-                Features
-              </button>
-              <button
-                onClick={() => scrollToSection("how-it-works")}
-                className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium text-left"
-                data-testid="nav-mobile-how-it-works"
-              >
-                How it Works
-              </button>
-              <button
-                onClick={() => scrollToSection("pricing")}
-                className="px-4 py-2 rounded-lg hover:bg-accent/50 hover:text-accent-foreground transition-all duration-200 text-sm font-medium text-left"
-                data-testid="nav-mobile-pricing"
-              >
-                Pricing
-              </button>
-              {isAuthenticated ? (
-                <>
-                  <Link href="/dashboard">
-                    <Button
-                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 hover:shadow-md transition-all duration-200"
-                      data-testid="button-mobile-dashboard"
-                    >
-                      Dashboard
-                    </Button>
-                  </Link>
-                  <Button
-                    className="w-full px-4 py-2 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-secondary/90 hover:shadow-md transition-all duration-200"
-                    data-testid="button-mobile-logout"
-                    onClick={() => window.location.href = '/api/logout'}
-                  >
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 hover:shadow-md transition-all duration-200"
-                  data-testid="button-mobile-login"
-                  onClick={() => {
-                    setIsLoginModalOpen(true);
-                    setIsMenuOpen(false);
-                  }}
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Loading...' : 'Login'}
-                </Button>
-              )}
             </div>
-          </div>
-        )}
+          </nav>
+        </div>
+      </header>
+      
+      {/* Mobile Menu Drawer */}
+      <div className={cn(
+        "fixed top-0 right-0 h-full w-full max-w-xs z-40 bg-background/80 backdrop-blur-xl transition-transform duration-300 ease-in-out md:hidden",
+        isMenuOpen ? "translate-x-0" : "translate-x-full"
+      )}>
+         <div className="h-full flex flex-col justify-between p-6 pt-24">
+            <div className="flex flex-col gap-4">
+              <NavLink href="#features">Features</NavLink>
+              <NavLink href="#pricing">Pricing</NavLink>
+              <NavLink href="#docs">Docs</NavLink>
+            </div>
+            <AuthButtons />
+         </div>
       </div>
+
 
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
       />
-    </nav>
+    </>
   );
 }

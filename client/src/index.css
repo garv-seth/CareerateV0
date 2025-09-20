@@ -1,95 +1,92 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: hsl(250, 250, 250);
-  --foreground: hsl(17, 24, 39);
-  --card: hsl(255, 255, 255);
-  --card-foreground: hsl(17, 24, 39);
-  --popover: hsl(255, 255, 255);
-  --popover-foreground: hsl(17, 24, 39);
-  --primary: hsl(0, 0, 0);
-  --primary-foreground: hsl(255, 255, 255);
-  --secondary: hsl(99, 102, 241);
-  --secondary-foreground: hsl(255, 255, 255);
-  --muted: hsl(245, 245, 245);
-  --muted-foreground: hsl(107, 114, 128);
-  --accent: hsl(16, 185, 129);
-  --accent-foreground: hsl(255, 255, 255);
-  --destructive: hsl(239, 68, 68);
-  --destructive-foreground: hsl(255, 255, 255);
-  --border: hsl(229, 231, 235);
-  --input: hsl(229, 231, 235);
-  --ring: hsl(99, 102, 241);
-  --radius: 0.75rem;
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
-}
-
-.dark {
-  --background: hsl(0, 0, 0);
-  --foreground: hsl(255, 255, 255);
-  --card: hsl(17, 17, 19);
-  --card-foreground: hsl(255, 255, 255);
-  --popover: hsl(0, 0, 0);
-  --popover-foreground: hsl(255, 255, 255);
-  --primary: hsl(255, 255, 255);
-  --primary-foreground: hsl(0, 0, 0);
-  --secondary: hsl(99, 102, 241);
-  --secondary-foreground: hsl(255, 255, 255);
-  --muted: hsl(39, 39, 42);
-  --muted-foreground: hsl(161, 161, 170);
-  --accent: hsl(16, 185, 129);
-  --accent-foreground: hsl(0, 0, 0);
-  --destructive: hsl(239, 68, 68);
-  --destructive-foreground: hsl(255, 255, 255);
-  --border: hsl(39, 39, 42);
-  --input: hsl(39, 39, 42);
-  --ring: hsl(99, 102, 241);
-}
-
 @layer base {
+  :root {
+    /* Base Colors (Dark Mode Default) */
+    --background: 257 50% 5%; /* #1E0E3F Deep Indigo */
+    --foreground: 220 13% 98%; /* #F8FAFC Off-White */
+    
+    /* Accent Colors */
+    --primary: 252 94% 77%; /* #A78BFA Lavender */
+    --primary-foreground: 220 13% 98%; /* Off-White for text on primary */
+    
+    --secondary: 290 92% 75%; /* #E879F9 Pinkish */
+    --secondary-foreground: 220 13% 98%;
+
+    /* Neutral Colors */
+    --muted: 226 34% 65%; /* #94A3B8 Slate-400 */
+    --muted-foreground: 226 34% 65%;
+    
+    /* Other semantic colors */
+    --card: 257 50% 10% / 0.5; /* Indigo at 50% opacity for glass effect */
+    --card-foreground: var(--foreground);
+    --border: 252 94% 77% / 0.2; /* Lavender at 20% opacity */
+    --input: 252 94% 77% / 0.2;
+    --ring: 252 94% 77%;
+
+    --radius: 0.75rem;
+
+    /* Font Families */
+    --font-sans: 'Inter', sans-serif;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  .light {
+    /* Base Colors (Light Mode) */
+    --background: 220 13% 98%; /* #F8FAFC Off-White */
+    --foreground: 222 47% 11%; /* #0F172A Slate-900 */
+    
+    /* Accent Colors */
+    --primary: 262 84% 59%; /* #7C3AED Violet */
+    --primary-foreground: 220 13% 98%;
+    
+    --secondary: 334 82% 66%; /* #F472B6 Rose */
+    --secondary-foreground: 220 13% 98%;
+
+    /* Neutral Colors */
+    --muted: 223 39% 47%; /* #64748B Slate-500 */
+    --muted-foreground: 223 39% 47%;
+    
+    /* Other semantic colors */
+    --card: 220 13% 95% / 0.5; /* Off-white at 50% opacity for glass effect */
+    --card-foreground: var(--foreground);
+    --border: 262 84% 59% / 0.2; /* Violet at 20% opacity */
+    --input: 262 84% 59% / 0.2;
+    --ring: 262 84% 59%;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground;
     font-family: var(--font-sans);
-  }
+    min-height: 100vh;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 
-  .font-mono {
-    font-family: var(--font-mono);
+    /* Starry Night/Future-Forward Background */
+    background-color: hsl(var(--background));
+    background-image: 
+      radial-gradient(ellipse at top, transparent 0%, hsl(var(--background))),
+      radial-gradient(ellipse at bottom, hsl(252 94% 77% / 0.1), transparent 70%);
   }
 }
 
-@layer components {
-  .glass {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+@layer utilities {
+  .glass-pane {
+    background: hsl(var(--card) / 0.1);
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
   }
 
-  .glass-dark {
-    background: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+  .text-display {
+    font-family: var(--font-display);
   }
-
-  .gradient-mesh {
-    background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--accent)) 100%);
-  }
-
-  .code-bg {
-    background: #1a1b26;
-  }
-
-  .syntax-keyword { color: #bb9af7; }
-  .syntax-string { color: #9ece6a; }
-  .syntax-comment { color: #565f89; }
-  .syntax-function { color: #7aa2f7; }
-  .syntax-number { color: #ff9e64; }
-  .syntax-white { color: #ffffff; }
 }

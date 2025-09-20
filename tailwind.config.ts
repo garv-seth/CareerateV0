@@ -5,25 +5,19 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   // Ensure production builds always contain our new theme utilities
   safelist: [
-    // Gradient backgrounds and brand colors
-    "bg-gradient-to-br",
-    "bg-gradient-to-r",
-    "from-slate-900",
-    "via-purple-900",
-    "to-slate-900",
-    "from-purple-500",
-    "to-pink-500",
-    // Glass/overlay utilities frequently used in the new UI
-    "bg-black/20",
-    "bg-black/40",
-    "bg-white/5",
-    "bg-white/10",
-    "border-white/10",
-    "border-white/20",
-    // Text color utilities used across headers
-    "text-white",
-    "text-white/70",
-    "text-white/60",
+    // Add any critical classes that might be purged
+    'bg-gradient-to-br', 'from-slate-900', 'via-purple-900', 'to-slate-900',
+    'bg-gradient-to-r', 'from-purple-500', 'to-pink-500',
+    'hover:from-purple-600', 'hover:to-pink-600',
+    'bg-black/20', 'backdrop-blur-md', 'border-white/10',
+    'data-[state=active]:bg-purple-500', 'data-[state=active]:text-white',
+    'bg-white/5', 'border-white/20', 'text-white', 'placeholder:text-white/50',
+    'bg-green-500/20', 'text-green-400', 'border-green-500/30',
+    'bg-blue-500/20', 'text-blue-400', 'border-blue-500/30',
+    'bg-purple-500/20', 'text-purple-400', 'border-purple-500/30',
+    'bg-cyan-500/20', 'to-cyan-500/20', 'border-blue-500/30',
+    'bg-emerald-500/20', 'to-emerald-500/20', 'border-green-500/30',
+    'bg-red-500/20', 'to-red-500/20', 'border-orange-500/30',
   ],
   theme: {
     extend: {
@@ -86,7 +80,7 @@ export default {
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
+        display: ["var(--font-display)"],
         mono: ["var(--font-mono)"],
       },
       keyframes: {

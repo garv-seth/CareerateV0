@@ -1,292 +1,125 @@
-import { useState } from "react";
-import { Link } from "wouter";
-import { 
-  Sparkles, Code, Cloud, Shield, Brain, Rocket, 
-  ArrowRight, Play, Star, Users, Activity, Globe,
-  Database, Terminal, MessageSquare, Zap, GitBranch,
-  ChevronDown, Menu, X
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ArrowRight, Play, Sparkles, Code, Cloud, Shield, Brain, Globe, Users, Database, Terminal, Activity } from "lucide-react";
+import Navigation from "@/components/navigation"; // Assuming navigation is now a separate component
 
-export default function Landing() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const Hero = () => (
+  <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    {/* Background liquid glass overlay */}
+    <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/10 to-background backdrop-blur-sm"></div>
+    <div className="absolute inset-0 bg-gradient-to-tl from-secondary/10 via-transparent to-transparent"></div>
 
+    <div className="relative z-10 container mx-auto text-center px-4">
+      <h1 className="text-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter mb-6">
+        Build Anything with AI Agents
+      </h1>
+      <p className="max-w-3xl mx-auto text-base sm:text-lg md:text-xl text-foreground/70 mb-10">
+        From idea to production in minutes. Our AI agents handle coding, deployment, monitoring, and maintenance so you can focus on building amazing products.
+      </p>
+      <div className="flex flex-wrap justify-center items-center gap-4">
+        <Button size="lg" className="rounded-full px-8 py-6 text-base font-semibold bg-primary/15 text-primary-foreground hover:bg-primary/25 transition-all duration-300 hover:scale-105 shadow-lg shadow-primary/10">
+          Start Building Now
+          <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+        <Button size="lg" variant="ghost" className="rounded-full px-8 py-6 text-base font-semibold text-foreground/80 hover:bg-primary/10">
+          Watch Demo
+          <Play className="ml-2 h-5 w-5" />
+        </Button>
+      </div>
+    </div>
+  </section>
+);
+
+const FeatureCard = ({ icon: Icon, title, description, colorClass }: { icon: React.ElementType, title: string, description: string, colorClass: string }) => (
+    <div className="glass-pane rounded-3xl p-6 flex flex-col items-start text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10">
+      <div className={`mb-4 p-3 rounded-xl bg-gradient-to-br ${colorClass}`}>
+          <Icon className="h-6 w-6 text-white"/>
+      </div>
+      <h3 className="text-display text-xl font-semibold mb-2">{title}</h3>
+      <p className="text-foreground/60">{description}</p>
+    </div>
+);
+
+
+const Features = () => (
+  <section className="py-24 sm:py-32">
+    <div className="container mx-auto px-4">
+      <div className="text-center max-w-3xl mx-auto mb-16">
+        <h2 className="text-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">The Most Advanced AI Development Platform</h2>
+        <p className="text-lg text-foreground/70">
+            Built for the future of software development with cutting-edge AI agents and enterprise-grade infrastructure.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {[
+            { icon: Brain, title: "GPT-5 Powered", description: "Latest AI models for superior code generation and analysis", colorClass: "from-primary to-secondary" },
+            { icon: Globe, title: "100+ Integrations", description: "Connect GitHub, AWS, Stripe, Datadog, and 100+ more services", colorClass: "from-blue-500 to-cyan-500" },
+            { icon: Users, title: "Real-time Collaboration", description: "Live cursors, presence, and collaborative editing like never before", colorClass: "from-green-500 to-emerald-500" },
+            { icon: Shield, title: "Enterprise Security", description: "Azure KeyVault encryption and SOC 2 Type II compliance", colorClass: "from-orange-500 to-red-500" },
+            { icon: Cloud, title: "Multi-Cloud Deploy", description: "Deploy anywhere with natural language commands", colorClass: "from-indigo-500 to-purple-500" },
+            { icon: Activity, title: "Autonomous Agents", description: "AI handles monitoring, scaling, and maintenance 24/7", colorClass: "from-pink-500 to-rose-500" },
+        ].map(feature => <FeatureCard key={feature.title} {...feature} />)}
+      </div>
+    </div>
+  </section>
+);
+
+const CTA = () => (
+    <section className="py-24 sm:py-32">
+        <div className="container mx-auto px-4">
+            <div className="relative rounded-3xl p-10 sm:p-16 text-center overflow-hidden glass-pane">
+                 <div className="absolute -inset-2 bg-gradient-to-r from-primary to-secondary opacity-10 blur-3xl"></div>
+                 <div className="relative z-10">
+                    <h2 className="text-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">Ready to Build the Future?</h2>
+                    <p className="max-w-2xl mx-auto text-lg text-foreground/70 mb-8">
+                        Join thousands of developers using AI agents to build, deploy, and scale applications faster than ever before.
+                    </p>
+                    <Button size="lg" className="rounded-full px-8 py-6 text-base font-semibold bg-primary/15 text-primary-foreground hover:bg-primary/25 transition-all duration-300 hover:scale-105 shadow-lg shadow-primary/10">
+                      <Sparkles className="mr-2 h-5 w-5" />
+                      Start Building Free
+                    </Button>
+                 </div>
+            </div>
+        </div>
+    </section>
+);
+
+const Footer = () => (
+  <footer className="border-t border-white/10 mt-20">
+    <div className="container mx-auto px-4 py-12">
+       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-8">
+          <div className="col-span-full lg:col-span-1">
+              <h3 className="text-display font-semibold text-lg mb-2">Careerate</h3>
+              <p className="text-sm text-foreground/60">The future of development is autonomous.</p>
+          </div>
+          {['Platform', 'Company', 'Resources', 'Legal'].map(section => (
+              <div key={section}>
+                  <h4 className="font-semibold mb-4">{section}</h4>
+                  <ul className="space-y-3">
+                      <li><a href="#" className="text-sm text-foreground/60 hover:text-foreground transition">Link 1</a></li>
+                      <li><a href="#" className="text-sm text-foreground/60 hover:text-foreground transition">Link 2</a></li>
+                  </ul>
+              </div>
+          ))}
+       </div>
+       <div className="border-t border-white/10 pt-8 text-center text-sm text-foreground/60">
+        <p>© {new Date().getFullYear()} Careerate. All rights reserved.</p>
+       </div>
+    </div>
+  </footer>
+)
+
+
+export default function LandingNew() {
   return (
-    <div className="min-h-screen" style={{background: "linear-gradient(135deg, #0f172a 0%, #581c87 50%, #0f172a 100%)"}}>
-      {/* Modern Navigation */}
-      <nav className="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-white" />
-              </div>
-              <span className="text-2xl font-bold text-white">Careerate</span>
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                <Activity className="h-3 w-3 mr-1" />
-                v2.0 Live
-              </Badge>
-            </div>
-
-            <div className="hidden md:flex items-center space-x-8">
-              <div className="flex items-center space-x-6">
-                <span className="text-white/70 hover:text-white cursor-pointer transition-colors">Features</span>
-                <span className="text-white/70 hover:text-white cursor-pointer transition-colors">Pricing</span>
-                <span className="text-white/70 hover:text-white cursor-pointer transition-colors">Docs</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Button 
-                  variant="outline" 
-                  className="border-white/20 text-white hover:bg-white/10"
-                  onClick={() => window.location.href = '/api/login'}
-                >
-                  Sign In
-                </Button>
-                <Button 
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
-                  onClick={() => window.location.href = '/api/login'}
-                >
-                  Get Started
-                </Button>
-              </div>
-            </div>
-
-            <Button
-              variant="ghost"
-              className="md:hidden text-white"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="relative px-6 pt-20 pb-32 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10"></div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <div className="mb-8">
-            <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30 px-4 py-2 text-sm">
-              <Sparkles className="h-4 w-4 mr-2" />
-              Powered by GPT-5 & Advanced AI Agents
-            </Badge>
-          </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-8 leading-tight">
-            Build Anything with
-            <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"> AI Agents</span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-white/70 max-w-4xl mx-auto mb-12 leading-relaxed">
-            From idea to production in minutes. Our AI agents handle coding, deployment, monitoring, and maintenance so you can focus on building amazing products.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-16">
-            <Button 
-              size="lg"
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 text-lg"
-              onClick={() => window.location.href = '/api/login'}
-            >
-              <Rocket className="h-5 w-5 mr-2" />
-              Start Building Now
-            </Button>
-            <Button 
-              size="lg"
-              variant="outline" 
-              className="border-white/20 text-white hover:bg-white/10 px-8 py-4 text-lg"
-            >
-              <Play className="h-5 w-5 mr-2" />
-              Watch Demo
-            </Button>
-          </div>
-
-          {/* Feature Highlights */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Code className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Vibe Coding</h3>
-              <p className="text-white/60">Natural language to production-ready code with real-time collaboration</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Cloud className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Vibe Hosting</h3>
-              <p className="text-white/60">Multi-cloud deployment with AI-managed infrastructure and scaling</p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">DevSecOps</h3>
-              <p className="text-white/60">Enterprise migration and security with autonomous maintenance</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="px-6 py-24">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              The Most Advanced AI Development Platform
-            </h2>
-            <p className="text-xl text-white/70 max-w-3xl mx-auto">
-              Built for the future of software development with cutting-edge AI agents and enterprise-grade infrastructure.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Brain,
-                title: "GPT-5 Powered",
-                description: "Latest AI models for superior code generation and analysis",
-                color: "from-purple-500 to-pink-500"
-              },
-              {
-                icon: Globe,
-                title: "100+ Integrations",
-                description: "Connect GitHub, AWS, Stripe, Datadog, and 100+ more services",
-                color: "from-blue-500 to-cyan-500"
-              },
-              {
-                icon: Users,
-                title: "Real-time Collaboration",
-                description: "Live cursors, presence, and collaborative editing like never before",
-                color: "from-green-500 to-emerald-500"
-              },
-              {
-                icon: Database,
-                title: "Enterprise Security",
-                description: "Azure KeyVault encryption and SOC 2 Type II compliance",
-                color: "from-orange-500 to-red-500"
-              },
-              {
-                icon: Terminal,
-                title: "Multi-Cloud Deploy",
-                description: "Deploy anywhere with natural language commands",
-                color: "from-indigo-500 to-purple-500"
-              },
-              {
-                icon: Activity,
-                title: "Autonomous Agents",
-                description: "AI handles monitoring, scaling, and maintenance 24/7",
-                color: "from-pink-500 to-rose-500"
-              }
-            ].map((feature, index) => (
-              <Card key={index} className="bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 group">
-                <CardContent className="p-6">
-                  <div className={`w-12 h-12 bg-gradient-to-r ${feature.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                    <feature.icon className="h-6 w-6 text-white" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-3">{feature.title}</h3>
-                  <p className="text-white/70">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="px-6 py-24">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-3xl p-12 border border-purple-500/30 backdrop-blur-md">
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Ready to Build the Future?
-            </h2>
-            <p className="text-xl text-white/70 mb-8 max-w-2xl mx-auto">
-              Join thousands of developers using AI agents to build, deploy, and scale applications faster than ever before.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-              <Button 
-                size="lg"
-                className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-4 text-lg"
-                onClick={() => window.location.href = '/api/login'}
-              >
-                <Sparkles className="h-5 w-5 mr-2" />
-                Start Building Free
-              </Button>
-              <Button 
-                size="lg"
-                variant="outline" 
-                className="border-white/20 text-white hover:bg-white/10 px-8 py-4 text-lg"
-              >
-                <MessageSquare className="h-5 w-5 mr-2" />
-                Talk to Sales
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-white/10 bg-black/20 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-xl font-bold text-white">Careerate</span>
-              </div>
-              <p className="text-white/60">
-                The most advanced AI development platform for building, deploying, and scaling applications.
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold text-white mb-4">Platform</h3>
-              <div className="space-y-2">
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Vibe Coding</p>
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Vibe Hosting</p>
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Enterprise Migration</p>
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Integrations</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold text-white mb-4">Company</h3>
-              <div className="space-y-2">
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">About</p>
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Careers</p>
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Contact</p>
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Security</p>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold text-white mb-4">Resources</h3>
-              <div className="space-y-2">
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Documentation</p>
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">API Reference</p>
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Status</p>
-                <p className="text-white/60 hover:text-white cursor-pointer transition-colors">Support</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="border-t border-white/10 mt-12 pt-8 flex items-center justify-between">
-            <p className="text-white/60">© 2025 Careerate. All rights reserved.</p>
-            <div className="flex items-center space-x-6">
-              <Link href="/privacy">
-                <span className="text-white/60 hover:text-white cursor-pointer transition-colors">Privacy</span>
-              </Link>
-              <Link href="/terms">
-                <span className="text-white/60 hover:text-white cursor-pointer transition-colors">Terms</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+    <div className="min-h-screen bg-background text-foreground">
+      <Navigation />
+      <main>
+        <Hero />
+        <Features />
+        <CTA />
+      </main>
+      <Footer />
     </div>
   );
 }
