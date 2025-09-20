@@ -4029,6 +4029,7 @@ async function testTwilioIntegration(credentials: any) {
   }
 }
 
+/*
 // AI Agents
 const devOpsAgent = new (require('./ai-agents/DevOpsAgent').DevOpsAgent)();
 const migrationAgent = new (require('./ai-agents/DevOpsAgent').EnterpriseMigrationAgent)();
@@ -4156,3 +4157,4 @@ app.get("/api/ai-agents/status", isAuthenticated, async (req, res) => {
     });
   }
 });
+*/
