@@ -21,26 +21,40 @@ fi
 echo "☁️ Building image in Azure Container Registry..."
 az acr build --registry $ACR_NAME --image $IMAGE_NAME . || { echo "❌ ACR build failed!"; exit 1; }
 
-# 1) Define/refresh secrets on the Container App from Key Vault
-#    This is REQUIRED so that secretref:* env vars resolve correctly.
-echo "🔐 Setting Container App secrets from Key Vault..."
+# 1) Pull actual secret values from Key Vault and define/refresh Container App secrets
+echo "🔐 Pulling secrets from Key Vault and updating Container App..."
+KV_NAME="careeeratesecretsvault"
+AZ_TENANT_ID=$(az keyvault secret show --vault-name $KV_NAME --name AZURE-TENANT-ID --query value -o tsv)
+AZ_CLIENT_ID=$(az keyvault secret show --vault-name $KV_NAME --name AZURE-CLIENT-ID --query value -o tsv)
+AZ_CLIENT_SECRET=$(az keyvault secret show --vault-name $KV_NAME --name AZURE-CLIENT-SECRET --query value -o tsv)
+SESSION_SECRET=$(az keyvault secret show --vault-name $KV_NAME --name SESSION-SECRET --query value -o tsv)
+DATABASE_URL=$(az keyvault secret show --vault-name $KV_NAME --name DATABASE-URL --query value -o tsv)
+OPENAI_API_KEY=$(az keyvault secret show --vault-name $KV_NAME --name OPENAI-API-KEY --query value -o tsv)
+GITHUB_CLIENT_ID=$(az keyvault secret show --vault-name $KV_NAME --name GITHUB-CLIENT-ID --query value -o tsv)
+GITHUB_CLIENT_SECRET=$(az keyvault secret show --vault-name $KV_NAME --name GITHUB-CLIENT-SECRET --query value -o tsv)
+STRIPE_SECRET_KEY=$(az keyvault secret show --vault-name $KV_NAME --name STRIPE-SECRET-KEY --query value -o tsv)
+STRIPE_WEBHOOK_SECRET=$(az keyvault secret show --vault-name $KV_NAME --name STRIPE-WEBHOOK-SECRET --query value -o tsv)
+SENDGRID_API_KEY=$(az keyvault secret show --vault-name $KV_NAME --name SENDGRID-API-KEY --query value -o tsv)
+TWILIO_ACCOUNT_SID=$(az keyvault secret show --vault-name $KV_NAME --name TWILIO-ACCOUNT-SID --query value -o tsv)
+TWILIO_AUTH_TOKEN=$(az keyvault secret show --vault-name $KV_NAME --name TWILIO-AUTH-TOKEN --query value -o tsv)
+
 az containerapp secret set \
   --name $CONTAINER_APP_NAME \
   --resource-group $RESOURCE_GROUP \
   --secrets \
-    "azure-client-id=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/AZURE-CLIENT-ID)" \
-    "azure-client-secret=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/AZURE-CLIENT-SECRET)" \
-    "azure-tenant-id=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/AZURE-TENANT-ID)" \
-    "session-secret=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/SESSION-SECRET)" \
-    "database-url=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/DATABASE-URL)" \
-    "openai-api-key=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/OPENAI-API-KEY)" \
-    "github-client-id=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/GITHUB-CLIENT-ID)" \
-    "github-client-secret=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/GITHUB-CLIENT-SECRET)" \
-    "stripe-secret-key=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/STRIPE-SECRET-KEY)" \
-    "stripe-webhook-secret=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/STRIPE-WEBHOOK-SECRET)" \
-    "sendgrid-api-key=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/SENDGRID-API-KEY)" \
-    "twilio-account-sid=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/TWILIO-ACCOUNT-SID)" \
-    "twilio-auth-token=@Microsoft.KeyVault(SecretUri=https://careeeratesecretsvault.vault.azure.net/secrets/TWILIO-AUTH-TOKEN)" || { echo "❌ Failed setting secrets"; exit 1; }
+    azure-client-id=$AZ_CLIENT_ID \
+    azure-client-secret=$AZ_CLIENT_SECRET \
+    azure-tenant-id=$AZ_TENANT_ID \
+    session-secret=$SESSION_SECRET \
+    database-url=$DATABASE_URL \
+    openai-api-key=$OPENAI_API_KEY \
+    github-client-id=$GITHUB_CLIENT_ID \
+    github-client-secret=$GITHUB_CLIENT_SECRET \
+    stripe-secret-key=$STRIPE_SECRET_KEY \
+    stripe-webhook-secret=$STRIPE_WEBHOOK_SECRET \
+    sendgrid-api-key=$SENDGRID_API_KEY \
+    twilio-account-sid=$TWILIO_ACCOUNT_SID \
+    twilio-auth-token=$TWILIO_AUTH_TOKEN || { echo "❌ Failed setting secrets"; exit 1; }
 
 # 2) Update image and bind env vars to the above secrets using secretref
 

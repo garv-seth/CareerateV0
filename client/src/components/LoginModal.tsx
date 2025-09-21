@@ -39,14 +39,6 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <DialogTitle className="text-center text-xl font-semibold text-foreground">
             Sign in to Careerate
           </DialogTitle>
-          <button
-            onClick={onClose}
-            className="absolute right-4 top-4 rounded-sm text-foreground/60 hover:text-foreground transition-colors focus:outline-none"
-            data-testid="close-login-modal"
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </button>
         </DialogHeader>
 
         <div className="flex flex-col space-y-3 p-6">

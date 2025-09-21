@@ -35,11 +35,19 @@ export default function Navigation() {
   }, []);
   
   const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
-    <Link href={href}>
-      <a className="px-4 py-2 rounded-full text-sm font-medium text-foreground/80 transition-all duration-300 hover:text-foreground hover:bg-primary/10">
-        {children}
-      </a>
-    </Link>
+    <a
+      href={href}
+      className="px-4 py-2 rounded-full text-sm font-medium text-foreground/80 transition-all duration-300 hover:text-foreground hover:bg-primary/10"
+      onClick={(e) => {
+        if (href.startsWith('#')) {
+          e.preventDefault();
+          const el = document.querySelector(href);
+          el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }}
+    >
+      {children}
+    </a>
   );
 
   const AuthButtons = () => (
@@ -63,7 +71,10 @@ export default function Navigation() {
           </Button>
           <Button 
             className="rounded-full text-sm bg-primary/15 text-primary-foreground hover:bg-primary/25 transition-all duration-300 hover:scale-105"
-            onClick={() => setIsLoginModalOpen(true)}
+            onClick={() => {
+              const el = document.querySelector('#pricing');
+              el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
             disabled={isLoading}
           >
             Get Started
