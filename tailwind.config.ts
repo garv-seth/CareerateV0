@@ -21,6 +21,11 @@ export default {
   ],
   theme: {
     extend: {
+      borderColor: ({ theme }) => ({
+        ...theme('colors'),
+        DEFAULT: 'hsl(var(--border))',
+        border: 'hsl(var(--border))'
+      }),
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
