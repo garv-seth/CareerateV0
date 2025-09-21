@@ -89,9 +89,7 @@
     "zod-validation-error": "^3.0.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.13",
     "@tailwindcss/typography": "^0.5.18",
-    "@tailwindcss/vite": "^4.1.13",
     "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "5.0.3",
     "@types/express-session": "^1.18.2",
@@ -105,8 +103,8 @@
     "autoprefixer": "^10.4.21",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.10",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.13",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.17",
     "tsx": "^4.20.5",
     "typescript": "5.9.2",
     "vite": "^7.1.6"
