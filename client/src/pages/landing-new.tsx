@@ -3,17 +3,17 @@ import { ArrowRight, Play, Sparkles, Code, Cloud, Shield, Brain, Globe, Users, D
 import Navigation from "@/components/navigation"; // Assuming navigation is now a separate component
 
 const Hero = () => (
-  <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+  <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
     {/* Background liquid glass overlay */}
     <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/10 to-background backdrop-blur-sm"></div>
     <div className="absolute inset-0 bg-gradient-to-tl from-secondary/10 via-transparent to-transparent"></div>
 
     <div className="relative z-10 container mx-auto text-center px-4">
       <h1 className="text-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter mb-6">
-        Build Anything with AI Agents
+        Let Ideas Flow. Agents Handle The Rest.
       </h1>
       <p className="max-w-3xl mx-auto text-base sm:text-lg md:text-xl text-foreground/70 mb-10">
-        From idea to production in minutes. Our AI agents handle coding, deployment, monitoring, and maintenance so you can focus on building amazing products.
+        Describe what you want. Our autonomous agents design, code, test, deploy, and maintain—across clouds and stacks—so you can ship in hours, not months.
       </p>
       <div className="flex flex-wrap justify-center items-center gap-4">
         <Button size="lg" className="rounded-full px-8 py-6 text-base font-semibold bg-primary/15 text-primary-foreground hover:bg-primary/25 transition-all duration-300 hover:scale-105 shadow-lg shadow-primary/10">
@@ -41,7 +41,7 @@ const FeatureCard = ({ icon: Icon, title, description, colorClass }: { icon: Rea
 
 
 const Features = () => (
-  <section className="py-24 sm:py-32">
+  <section id="features" className="py-24 sm:py-32">
     <div className="container mx-auto px-4">
       <div className="text-center max-w-3xl mx-auto mb-16">
         <h2 className="text-display text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-4">The Most Advanced AI Development Platform</h2>
@@ -59,6 +59,58 @@ const Features = () => (
             { icon: Cloud, title: "Multi-Cloud Deploy", description: "Deploy anywhere with natural language commands", colorClass: "from-indigo-500 to-purple-500" },
             { icon: Activity, title: "Autonomous Agents", description: "AI handles monitoring, scaling, and maintenance 24/7", colorClass: "from-pink-500 to-rose-500" },
         ].map(feature => <FeatureCard key={feature.title} {...feature} />)}
+      </div>
+    </div>
+  </section>
+);
+
+const Pricing = () => (
+  <section id="pricing" className="py-24 sm:py-32">
+    <div className="container mx-auto px-4">
+      <div className="text-center mb-12">
+        <h2 className="text-display text-4xl font-bold mb-2">Simple, transparent pricing</h2>
+        <p className="text-foreground/70">Start free. Scale when you’re ready.</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[{
+          name: 'Free', price: '$0', desc: 'For exploration and small projects', features: ['1 Project', 'Basic AI generation', 'Community support']
+        },{
+          name: 'Pro', price: '$49', desc: 'For solo builders and startups', features: ['Unlimited Projects', 'Advanced agents', 'Priority builds', 'Email support']
+        },{
+          name: 'Enterprise', price: 'Contact', desc: 'Security, SSO, custom SLAs', features: ['SSO & SAML', 'Private cloud/VPC', 'Dedicated support']
+        }].map(tier => (
+          <div key={tier.name} className="glass-pane rounded-3xl p-8 flex flex-col">
+            <h3 className="text-xl font-semibold mb-1">{tier.name}</h3>
+            <p className="text-3xl font-bold mb-2">{tier.price}</p>
+            <p className="text-foreground/60 mb-6">{tier.desc}</p>
+            <ul className="space-y-2 text-sm flex-1">
+              {tier.features.map(f => <li key={f} className="text-foreground/70">• {f}</li>)}
+            </ul>
+            <Button className="mt-6 rounded-full bg-primary/15 hover:bg-primary/25">Get Started</Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+const Docs = () => (
+  <section id="docs" className="py-24 sm:py-32">
+    <div className="container mx-auto px-4">
+      <div className="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h2 className="text-display text-4xl font-bold mb-4">Developer-first docs</h2>
+          <p className="text-foreground/70 mb-6">Clear guides, API references, and copy‑paste snippets to automate everything—from code generation to multi‑cloud deploys.</p>
+          <div className="flex gap-3">
+            <a href="#" className="rounded-full px-5 py-3 glass-pane">Quickstart</a>
+            <a href="#" className="rounded-full px-5 py-3 glass-pane">CLI & API</a>
+          </div>
+        </div>
+        <div className="glass-pane rounded-3xl p-6 text-sm text-foreground/80">
+          <pre className="whitespace-pre-wrap">{
+            `curl -X POST /api/ai/deploy \\\n+  -d '{\"project\":\"shop-app\",\"provider\":\"azure\",\"strategy\":\"blue-green\"}'`
+          }</pre>
+        </div>
       </div>
     </div>
   </section>
@@ -117,6 +169,8 @@ export default function LandingNew() {
       <main>
         <Hero />
         <Features />
+        <Pricing />
+        <Docs />
         <CTA />
       </main>
       <Footer />

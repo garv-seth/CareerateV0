@@ -89,7 +89,6 @@ export default function Navigation() {
             <Link href="/" className="flex items-center gap-3 group pl-2">
               <Logo />
               <span className="text-display font-bold text-lg text-foreground">Careerate</span>
-              <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-0.5 rounded-full border border-primary/20">v2.0 Live</span>
             </Link>
 
             <div className="hidden md:flex items-center gap-2">
