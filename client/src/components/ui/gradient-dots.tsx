@@ -33,16 +33,16 @@ export function GradientDots({
 
 	return (
 		<motion.div
-			className={`absolute inset-0 mix-blend-screen ${className || ''}`}
+			className={`absolute inset-0 ${className || ''}`}
 			style={{
 				backgroundColor,
 				backgroundImage: `
           radial-gradient(circle at 50% 50%, transparent ${ringInner}px, ${backgroundColor} ${ringInner}px ${ringOuter}px, transparent ${ringOuter}px),
           radial-gradient(circle at 50% 50%, transparent ${ringInner}px, ${backgroundColor} ${ringInner}px ${ringOuter}px, transparent ${ringOuter}px),
-          radial-gradient(circle at 50% 50%, #f00, transparent 60%),
-          radial-gradient(circle at 50% 50%, #ff0, transparent 60%),
-          radial-gradient(circle at 50% 50%, #0f0, transparent 60%),
-          radial-gradient(ellipse at 50% 50%, #00f, transparent 60%)
+          radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.3), transparent 70%),
+          radial-gradient(circle at 50% 50%, hsl(var(--secondary) / 0.3), transparent 70%),
+          radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.2), transparent 70%),
+          radial-gradient(ellipse at 50% 50%, hsl(var(--secondary) / 0.2), transparent 70%)
         `,
 				backgroundSize: `
           ${spacing}px ${hexSpacing}px,
@@ -61,19 +61,19 @@ export function GradientDots({
 			}}
 			animate={{
 				backgroundPosition: [
-					`0px 0px, ${spacing / 2}px ${hexSpacing / 2}px, 800% 400%, 1000% -400%, -1200% -600%, 400% ${hexSpacing}px`,
+					`0px 0px, ${spacing / 2}px ${hexSpacing / 2}px, 600% 300%, 800% -300%, -1000% -500%, 300% ${hexSpacing}px`,
 					`0px 0px, ${spacing / 2}px ${hexSpacing / 2}px, 0% 0%, 0% 0%, 0% 0%, 0% 0%`,
 				],
 				filter: ['hue-rotate(0deg)', 'hue-rotate(360deg)'],
 			}}
 			transition={{
 				backgroundPosition: {
-					duration: duration,
+					duration: duration * 1.5,
 					ease: 'linear',
 					repeat: Number.POSITIVE_INFINITY,
 				},
 				filter: {
-					duration: colorCycleDuration,
+					duration: colorCycleDuration * 1.5,
 					ease: 'linear',
 					repeat: Number.POSITIVE_INFINITY,
 				},
