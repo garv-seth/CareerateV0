@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "concurrently \"npm:server:dev\" \"npm:client:dev\"",
     "client:dev": "vite",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=cjs --outdir=dist --define:import.meta.dirname=__dirname",
-    "start": "NODE_ENV=production node dist/index.js",
+    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=cjs --outfile=dist/index.cjs --define:import.meta.dirname=__dirname",
+    "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "db:migrate:framework": "tsx scripts/migrate-add-framework.ts"

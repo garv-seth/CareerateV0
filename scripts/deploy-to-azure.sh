@@ -7,7 +7,7 @@ echo "🚀 Deploying Careerate to Azure Container Apps..."
 RESOURCE_GROUP="Careerate"
 CONTAINER_APP_NAME="careerate-web"
 ACR_NAME="careerateacr"
-IMAGE_NAME="careerate-app:v0.0.14" # Increment version
+IMAGE_NAME="careerate-app:v0.0.15" # Increment version
 
 # Check if logged in to Azure
 echo "📋 Checking Azure login status..."
