@@ -8,12 +8,14 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+RUN npm install -g npm@latest
+RUN npm ci --omit=dev
 
 # Build the application
 FROM base AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
+RUN npm install -g npm@latest
 RUN npm ci
 
 # Copy source code

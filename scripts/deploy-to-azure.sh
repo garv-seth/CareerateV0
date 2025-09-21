@@ -7,7 +7,7 @@ echo "🚀 Deploying Careerate to Azure Container Apps..."
 RESOURCE_GROUP="Careerate"
 CONTAINER_APP_NAME="careerate-web"
 ACR_NAME="careerateacr"
-IMAGE_NAME="careerate-app:v0.0.12" # Increment version
+IMAGE_NAME="careerate-app:v0.0.14" # Increment version
 
 # Check if logged in to Azure
 echo "📋 Checking Azure login status..."
@@ -87,7 +87,7 @@ az containerapp update \
 # Route all traffic to newest revision
 echo "⏳ Waiting for new revision..."
 sleep 30
-LATEST_REVISION=$(az containerapp revision list -n $CONTAINER_APP_NAME -g $RESOURCE_GROUP --query "[?properties.createdTime] | sort_by(@, &properties.createdTime) | [-1].name" -o tsv)
+LATEST_REVISION=$(az containerapp revision list -n $CONTAINER_APP_NAME -g $RESOURCE_GROUP --query "[?properties.createdTime] | sort_by(@, &properties.createdTime) | [-1].name" -o tsv | tr -d '[:space:]')
 if [ -z "$LATEST_REVISION" ]; then
   echo "⚠️ Could not determine the latest revision name."
   exit 1
