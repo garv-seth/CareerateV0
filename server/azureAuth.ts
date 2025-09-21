@@ -112,11 +112,12 @@ export async function setupAuth(app: Express) {
     });
   });
 
-  // Microsoft OAuth login redirect (using Azure AD instead of B2C)
+  // Microsoft OAuth login redirect (using Azure AD)
   app.get("/api/login", (req, res) => {
     const tenantId = process.env.AZURE_TENANT_ID;
     const clientId = process.env.AZURE_CLIENT_ID;
-    const redirectUri = encodeURIComponent(`${req.protocol}://${req.get('host')}/api/callback`);
+    const baseUrl = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, "");
+    const redirectUri = encodeURIComponent(`${baseUrl}/api/callback`);
 
     console.log('Microsoft OAuth Login attempt:', { tenantId, clientId: clientId ? 'set' : 'missing', redirectUri });
 
@@ -170,7 +171,8 @@ export async function setupAuth(app: Express) {
     try {
       // Exchange code for tokens using Azure AD
       const tokenUrl = `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/oauth2/v2.0/token`;
-      const redirectUri = `${req.protocol}://${req.get('host')}/api/callback`;
+      const baseUrl = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, "");
+      const redirectUri = `${baseUrl}/api/callback`;
 
       const tokenParams = new URLSearchParams({
         client_id: process.env.AZURE_CLIENT_ID!,
@@ -271,8 +273,9 @@ export async function setupAuth(app: Express) {
   // Microsoft OAuth logout (Azure AD)
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
+      const baseUrl = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, "");
       const logoutUrl = `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/oauth2/v2.0/logout?` +
-        `post_logout_redirect_uri=${encodeURIComponent(`${req.protocol}://${req.get('host')}`)}`;
+        `post_logout_redirect_uri=${encodeURIComponent(baseUrl)}`;
       res.redirect(logoutUrl);
     });
   });
