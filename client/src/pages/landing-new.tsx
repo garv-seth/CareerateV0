@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sparkles, Code, Cloud, Shield, Brain, Globe, Users, Database, Terminal, Activity } from "lucide-react";
-import Navigation from "@/components/navigation"; // Assuming navigation is now a separate component
+import { AppShell } from "@/components/AppShell";
 import { GradientDots } from "@/components/ui/gradient-dots";
 
 const Hero = () => (
@@ -167,8 +167,7 @@ const Footer = () => (
 
 export default function LandingNew() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Navigation />
+    <AppShell>
       <main>
         <Hero />
         <Features />
@@ -176,7 +175,6 @@ export default function LandingNew() {
         <Docs />
         <CTA />
       </main>
-      <Footer />
-    </div>
+    </AppShell>
   );
 }

@@ -19,6 +19,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { AppShell } from "@/components/AppShell";
 
 const appTemplates = [
   {
@@ -161,62 +162,11 @@ export default function Dashboard() {
   };
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: "var(--background)",
-      }}
-    >
-      {/* Modern Header - This should be replaced by the global Navigation component */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-xl flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <span className="text-2xl font-bold text-foreground text-display">Careerate</span>
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                <Activity className="h-3 w-3 mr-1" />
-                Live
-              </Badge>
-            </div>
-
-            <nav className="hidden md:flex space-x-6">
-              <Button variant="ghost" className="text-foreground/70 hover:text-foreground hover:bg-primary/10">
-                <Code className="h-4 w-4 mr-2" />
-                Vibe Coding
-              </Button>
-              <Button variant="ghost" className="text-foreground/70 hover:text-foreground hover:bg-primary/10">
-                <Cloud className="h-4 w-4 mr-2" />
-                Vibe Hosting
-              </Button>
-              <Link href="/integrations">
-                <Button variant="ghost" className="text-foreground/70 hover:text-foreground hover:bg-primary/10">
-                    <Shield className="h-4 w-4 mr-2" />
-                    Integrations
-                </Button>
-              </Link>
-            </nav>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" className="border-border text-foreground hover:bg-primary/10">
-              <Settings className="h-4 w-4" />
-            </Button>
-            <Link href="/account">
-              <Button variant="outline" className="border-border text-foreground hover:bg-primary/10">
-                <User className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <AppShell>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3 glass-pane rounded-full p-1 h-auto">
-            <TabsTrigger value="agent" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground">
+          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 glass-pane rounded-full p-1 h-auto">
+            <TabsTrigger value="agent" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground flex-1 sm:flex-initial">
               <Brain className="h-4 w-4 mr-2" />
               AI Agent
             </TabsTrigger>
@@ -266,17 +216,17 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center space-x-2 sm:space-x-4 overflow-x-auto pb-2">
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30 flex-shrink-0">
                         <Cpu className="h-3 w-3 mr-1" />
                         GPT-5 Ready
                       </Badge>
-                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 flex-shrink-0">
                         <Cloud className="h-3 w-3 mr-1" />
                         Multi-Cloud
                       </Badge>
-                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
+                      <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 flex-shrink-0">
                         <Shield className="h-3 w-3 mr-1" />
                         DevSecOps
                       </Badge>
@@ -285,7 +235,7 @@ export default function Dashboard() {
                     <Button 
                       onClick={handleAgentPrompt}
                       disabled={!agentPrompt.trim() || isGenerating}
-                      className="rounded-full bg-primary/15 text-primary-foreground hover:bg-primary/25 transition-all duration-300 hover:scale-105 shadow-lg shadow-primary/10 px-8"
+                      className="rounded-full bg-primary/15 text-primary-foreground hover:bg-primary/25 transition-all duration-300 hover:scale-105 shadow-lg shadow-primary/10 px-8 w-full sm:w-auto"
                       size="lg"
                     >
                       {isGenerating ? (
@@ -677,6 +627,6 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </AppShell>
   );
 }
