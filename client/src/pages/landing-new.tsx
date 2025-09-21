@@ -1,10 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sparkles, Code, Cloud, Shield, Brain, Globe, Users, Database, Terminal, Activity } from "lucide-react";
 import Navigation from "@/components/navigation"; // Assuming navigation is now a separate component
+import { GradientDots } from "@/components/ui/gradient-dots";
 
 const Hero = () => (
   <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-    {/* Background liquid glass overlay */}
+    {/* Animated gradient dots background */}
+    <GradientDots className="opacity-25" duration={20} colorCycleDuration={10} spacing={12} dotSize={8} />
+    {/* Background liquid glass overlays */}
     <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/10 to-background backdrop-blur-sm"></div>
     <div className="absolute inset-0 bg-gradient-to-tl from-secondary/10 via-transparent to-transparent"></div>
 
