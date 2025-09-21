@@ -27,14 +27,18 @@ export function GradientDots({
 }: GradientDotsProps) {
 	const hexSpacing = spacing * 1.732; // Hexagonal spacing calculation
 
+	// Create a larger visible "hole" so the colorful layers are noticeable
+	const ringInner = dotSize; // size of transparent hole
+	const ringOuter = dotSize + 1; // thin ring to keep the grid structure
+
 	return (
 		<motion.div
-			className={`absolute inset-0 ${className || ''}`}
+			className={`absolute inset-0 mix-blend-screen ${className || ''}`}
 			style={{
 				backgroundColor,
 				backgroundImage: `
-          radial-gradient(circle at 50% 50%, transparent 1.5px, ${backgroundColor} 0 ${dotSize}px, transparent ${dotSize}px),
-          radial-gradient(circle at 50% 50%, transparent 1.5px, ${backgroundColor} 0 ${dotSize}px, transparent ${dotSize}px),
+          radial-gradient(circle at 50% 50%, transparent ${ringInner}px, ${backgroundColor} ${ringInner}px ${ringOuter}px, transparent ${ringOuter}px),
+          radial-gradient(circle at 50% 50%, transparent ${ringInner}px, ${backgroundColor} ${ringInner}px ${ringOuter}px, transparent ${ringOuter}px),
           radial-gradient(circle at 50% 50%, #f00, transparent 60%),
           radial-gradient(circle at 50% 50%, #ff0, transparent 60%),
           radial-gradient(circle at 50% 50%, #0f0, transparent 60%),
