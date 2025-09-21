@@ -58,8 +58,8 @@
     --ring: 262 84% 59%;
   }
 
-  * {
-    @apply border-border;
+  *, ::before, ::after {
+    border-color: hsl(var(--border));
   }
 
   body {
