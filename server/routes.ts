@@ -4029,6 +4029,9 @@ async function testTwilioIntegration(credentials: any) {
   }
 }
 
+// Export the function for use in other modules
+export { testTwilioIntegration };
+
 // OAuth Routes
 app.get('/api/auth/:service', async (req, res) => {
   try {
@@ -4283,4 +4286,3 @@ app.post('/api/test-application/generate', isAuthenticated, async (req, res) => 
     });
   }
 });
-}
