@@ -64,7 +64,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [agentPrompt, setAgentPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState("agent");
+  const [activeTab, setActiveTab] = useState<string>(() => (typeof window !== 'undefined' ? (window.location.hash?.replace('#', '') || 'agent') : 'agent'));
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const promptRef = useRef<HTMLTextAreaElement>(null);
@@ -111,6 +111,23 @@ export default function Dashboard() {
   const filteredProjects = projects.filter((project: any) =>
     project.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Keep tab state in sync with URL hash so navbar links work
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash?.replace('#', '') || 'agent';
+      setActiveTab(hash);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
+    const nextHash = `#${activeTab}`;
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, '', `${window.location.pathname}${nextHash}`);
+    }
+  }, [activeTab]);
 
   const handleCreateProject = (template: any) => {
     setFramework(template.framework);

@@ -87,11 +87,24 @@ export function AppShell({ children }: { children: ReactNode }) {
     const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
     const { isAuthenticated, isLoading } = useAuth();
     const [isScrolled, setIsScrolled] = useState(false);
+    const [location] = useLocation();
+    const isOnDashboard = isAuthenticated && (location === "/" || location.startsWith("/dashboard"));
+    const [activeDashTab, setActiveDashTab] = useState<string>(() => (typeof window !== 'undefined' ? (window.location.hash?.replace('#', '') || 'agent') : 'agent'));
 
     useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 10);
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
+
+    // Keep navbar dashboard tab highlighting in sync with URL hash
+    useEffect(() => {
+        const onHashChange = () => {
+            const hash = window.location.hash?.replace('#', '') || 'agent';
+            setActiveDashTab(hash);
+        };
+        window.addEventListener('hashchange', onHashChange);
+        return () => window.removeEventListener('hashchange', onHashChange);
     }, []);
 
     const UnauthenticatedNav = () => (
@@ -116,6 +129,39 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Monitoring
             </NavLink>
+        </>
+    );
+
+    // Dashboard-specific nav that mirrors the tabs: AI Agent, Projects, Overview
+    const DashboardNav = () => (
+        <>
+            <Link href="#agent">
+                <a className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
+                    activeDashTab === 'agent' ? "text-foreground bg-primary/10" : "text-foreground/70 hover:text-foreground hover:bg-primary/10"
+                )}>
+                    <Brain className="h-4 w-4 mr-2 inline" />
+                    AI Agent
+                </a>
+            </Link>
+            <Link href="#projects">
+                <a className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
+                    activeDashTab === 'projects' ? "text-foreground bg-primary/10" : "text-foreground/70 hover:text-foreground hover:bg-primary/10"
+                )}>
+                    <GitBranch className="h-4 w-4 mr-2 inline" />
+                    Projects
+                </a>
+            </Link>
+            <Link href="#overview">
+                <a className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
+                    activeDashTab === 'overview' ? "text-foreground bg-primary/10" : "text-foreground/70 hover:text-foreground hover:bg-primary/10"
+                )}>
+                    <BarChart3 className="h-4 w-4 mr-2 inline" />
+                    Overview
+                </a>
+            </Link>
         </>
     );
 
@@ -164,7 +210,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                         <Logo />
 
                         <div className="hidden md:flex items-center gap-2">
-                            {isAuthenticated ? <AuthenticatedNav /> : <UnauthenticatedNav />}
+                            {isAuthenticated ? (isOnDashboard ? <DashboardNav /> : <AuthenticatedNav />) : <UnauthenticatedNav />}
                         </div>
 
                         <div className="hidden md:flex items-center pr-2">
@@ -186,7 +232,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             )}>
                 <div className="h-full flex flex-col justify-between p-6 pt-24">
                     <div className="flex flex-col gap-4">
-                        {isAuthenticated ? <AuthenticatedNav /> : <UnauthenticatedNav />}
+                        {isAuthenticated ? (isOnDashboard ? <DashboardNav /> : <AuthenticatedNav />) : <UnauthenticatedNav />}
                     </div>
                     <AuthButtons />
                 </div>
