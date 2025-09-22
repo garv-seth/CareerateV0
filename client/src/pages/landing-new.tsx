@@ -5,11 +5,8 @@ import { GradientDots } from "@/components/ui/gradient-dots";
 
 const Hero = () => (
   <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden">
-    {/* Background liquid glass overlays (bottom layer) */}
-    <div className="absolute inset-0 z-0 bg-gradient-to-br from-background via-primary/10 to-background backdrop-blur-sm pointer-events-none"></div>
-    <div className="absolute inset-0 z-0 bg-gradient-to-tl from-secondary/10 via-transparent to-transparent pointer-events-none"></div>
-    {/* Animated gradient dots above overlays, below content */}
-    <GradientDots className="z-[1] opacity-20 pointer-events-none" duration={22} colorCycleDuration={12} spacing={12} dotSize={7} />
+    {/* Animated gradient dots as the sole background to avoid banding */}
+    <GradientDots className="z-0 opacity-25 pointer-events-none" duration={22} colorCycleDuration={12} spacing={12} dotSize={7} />
 
     <div className="relative z-10 container mx-auto text-center px-4">
       <h1 className="text-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter mb-6">

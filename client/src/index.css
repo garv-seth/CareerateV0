@@ -69,18 +69,14 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-
-    /* Starry Night/Future-Forward Background */
     background-color: hsl(var(--background));
-    background-image: 
-      radial-gradient(ellipse at top, transparent 0%, hsl(var(--background))),
-      radial-gradient(ellipse at bottom, hsl(252 94% 77% / 0.1), transparent 70%);
   }
 }
 
 @layer utilities {
   .glass-pane {
     background: hsl(var(--card) / 0.1);
+    -webkit-backdrop-filter: blur(16px);
     backdrop-filter: blur(16px);
     border: 1px solid hsl(var(--border));
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
