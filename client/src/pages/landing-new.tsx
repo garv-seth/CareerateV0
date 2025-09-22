@@ -4,7 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { GradientDots } from "@/components/ui/gradient-dots";
 
 const Hero = () => (
-  <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+  <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden">
     {/* Background liquid glass overlays (bottom layer) */}
     <div className="absolute inset-0 z-0 bg-gradient-to-br from-background via-primary/10 to-background backdrop-blur-sm pointer-events-none"></div>
     <div className="absolute inset-0 z-0 bg-gradient-to-tl from-secondary/10 via-transparent to-transparent pointer-events-none"></div>

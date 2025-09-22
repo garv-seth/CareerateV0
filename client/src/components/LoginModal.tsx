@@ -46,17 +46,18 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <Button
             onClick={() => handleLogin('microsoft')}
             disabled={isLoading}
-            className="w-full h-12 text-sm font-bold rounded-full bg-white/10 hover:bg-white/15 text-foreground flex items-center justify-center gap-3 border border-white/20"
+            className="w-full h-12 text-sm font-semibold rounded-full bg-white text-[#1F1F1F] hover:bg-white/90 flex items-center justify-center gap-3 border border-border"
             data-testid="login-microsoft"
           >
-            {/* Fluent Microsoft 4-square mark */}
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <rect width="10" height="10" x="1" y="1" fill="#F25022"/>
-              <rect width="10" height="10" x="13" y="1" fill="#00A4EF"/>
-              <rect width="10" height="10" x="1" y="13" fill="#7FBA00"/>
-              <rect width="10" height="10" x="13" y="13" fill="#FFB900"/>
-            </svg>
-            {isLoading ? 'Connecting...' : 'Continue with Microsoft'}
+            <span className="absolute left-5 inline-flex items-center" aria-hidden>
+              <svg width="20" height="20" viewBox="0 0 24 24">
+                <rect width="10" height="10" x="1" y="1" fill="#F25022"/>
+                <rect width="10" height="10" x="13" y="1" fill="#00A4EF"/>
+                <rect width="10" height="10" x="1" y="13" fill="#7FBA00"/>
+                <rect width="10" height="10" x="13" y="13" fill="#FFB900"/>
+              </svg>
+            </span>
+            <span>{isLoading ? 'Connecting…' : 'Sign in with Microsoft'}</span>
           </Button>
 
           {/* GitHub Login */}
@@ -64,11 +65,11 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
             onClick={() => handleLogin('github')}
             disabled={isLoading}
             variant="ghost"
-            className="w-full h-12 text-sm font-bold rounded-full glass-pane flex items-center justify-center gap-3"
+            className="w-full h-12 text-sm font-semibold rounded-full glass-pane flex items-center justify-center gap-3"
             data-testid="login-github"
           >
             <Github className="w-5 h-5" />
-            {isLoading ? 'Connecting...' : 'Continue with GitHub'}
+            <span>{isLoading ? 'Connecting…' : 'Continue with GitHub'}</span>
           </Button>
 
           <div className="text-center text-sm text-foreground/70 mt-4">
