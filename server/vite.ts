@@ -99,12 +99,15 @@ export function serveStatic(app: Express) {
 
       const latestJs = pickLatest(/^index-.*\.js$/i);
       const latestCss = pickLatest(/^index-.*\.css$/i);
+      const version = Date.now();
 
       if (latestJs) {
-        html = html.replace(/src="\/assets\/index-[^"]+\.js"/g, `src="/assets/${latestJs}"`);
+        html = html.replace(/src="\/assets\/index-[^"]+\.js"/g, `src="/assets/${latestJs}?v=${version}"`);
       }
       if (latestCss) {
-        html = html.replace(/href="\/assets\/index-[^"]+\.css"/g, `href="/assets/${latestCss}"`);
+        // Strip crossorigin on stylesheet and append version param for cache busting
+        html = html.replace(/rel="stylesheet"\s+crossorigin\s+href="\/assets\/index-[^"]+\.css"/g, `rel="stylesheet" href="/assets/${latestCss}?v=${version}"`);
+        html = html.replace(/href="\/assets\/index-[^"]+\.css"/g, `href="/assets/${latestCss}?v=${version}"`);
       }
 
       res.setHeader("Cache-Control", "no-store");
