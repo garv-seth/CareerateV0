@@ -1,8 +1,8 @@
 import { encryptionService, secretsManager } from './encryptionService';
-import { 
-  type Integration, 
+import {
+  type Integration,
   type InsertIntegration,
-  type IntegrationSecret, 
+  type IntegrationSecret,
   type InsertIntegrationSecret,
   type ApiConnection,
   type InsertApiConnection,
@@ -10,6 +10,7 @@ import {
   type InsertRepositoryConnection,
   type IntegrationHealthCheck
 } from '@shared/schema';
+import { randomBytes } from 'crypto';
 
 export interface ConnectionTestResult {
   success: boolean;
@@ -46,6 +47,41 @@ export interface IntegrationConfig {
     timeout: number; // seconds
     retries: number;
   };
+  oauth?: {
+    enabled: boolean;
+    clientId?: string;
+    clientSecret?: string;
+    redirectUri?: string;
+    scopes?: string[];
+  };
+}
+
+export interface OAuthConfig {
+  service: string;
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  scopes: string[];
+  authorizationUrl: string;
+  tokenUrl: string;
+  userInfoUrl?: string;
+}
+
+export interface OAuthTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  token_type?: string;
+  scope?: string;
+}
+
+export interface OAuthUserInfo {
+  id: string;
+  email?: string;
+  name?: string;
+  username?: string;
+  avatar_url?: string;
+  provider: string;
 }
 
 /**
@@ -53,6 +89,231 @@ export interface IntegrationConfig {
  * Handles connection testing, health monitoring, and configuration
  */
 export class IntegrationService {
+  private oauthConfigs = new Map<string, OAuthConfig>();
+
+  constructor() {
+    this.initializeOAuthConfigs();
+  }
+
+  private initializeOAuthConfigs() {
+    // GitHub OAuth Configuration
+    this.oauthConfigs.set('github', {
+      service: 'github',
+      clientId: process.env.GITHUB_CLIENT_ID || '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || '',
+      redirectUri: `${process.env.APP_URL || 'http://localhost:3000'}/auth/github/callback`,
+      scopes: ['read:user', 'user:email', 'repo', 'read:org'],
+      authorizationUrl: 'https://github.com/login/oauth/authorize',
+      tokenUrl: 'https://github.com/login/oauth/access_token',
+      userInfoUrl: 'https://api.github.com/user'
+    });
+
+    // GitLab OAuth Configuration
+    this.oauthConfigs.set('gitlab', {
+      service: 'gitlab',
+      clientId: process.env.GITLAB_CLIENT_ID || '',
+      clientSecret: process.env.GITLAB_CLIENT_SECRET || '',
+      redirectUri: `${process.env.APP_URL || 'http://localhost:3000'}/auth/gitlab/callback`,
+      scopes: ['read_user', 'read_repository', 'write_repository'],
+      authorizationUrl: 'https://gitlab.com/oauth/authorize',
+      tokenUrl: 'https://gitlab.com/oauth/token',
+      userInfoUrl: 'https://gitlab.com/api/v4/user'
+    });
+  }
+
+  /**
+   * Generate OAuth authorization URL
+   */
+  async getOAuthAuthorizationUrl(
+    service: string,
+    state: string,
+    projectId?: string
+  ): Promise<{ url: string; config: OAuthConfig }> {
+    const config = this.oauthConfigs.get(service);
+    if (!config) {
+      throw new Error(`OAuth not configured for service: ${service}`);
+    }
+
+    const params = new URLSearchParams({
+      client_id: config.clientId,
+      redirect_uri: config.redirectUri,
+      scope: config.scopes.join(' '),
+      state: state,
+      response_type: 'code'
+    });
+
+    if (projectId) {
+      params.set('state', `${state}:${projectId}`);
+    }
+
+    return {
+      url: `${config.authorizationUrl}?${params.toString()}`,
+      config
+    };
+  }
+
+  /**
+   * Exchange OAuth code for access token
+   */
+  async exchangeOAuthCode(
+    service: string,
+    code: string,
+    state: string
+  ): Promise<{ tokenResponse: OAuthTokenResponse; userInfo: OAuthUserInfo }> {
+    const config = this.oauthConfigs.get(service);
+    if (!config) {
+      throw new Error(`OAuth not configured for service: ${service}`);
+    }
+
+    try {
+      // Exchange code for token
+      const tokenResponse = await fetch(config.tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        body: new URLSearchParams({
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          code: code,
+          grant_type: 'authorization_code',
+          redirect_uri: config.redirectUri
+        })
+      });
+
+      if (!tokenResponse.ok) {
+        throw new Error(`OAuth token exchange failed: ${tokenResponse.statusText}`);
+      }
+
+      const tokenData: OAuthTokenResponse = await tokenResponse.json();
+
+      // Get user info
+      const userInfoResponse = await fetch(config.userInfoUrl!, {
+        headers: {
+          'Authorization': `Bearer ${tokenData.access_token}`,
+          'Accept': 'application/json',
+          'User-Agent': 'Careerate-Integration-Service'
+        }
+      });
+
+      if (!userInfoResponse.ok) {
+        throw new Error(`Failed to get user info: ${userInfoResponse.statusText}`);
+      }
+
+      const userData = await userInfoResponse.json();
+      const userInfo: OAuthUserInfo = {
+        id: userData.id.toString(),
+        email: userData.email,
+        name: userData.name,
+        username: userData.login || userData.username,
+        avatar_url: userData.avatar_url,
+        provider: service
+      };
+
+      return { tokenResponse: tokenData, userInfo };
+    } catch (error) {
+      throw new Error(`OAuth exchange failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create integration from OAuth flow
+   */
+  async createOAuthIntegration(
+    service: string,
+    tokenResponse: OAuthTokenResponse,
+    userInfo: OAuthUserInfo,
+    userId: string,
+    projectId?: string
+  ): Promise<{
+    integration: InsertIntegration;
+    secrets: InsertIntegrationSecret[];
+  }> {
+    const encryptedAccessToken = await secretsManager.encryptApiKey(
+      tokenResponse.access_token,
+      service,
+      'production'
+    );
+
+    const encryptedRefreshToken = tokenResponse.refresh_token ?
+      await secretsManager.encryptApiKey(
+        tokenResponse.refresh_token,
+        service,
+        'production'
+      ) : null;
+
+    const secrets: InsertIntegrationSecret[] = [
+      {
+        integrationId: '', // Will be set after integration creation
+        secretType: 'oauth-token',
+        secretName: 'access_token',
+        encryptedValue: encryptedAccessToken.encryptedValue,
+        encryptionAlgorithm: encryptedAccessToken.algorithm,
+        keyId: encryptedAccessToken.keyId,
+        environment: 'production',
+        scope: tokenResponse.scope ? tokenResponse.scope.split(' ') : [],
+        metadata: {
+          provider: service,
+          userInfo: userInfo,
+          tokenType: tokenResponse.token_type,
+          expiresAt: tokenResponse.expires_in ?
+            new Date(Date.now() + tokenResponse.expires_in * 1000).toISOString() : null
+        }
+      }
+    ];
+
+    if (encryptedRefreshToken) {
+      secrets.push({
+        integrationId: '',
+        secretType: 'oauth-token',
+        secretName: 'refresh_token',
+        encryptedValue: encryptedRefreshToken.encryptedValue,
+        encryptionAlgorithm: encryptedRefreshToken.algorithm,
+        keyId: encryptedRefreshToken.keyId,
+        environment: 'production',
+        metadata: {
+          provider: service,
+          refreshToken: true
+        }
+      });
+    }
+
+    const integration: InsertIntegration = {
+      userId,
+      projectId,
+      name: `${userInfo.name || userInfo.username}'s ${service} Account`,
+      type: this.getServiceType(service),
+      service: service,
+      category: this.categorizeService(service),
+      connectionType: 'oauth',
+      configuration: {
+        userInfo: userInfo,
+        connectedAt: new Date().toISOString(),
+        scopes: tokenResponse.scope?.split(' ') || []
+      },
+      endpoints: this.getServiceEndpoints(service),
+      permissions: tokenResponse.scope ? tokenResponse.scope.split(' ') : [],
+      rateLimits: {},
+      healthCheck: {
+        enabled: true,
+        interval: 300,
+        timeout: 30,
+        retries: 3
+      },
+      isEnabled: true,
+      autoRotate: false,
+      metadata: {
+        oauthUser: userInfo,
+        connectedBy: userId,
+        connectedAt: new Date().toISOString(),
+        version: '1.0'
+      }
+    };
+
+    return { integration, secrets };
+  }
+
   /**
    * Tests connection to external service
    */
@@ -811,6 +1072,238 @@ export class IntegrationService {
     };
 
     return connectionTypes[service] || 'api-key';
+  }
+
+  private getServiceType(service: string): string {
+    const serviceTypes: Record<string, string> = {
+      'github': 'repository',
+      'gitlab': 'repository',
+      'aws': 'cloud-provider',
+      'azure': 'cloud-provider',
+      'gcp': 'cloud-provider',
+      'stripe': 'payment',
+      'twilio': 'communication',
+      'sendgrid': 'communication'
+    };
+
+    return serviceTypes[service] || 'api';
+  }
+
+  private getServiceEndpoints(service: string): Record<string, string> {
+    const endpoints: Record<string, Record<string, string>> = {
+      'github': {
+        api: 'https://api.github.com',
+        repos: 'https://api.github.com/repos',
+        user: 'https://api.github.com/user'
+      },
+      'gitlab': {
+        api: 'https://gitlab.com/api/v4',
+        repos: 'https://gitlab.com/api/v4/projects',
+        user: 'https://gitlab.com/api/v4/user'
+      },
+      'aws': {
+        api: 'https://ec2.amazonaws.com',
+        s3: 'https://s3.amazonaws.com'
+      },
+      'azure': {
+        api: 'https://management.azure.com',
+        graph: 'https://graph.microsoft.com'
+      }
+    };
+
+    return endpoints[service] || {};
+  }
+
+  /**
+   * Get available OAuth providers
+   */
+  getAvailableOAuthProviders(): Array<{ service: string; name: string; description: string }> {
+    return [
+      {
+        service: 'github',
+        name: 'GitHub',
+        description: 'Connect your GitHub account to manage repositories and deploy code'
+      },
+      {
+        service: 'gitlab',
+        name: 'GitLab',
+        description: 'Connect your GitLab account for repository management and CI/CD'
+      }
+    ];
+  }
+
+  /**
+   * Refresh OAuth token
+   */
+  async refreshOAuthToken(
+    integration: Integration & { secrets?: IntegrationSecret[] }
+  ): Promise<boolean> {
+    const refreshTokenSecret = integration.secrets?.find(s =>
+      s.secretName === 'refresh_token' && s.secretType === 'oauth-token'
+    );
+
+    if (!refreshTokenSecret) {
+      throw new Error('No refresh token available');
+    }
+
+    const config = this.oauthConfigs.get(integration.service);
+    if (!config) {
+      throw new Error(`OAuth not configured for service: ${integration.service}`);
+    }
+
+    try {
+      const refreshToken = await encryptionService.decrypt(refreshTokenSecret, 'production');
+
+      const response = await fetch(config.tokenUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
+        },
+        body: new URLSearchParams({
+          client_id: config.clientId,
+          client_secret: config.clientSecret,
+          refresh_token: refreshToken,
+          grant_type: 'refresh_token'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Token refresh failed: ${response.statusText}`);
+      }
+
+      const tokenData: OAuthTokenResponse = await response.json();
+
+      // Update the access token
+      const accessTokenSecret = integration.secrets?.find(s =>
+        s.secretName === 'access_token' && s.secretType === 'oauth-token'
+      );
+
+      if (accessTokenSecret) {
+        const encryptedAccessToken = await secretsManager.encryptApiKey(
+          tokenData.access_token,
+          integration.service,
+          'production'
+        );
+
+        await storage.updateIntegrationSecret(accessTokenSecret.id, {
+          encryptedValue: encryptedAccessToken.encryptedValue,
+          metadata: {
+            ...accessTokenSecret.metadata,
+            expiresAt: tokenData.expires_in ?
+              new Date(Date.now() + tokenData.expires_in * 1000).toISOString() : null
+          }
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Failed to refresh token for ${integration.service}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Account Management - Get connected accounts
+   */
+  async getConnectedAccounts(userId: string): Promise<Array<{
+    integration: Integration;
+    accountInfo: OAuthUserInfo;
+    repositories?: any[];
+    status: string;
+  }>> {
+    const integrations = await storage.getUserIntegrations(userId);
+    const oauthIntegrations = integrations.filter(i => i.connectionType === 'oauth');
+
+    const connectedAccounts = [];
+
+    for (const integration of oauthIntegrations) {
+      try {
+        const secrets = await storage.getIntegrationSecrets(integration.id);
+        const accessTokenSecret = secrets.find(s => s.secretName === 'access_token');
+
+        if (accessTokenSecret) {
+          const accountInfo = integration.configuration?.userInfo as OAuthUserInfo;
+
+          // Get additional account data based on service
+          let repositories = [];
+          if (integration.service === 'github' || integration.service === 'gitlab') {
+            repositories = await this.getUserRepositories(integration, secrets);
+          }
+
+          connectedAccounts.push({
+            integration,
+            accountInfo,
+            repositories,
+            status: integration.status
+          });
+        }
+      } catch (error) {
+        console.error(`Failed to get account info for ${integration.service}:`, error);
+      }
+    }
+
+    return connectedAccounts;
+  }
+
+  private async getUserRepositories(
+    integration: Integration,
+    secrets: IntegrationSecret[]
+  ): Promise<any[]> {
+    const accessTokenSecret = secrets.find(s => s.secretName === 'access_token');
+    if (!accessTokenSecret) return [];
+
+    try {
+      const token = await encryptionService.decrypt(accessTokenSecret, 'production');
+      const baseUrl = integration.endpoints?.api;
+
+      if (integration.service === 'github') {
+        const response = await fetch(`${baseUrl}/user/repos?type=owner&per_page=20`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'Careerate-Integration-Service'
+          }
+        });
+
+        if (response.ok) {
+          const repos = await response.json();
+          return repos.map((repo: any) => ({
+            id: repo.id,
+            name: repo.name,
+            full_name: repo.full_name,
+            description: repo.description,
+            private: repo.private,
+            url: repo.html_url,
+            clone_url: repo.clone_url
+          }));
+        }
+      } else if (integration.service === 'gitlab') {
+        const response = await fetch(`${baseUrl}/projects?owned=true&per_page=20`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'User-Agent': 'Careerate-Integration-Service'
+          }
+        });
+
+        if (response.ok) {
+          const repos = await response.json();
+          return repos.map((repo: any) => ({
+            id: repo.id,
+            name: repo.name,
+            full_name: repo.path_with_namespace,
+            description: repo.description,
+            private: !repo.public,
+            url: repo.web_url,
+            clone_url: repo.http_url_to_repo
+          }));
+        }
+      }
+    } catch (error) {
+      console.error(`Failed to get repositories for ${integration.service}:`, error);
+    }
+
+    return [];
   }
 }
 

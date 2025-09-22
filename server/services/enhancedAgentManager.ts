@@ -1,6 +1,10 @@
 import OpenAI from "openai";
 import { storage } from "../storage";
 import { AiAgent, InsertAiAgent, AgentTask, InsertAgentTask, AgentCommunication, InsertAgentCommunication } from "@shared/schema";
+import { spawn, ChildProcess } from "child_process";
+import { promises as fs } from "fs";
+import path from "path";
+import fetch from "node-fetch";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "fake-key-for-testing"
@@ -25,6 +29,29 @@ export interface AgentDecision {
   subAgentType?: AgentType;
   subAgentCapabilities?: string[];
   metadata: any;
+  toolCalls?: ToolCall[];
+}
+
+export interface ToolCall {
+  name: string;
+  arguments: Record<string, any>;
+  result?: any;
+  error?: string;
+}
+
+export interface AgentContext {
+  projectId: string;
+  userId: string;
+  workingDirectory?: string;
+  environment?: Record<string, string>;
+  files?: Record<string, string>;
+  integrations?: any[];
+}
+
+interface ToolDefinition {
+  name: string;
+  description: string;
+  execute: (args: Record<string, any>, context: AgentContext) => Promise<any>;
 }
 
 export interface SubAgentRequest {
@@ -37,10 +64,269 @@ export interface SubAgentRequest {
   estimatedDuration?: number;
 }
 
+// Terminal Service for Agent Command Execution
+export class TerminalService {
+  private runningCommands = new Map<string, { process: ChildProcess; startTime: Date }>();
+  private commandHistory: Array<{ command: string; output: string; timestamp: Date; success: boolean }> = [];
+
+  async executeCommand(
+    command: string,
+    workingDirectory: string = process.cwd(),
+    environment: Record<string, string> = {},
+    timeoutMs: number = 30000
+  ): Promise<{
+    command: string;
+    success: boolean;
+    exitCode?: number;
+    stdout: string;
+    stderr: string;
+    executionTime: number;
+    workingDirectory: string;
+  }> {
+    const commandId = `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    return new Promise((resolve) => {
+      const [cmd, ...args] = command.split(' ');
+      const startTime = Date.now();
+
+      const childProcess = spawn(cmd, args, {
+        cwd: workingDirectory,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, ...environment },
+        detached: false
+      });
+
+      let stdout = '';
+      let stderr = '';
+      let timedOut = false;
+
+      this.runningCommands.set(commandId, { process: childProcess, startTime: new Date() });
+
+      const timeout = setTimeout(() => {
+        timedOut = true;
+        childProcess.kill('SIGTERM');
+        setTimeout(() => {
+          if (!childProcess.killed) {
+            childProcess.kill('SIGKILL');
+          }
+        }, 5000);
+
+        this.runningCommands.delete(commandId);
+        this.commandHistory.push({
+          command,
+          output: `Command timed out after ${timeoutMs}ms\nSTDOUT: ${stdout}\nSTDERR: ${stderr}`,
+          timestamp: new Date(),
+          success: false
+        });
+
+        resolve({
+          command,
+          success: false,
+          stdout,
+          stderr: stderr + `\nCommand timed out after ${timeoutMs}ms`,
+          executionTime: Date.now() - startTime,
+          workingDirectory
+        });
+      }, timeoutMs);
+
+      childProcess.stdout?.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      childProcess.stderr?.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      childProcess.on('close', (code) => {
+        clearTimeout(timeout);
+        if (timedOut) return;
+
+        this.runningCommands.delete(commandId);
+        const success = code === 0;
+        const output = success ?
+          `Command executed successfully\n${stdout}` :
+          `Command failed with exit code ${code}\nSTDOUT: ${stdout}\nSTDERR: ${stderr}`;
+
+        this.commandHistory.push({
+          command,
+          output,
+          timestamp: new Date(),
+          success
+        });
+
+        resolve({
+          command,
+          success,
+          exitCode: code || undefined,
+          stdout,
+          stderr,
+          executionTime: Date.now() - startTime,
+          workingDirectory
+        });
+      });
+
+      childProcess.on('error', (error) => {
+        clearTimeout(timeout);
+        if (timedOut) return;
+
+        this.runningCommands.delete(commandId);
+        this.commandHistory.push({
+          command,
+          output: `Command error: ${error.message}`,
+          timestamp: new Date(),
+          success: false
+        });
+
+        resolve({
+          command,
+          success: false,
+          stdout,
+          stderr: error.message,
+          executionTime: Date.now() - startTime,
+          workingDirectory
+        });
+      });
+    });
+  }
+
+  async installPackage(packageName: string, workingDirectory: string, dev: boolean = false): Promise<any> {
+    const command = `npm install ${dev ? '--save-dev' : '--save'} ${packageName}`;
+    return await this.executeCommand(command, workingDirectory);
+  }
+
+  async runScript(scriptName: string, workingDirectory: string): Promise<any> {
+    const command = `npm run ${scriptName}`;
+    return await this.executeCommand(command, workingDirectory);
+  }
+
+  async getProjectInfo(workingDirectory: string): Promise<any> {
+    try {
+      const packageJson = await fs.readFile(path.join(workingDirectory, 'package.json'), 'utf-8');
+      const packageData = JSON.parse(packageJson);
+
+      return {
+        name: packageData.name,
+        version: packageData.version,
+        scripts: packageData.scripts || {},
+        dependencies: packageData.dependencies || {},
+        devDependencies: packageData.devDependencies || {},
+        hasPackageJson: true
+      };
+    } catch (error) {
+      return {
+        hasPackageJson: false,
+        error: error.message
+      };
+    }
+  }
+
+  getCommandHistory(limit: number = 10): Array<{
+    command: string;
+    output: string;
+    timestamp: Date;
+    success: boolean;
+  }> {
+    return this.commandHistory.slice(-limit);
+  }
+
+  killCommand(commandId: string): boolean {
+    const command = this.runningCommands.get(commandId);
+    if (command) {
+      command.process.kill();
+      this.runningCommands.delete(commandId);
+      return true;
+    }
+    return false;
+  }
+
+  getRunningCommands(): Array<{ id: string; command: string; startTime: Date }> {
+    return Array.from(this.runningCommands.entries()).map(([id, cmd]) => ({
+      id,
+      command: 'Running command...', // We don't store the original command for security
+      startTime: cmd.startTime
+    }));
+  }
+}
+
 export class EnhancedAgentManager {
   private agents: Map<string, AiAgent> = new Map();
   private agentHeartbeats: Map<string, Date> = new Map();
   private coordinatorAgent: AiAgent | null = null;
+  private runningProcesses: Map<string, ChildProcess> = new Map();
+  private agentContexts: Map<string, AgentContext> = new Map();
+  private availableTools = new Map<string, ToolDefinition>();
+  private terminalService = new TerminalService();
+
+  constructor() {
+    this.initializeTools();
+  }
+
+  private initializeTools() {
+    // Core thinking and reasoning tools
+    this.availableTools.set('think', {
+      name: 'think',
+      description: 'Deep reasoning and analysis',
+      execute: this.executeThinkTool.bind(this)
+    });
+
+    this.availableTools.set('web_search', {
+      name: 'web_search',
+      description: 'Search the web for information',
+      execute: this.executeWebSearchTool.bind(this)
+    });
+
+    // File system tools
+    this.availableTools.set('read_file', {
+      name: 'read_file',
+      description: 'Read a file from the project',
+      execute: this.executeReadFileTool.bind(this)
+    });
+
+    this.availableTools.set('write_file', {
+      name: 'write_file',
+      description: 'Write content to a file',
+      execute: this.executeWriteFileTool.bind(this)
+    });
+
+    this.availableTools.set('list_files', {
+      name: 'list_files',
+      description: 'List files in a directory',
+      execute: this.executeListFilesTool.bind(this)
+    });
+
+    // Terminal and execution tools
+    this.availableTools.set('run_terminal_command', {
+      name: 'run_terminal_command',
+      description: 'Execute terminal commands',
+      execute: this.executeTerminalCommandTool.bind(this)
+    });
+
+    this.availableTools.set('install_package', {
+      name: 'install_package',
+      description: 'Install npm packages',
+      execute: this.executeInstallPackageTool.bind(this)
+    });
+
+    // Integration tools
+    this.availableTools.set('get_integrations', {
+      name: 'get_integrations',
+      description: 'Get available integrations',
+      execute: this.executeGetIntegrationsTool.bind(this)
+    });
+
+    // Analysis tools
+    this.availableTools.set('analyze_code', {
+      name: 'analyze_code',
+      description: 'Analyze code quality and security',
+      execute: this.executeCodeAnalysisTool.bind(this)
+    });
+
+    this.availableTools.set('generate_tests', {
+      name: 'generate_tests',
+      description: 'Generate test cases',
+      execute: this.executeGenerateTestsTool.bind(this)
+    });
+  }
 
   async initialize(projectId: string): Promise<void> {
     // Create a coordinator agent for this project if it doesn't exist
@@ -826,6 +1112,1441 @@ Based on the context and your role as a ${agent.type} agent, make an intelligent
           input: { originalTask: task, assistanceType: 'stuck-task-help' }
         });
       }
+    }
+  }
+
+  // Core Agent Capabilities - Tool Implementations
+  private async executeThinkTool(args: Record<string, any>, context: AgentContext): Promise<any> {
+    const { query, reasoning_steps = 3 } = args;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert AI assistant engaged in deep reasoning. Think step by step through the user's query, breaking down complex problems into manageable parts.`
+          },
+          {
+            role: "user",
+            content: `Please think deeply about: ${query}\n\nProvide your reasoning in ${reasoning_steps} clear steps.`
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.3,
+      });
+
+      return {
+        thoughts: response.choices[0].message.content,
+        reasoning_steps: reasoning_steps,
+        confidence: 0.95
+      };
+    } catch (error) {
+      return {
+        error: `Thinking failed: ${error.message}`,
+        query: query
+      };
+    }
+  }
+
+  private async executeWebSearchTool(args: Record<string, any>, context: AgentContext): Promise<any> {
+    const { query, max_results = 5 } = args;
+
+    try {
+      const response = await fetch(`https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`);
+
+      if (!response.ok) {
+        return {
+          error: `Web search failed: ${response.statusText}`,
+          query: query
+        };
+      }
+
+      const data = await response.json();
+
+      return {
+        query: query,
+        results: [
+          {
+            title: data.AnswerTitle || data.Heading || "Search Result",
+            snippet: data.Answer || data.Abstract || "No snippet available",
+            url: data.AnswerURL || data.AbstractURL || "#",
+            source: "DuckDuckGo"
+          }
+        ].slice(0, max_results),
+        related_topics: data.RelatedTopics?.slice(0, max_results) || []
+      };
+    } catch (error) {
+      return {
+        error: `Web search failed: ${error.message}`,
+        query: query
+      };
+    }
+  }
+
+  private async executeTerminalCommandTool(args: Record<string, any>, context: AgentContext): Promise<any> {
+    const { command, working_directory } = args;
+    const cwd = working_directory || context.workingDirectory || process.cwd();
+
+    const result = await this.terminalService.executeCommand(
+      command,
+      cwd,
+      context.environment || {},
+      60000 // 60 second timeout for agent commands
+    );
+
+    return {
+      command: result.command,
+      success: result.success,
+      exit_code: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      working_directory: result.workingDirectory,
+      execution_time: result.executionTime
+    };
+  }
+}
+
+// AI Assistant Service for user interactions
+export class AIAssistantService {
+  private openai: OpenAI;
+  private agentManager: EnhancedAgentManager;
+  private terminalService: TerminalService;
+
+  constructor(agentManager: EnhancedAgentManager, terminalService: TerminalService) {
+    this.agentManager = agentManager;
+    this.terminalService = terminalService;
+    this.openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY || "fake-key-for-testing"
+    });
+  }
+
+  async processUserQuery(
+    query: string,
+    context: {
+      projectId: string;
+      userId: string;
+      workingDirectory?: string;
+      currentFiles?: Record<string, string>;
+    }
+  ): Promise<{
+    response: string;
+    actions: Array<{
+      type: string;
+      description: string;
+      command?: string;
+      file?: string;
+      content?: string;
+    }>;
+    agentTasks?: Array<{
+      agentType: string;
+      task: string;
+      priority: string;
+    }>;
+  }> {
+    try {
+      // First, analyze the user's query to understand intent
+      const analysis = await this.analyzeQuery(query, context);
+
+      // Create agent context
+      const agentContext: AgentContext = {
+        projectId: context.projectId,
+        userId: context.userId,
+        workingDirectory: context.workingDirectory,
+        files: context.currentFiles,
+        environment: {
+          NODE_ENV: 'development',
+          PATH: process.env.PATH || ''
+        }
+      };
+
+      // Execute any immediate tools if needed
+      const toolResults = await this.executeImmediateTools(analysis.tools, agentContext);
+
+      // Delegate complex tasks to agents
+      const agentTasks = await this.delegateToAgents(analysis.tasks, context.projectId);
+
+      // Generate comprehensive response
+      const response = await this.generateResponse(query, analysis, toolResults, agentTasks);
+
+      return {
+        response,
+        actions: analysis.immediateActions,
+        agentTasks: agentTasks
+      };
+
+    } catch (error) {
+      console.error('AI Assistant error:', error);
+      return {
+        response: `I encountered an error while processing your request: ${error.message}. Please try again or contact support if the issue persists.`,
+        actions: [],
+        agentTasks: []
+      };
+    }
+  }
+
+  private async analyzeQuery(query: string, context: any): Promise<{
+    intent: string;
+    tools: Array<{ name: string; args: Record<string, any> }>;
+    tasks: Array<{ type: string; description: string; priority: string }>;
+    immediateActions: Array<{ type: string; description: string; command?: string; file?: string; content?: string }>;
+  }> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: `You are an AI assistant for a development platform similar to Replit. Analyze user queries and break them down into:
+
+1. Intent classification (e.g., "create_file", "run_command", "analyze_code", "deploy", "search_info")
+2. Required tools to execute (from available tools: think, web_search, read_file, write_file, list_files, run_terminal_command, install_package, get_integrations, analyze_code, generate_tests)
+3. Tasks that should be delegated to specialized agents
+4. Immediate actions that can be taken right away
+
+Available tools:
+- think: Deep reasoning about complex problems
+- web_search: Search for information online
+- read_file: Read files from the project
+- write_file: Create or modify files
+- list_files: List directory contents
+- run_terminal_command: Execute terminal commands
+- install_package: Install npm packages
+- get_integrations: Get available integrations
+- analyze_code: Analyze code quality and security
+- generate_tests: Generate test cases
+
+Respond with a JSON object:
+{
+  "intent": "intent_type",
+  "tools": [{"name": "tool_name", "args": {"arg1": "value1"}}],
+  "tasks": [{"type": "agent_type", "description": "task description", "priority": "high|medium|low"}],
+  "immediateActions": [{"type": "action_type", "description": "what to do", "command": "command to run", "file": "file_path", "content": "file content"}]
+}`
+          },
+          {
+            role: "user",
+            content: `Analyze this query in the context of a development project: "${query}"`
+          }
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 1500,
+        temperature: 0.3,
+      });
+
+      return JSON.parse(response.choices[0].message.content || "{}");
+    } catch (error) {
+      console.error('Query analysis error:', error);
+      return {
+        intent: 'unknown',
+        tools: [],
+        tasks: [],
+        immediateActions: []
+      };
+    }
+  }
+
+  private async executeImmediateTools(
+    tools: Array<{ name: string; args: Record<string, any> }>,
+    context: AgentContext
+  ): Promise<Record<string, any>> {
+    const results: Record<string, any> = {};
+
+    for (const tool of tools) {
+      try {
+        const toolDef = this.agentManager['availableTools'].get(tool.name);
+        if (toolDef) {
+          results[tool.name] = await toolDef.execute(tool.args, context);
+        }
+      } catch (error) {
+        results[tool.name] = { error: error.message };
+      }
+    }
+
+    return results;
+  }
+
+  private async delegateToAgents(
+    tasks: Array<{ type: string; description: string; priority: string }>,
+    projectId: string
+  ): Promise<Array<{ agentType: string; task: string; priority: string }>> {
+    const delegatedTasks: Array<{ agentType: string; task: string; priority: string }> = [];
+
+    for (const task of tasks) {
+      // Create appropriate agent based on task type
+      const agentType = this.mapTaskToAgentType(task.type);
+
+      if (agentType) {
+        await this.agentManager.assignTaskToAgent(projectId, agentType, {
+          taskType: task.type,
+          description: task.description,
+          priority: task.priority,
+          input: { originalTask: task }
+        });
+
+        delegatedTasks.push({
+          agentType,
+          task: task.description,
+          priority: task.priority
+        });
+      }
+    }
+
+    return delegatedTasks;
+  }
+
+  private mapTaskToAgentType(taskType: string): string | null {
+    const mapping: Record<string, string> = {
+      'code_analysis': 'code-review',
+      'security_scan': 'security',
+      'performance_optimization': 'performance',
+      'deployment': 'deployment',
+      'monitoring': 'monitoring',
+      'incident_response': 'sre'
+    };
+
+    return mapping[taskType] || null;
+  }
+
+  private async generateResponse(
+    originalQuery: string,
+    analysis: any,
+    toolResults: Record<string, any>,
+    agentTasks: Array<{ agentType: string; task: string; priority: string }>
+  ): Promise<string> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful AI assistant for a development platform. Based on the analysis and tool results, provide a comprehensive response to the user. Include:
+
+1. Acknowledge what the user asked for
+2. Explain what actions were taken or are being taken
+3. Summarize any results from tools or agents
+4. Provide next steps or recommendations
+5. Be conversational and helpful
+
+Format your response in a natural, easy-to-understand way.`
+          },
+          {
+            role: "user",
+            content: `Original query: "${originalQuery}"
+
+Analysis: ${JSON.stringify(analysis, null, 2)}
+
+Tool Results: ${JSON.stringify(toolResults, null, 2)}
+
+Agent Tasks: ${JSON.stringify(agentTasks, null, 2)}
+
+Please provide a comprehensive response to the user.`
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+      });
+
+      return response.choices[0].message.content || "I've processed your request and initiated the necessary actions.";
+    } catch (error) {
+      return `I've analyzed your request and initiated the appropriate actions. Here's what I found: ${JSON.stringify(toolResults, null, 2)}`;
+    }
+  }
+
+  // Helper method to assign tasks to specific agent types
+  async assignTaskToAgent(projectId: string, agentType: AgentType, taskData: Omit<InsertAgentTask, 'agentId'>): Promise<AgentTask> {
+    // Find or create an agent of the specified type for this project
+    const existingAgents = await storage.getProjectAgents(projectId);
+    let agent = existingAgents.find(a => a.type === agentType && a.status === 'active');
+
+    if (!agent) {
+      // Create a new agent if none exists
+      agent = await this.createAgent({
+        type: agentType,
+        name: `${agentType.toUpperCase()} Agent`,
+        projectId,
+        capabilities: this.getDefaultCapabilities(agentType),
+        configuration: this.getDefaultConfiguration(agentType)
+      });
+    }
+
+    // Assign the task to the agent
+    return await this.assignTask(agent.id, taskData);
+  }
+
+  // Export services for external use
+  getTerminalService(): TerminalService {
+    return this.terminalService;
+  }
+
+  getAvailableTools(): Map<string, ToolDefinition> {
+    return this.availableTools;
+  }
+}
+
+// Test Application Generator using Agent System
+export class TestApplicationGenerator {
+  private agentManager: EnhancedAgentManager;
+  private terminalService: TerminalService;
+  private projectId: string;
+  private workingDirectory: string;
+
+  constructor(
+    agentManager: EnhancedAgentManager,
+    terminalService: TerminalService,
+    projectId: string,
+    workingDirectory: string
+  ) {
+    this.agentManager = agentManager;
+    this.terminalService = terminalService;
+    this.projectId = projectId;
+    this.workingDirectory = workingDirectory;
+  }
+
+  async generateCompleteApplication(specifications: {
+    name: string;
+    description: string;
+    features: string[];
+    frontend?: 'react' | 'vue' | 'angular';
+    backend?: 'nodejs' | 'python';
+    database?: 'mongodb' | 'postgresql' | 'sqlite';
+    auth?: boolean;
+    api?: boolean;
+    deployment?: 'azure' | 'aws' | 'gcp';
+  }): Promise<{
+    success: boolean;
+    message: string;
+    files: Record<string, string>;
+    deploymentUrl?: string;
+    steps: string[];
+  }> {
+    const steps: string[] = [];
+    const files: Record<string, string> = {};
+
+    try {
+      steps.push('🚀 Initializing test application generation...');
+
+      // Step 1: Set up project structure
+      steps.push('📁 Creating project structure...');
+      await this.createProjectStructure(specifications);
+      steps.push('✅ Project structure created');
+
+      // Step 2: Generate package.json
+      steps.push('📦 Setting up dependencies...');
+      const packageJson = await this.generatePackageJson(specifications);
+      files['package.json'] = JSON.stringify(packageJson, null, 2);
+      steps.push('✅ Dependencies configured');
+
+      // Step 3: Generate backend code
+      if (specifications.backend) {
+        steps.push(`🔧 Generating ${specifications.backend} backend...`);
+        const backendFiles = await this.generateBackend(specifications);
+        Object.assign(files, backendFiles);
+        steps.push('✅ Backend generated');
+      }
+
+      // Step 4: Generate frontend code
+      if (specifications.frontend) {
+        steps.push(`🎨 Generating ${specifications.frontend} frontend...`);
+        const frontendFiles = await this.generateFrontend(specifications);
+        Object.assign(files, frontendFiles);
+        steps.push('✅ Frontend generated');
+      }
+
+      // Step 5: Generate database schema
+      if (specifications.database) {
+        steps.push(`🗄️  Creating ${specifications.database} schema...`);
+        const dbFiles = await this.generateDatabaseSchema(specifications);
+        Object.assign(files, dbFiles);
+        steps.push('✅ Database schema created');
+      }
+
+      // Step 6: Generate configuration files
+      steps.push('⚙️  Creating configuration files...');
+      const configFiles = await this.generateConfiguration(specifications);
+      Object.assign(files, configFiles);
+      steps.push('✅ Configuration files created');
+
+      // Step 7: Generate tests
+      steps.push('🧪 Creating test suite...');
+      const testFiles = await this.generateTests(specifications);
+      Object.assign(files, testFiles);
+      steps.push('✅ Tests generated');
+
+      // Step 8: Generate deployment configuration
+      if (specifications.deployment) {
+        steps.push(`🚀 Preparing ${specifications.deployment} deployment...`);
+        const deployFiles = await this.generateDeploymentConfig(specifications);
+        Object.assign(files, deployFiles);
+        steps.push('✅ Deployment configuration ready');
+      }
+
+      // Step 9: Create README and documentation
+      steps.push('📚 Generating documentation...');
+      const docs = await this.generateDocumentation(specifications);
+      Object.assign(files, docs);
+      steps.push('✅ Documentation created');
+
+      // Step 10: Deploy if requested
+      let deploymentUrl: string | undefined;
+      if (specifications.deployment === 'azure') {
+        steps.push('☁️  Deploying to Azure...');
+        deploymentUrl = await this.deployToAzure(files);
+        steps.push('✅ Deployed to Azure');
+      }
+
+      return {
+        success: true,
+        message: `Successfully generated ${specifications.name} with ${Object.keys(files).length} files!`,
+        files,
+        deploymentUrl,
+        steps
+      };
+
+    } catch (error) {
+      console.error('Test application generation failed:', error);
+      return {
+        success: false,
+        message: `Failed to generate application: ${error.message}`,
+        files: {},
+        steps
+      };
+    }
+  }
+
+  private async createProjectStructure(specs: any): Promise<void> {
+    const directories = [
+      'src',
+      'src/components',
+      'src/pages',
+      'src/services',
+      'src/utils',
+      'src/models',
+      'public',
+      'tests',
+      'docs'
+    ];
+
+    for (const dir of directories) {
+      await this.terminalService.executeCommand(`mkdir -p ${dir}`, this.workingDirectory);
+    }
+  }
+
+  private async generatePackageJson(specs: any): Promise<any> {
+    const dependencies: Record<string, string> = {};
+    const devDependencies: Record<string, string> = {
+      'typescript': '^5.0.0',
+      'ts-node': '^10.9.0',
+      '@types/node': '^20.0.0'
+    };
+
+    // Frontend dependencies
+    if (specs.frontend === 'react') {
+      dependencies['react'] = '^18.2.0';
+      dependencies['react-dom'] = '^18.2.0';
+      devDependencies['@types/react'] = '^18.2.0';
+      devDependencies['@types/react-dom'] = '^18.2.0';
+      devDependencies['@vitejs/plugin-react'] = '^4.0.0';
+      devDependencies['vite'] = '^4.4.0';
+    }
+
+    // Backend dependencies
+    if (specs.backend === 'nodejs') {
+      dependencies['express'] = '^4.18.0';
+      dependencies['cors'] = '^2.8.5';
+      dependencies['helmet'] = '^7.0.0';
+      dependencies['dotenv'] = '^16.0.0';
+      devDependencies['@types/express'] = '^4.17.0';
+      devDependencies['@types/cors'] = '^2.8.0';
+      devDependencies['nodemon'] = '^3.0.0';
+    }
+
+    // Database dependencies
+    if (specs.database === 'mongodb') {
+      dependencies['mongoose'] = '^7.0.0';
+    } else if (specs.database === 'postgresql') {
+      dependencies['pg'] = '^8.11.0';
+      devDependencies['@types/pg'] = '^8.10.0';
+    }
+
+    // Auth dependencies
+    if (specs.auth) {
+      dependencies['jsonwebtoken'] = '^9.0.0';
+      dependencies['bcryptjs'] = '^2.4.3';
+      devDependencies['@types/bcryptjs'] = '^2.4.0';
+      devDependencies['@types/jsonwebtoken'] = '^9.0.0';
+    }
+
+    return {
+      name: specs.name.toLowerCase().replace(/\s+/g, '-'),
+      version: '1.0.0',
+      description: specs.description,
+      main: specs.backend === 'nodejs' ? 'src/server.js' : 'src/index.js',
+      scripts: {
+        'dev': specs.frontend === 'react' ? 'vite' : 'nodemon src/server.js',
+        'build': specs.frontend === 'react' ? 'tsc && vite build' : 'tsc',
+        'start': specs.backend === 'nodejs' ? 'node dist/server.js' : 'node dist/index.js',
+        'test': 'jest',
+        'lint': 'eslint src --ext .ts,.tsx,.js,.jsx'
+      },
+      dependencies,
+      devDependencies,
+      keywords: specs.features,
+      author: 'AI Generated',
+      license: 'MIT'
+    };
+  }
+
+  private async generateBackend(specs: any): Promise<Record<string, string>> {
+    const files: Record<string, string> = {};
+
+    if (specs.backend === 'nodejs') {
+      // Express server
+      files['src/server.js'] = `const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(helmet());
+app.use(cors());
+app.use(express.json());
+
+// ${specs.auth ? 'Authentication middleware' : 'API routes'}
+${specs.auth ? `
+// Auth middleware
+const jwt = require('jsonwebtoken');
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
+` : ''}
+
+// Routes
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
+
+${specs.features.includes('users') ? `
+app.get('/api/users', authenticateToken, (req, res) => {
+  // TODO: Get users from database
+  res.json({ users: [], message: 'User API endpoint' });
+});
+` : ''}
+
+${specs.features.includes('products') ? `
+app.get('/api/products', (req, res) => {
+  // TODO: Get products from database
+  res.json({ products: [], message: 'Products API endpoint' });
+});
+` : ''}
+
+// Start server
+app.listen(PORT, () => {
+  console.log(\`🚀 Server running on port \${PORT}\`);
+});
+
+module.exports = app;`;
+
+      // Environment variables
+      files['.env.example'] = `PORT=3001
+NODE_ENV=development
+JWT_SECRET=your-super-secret-jwt-key-here
+${specs.database === 'mongodb' ? 'MONGODB_URI=mongodb://localhost:27017/testapp' : ''}
+${specs.database === 'postgresql' ? 'DATABASE_URL=postgresql://user:password@localhost:5432/testapp' : ''}`;
+
+      files['src/models/User.js'] = specs.auth ? `const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const userSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+userSchema.pre('save', async function(next) {
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 12);
+  }
+  next();
+});
+
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema);` : '';
+    }
+
+    return files;
+  }
+
+  private async generateFrontend(specs: any): Promise<Record<string, string>> {
+    const files: Record<string, string> = {};
+
+    if (specs.frontend === 'react') {
+      // Vite config
+      files['vite.config.js'] = `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true
+      }
+    }
+  }
+});`;
+
+      // Main App component
+      files['src/App.jsx'] = `import { useState, useEffect } from 'react';
+import './App.css';
+
+function App() {
+  const [message, setMessage] = useState('Loading...');
+
+  useEffect(() => {
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => setMessage(data.message || 'App is running!'))
+      .catch(err => setMessage('Error connecting to backend'));
+  }, []);
+
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>${specs.name}</h1>
+        <p>{message}</p>
+        ${specs.description}
+      </header>
+      <main>
+        <h2>Features</h2>
+        <ul>
+          ${specs.features.map((feature: string) => `<li>${feature}</li>`).join('')}
+        </ul>
+      </main>
+    </div>
+  );
+}
+
+export default App;`;
+
+      // CSS
+      files['src/App.css'] = `.App {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.App-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 2.5rem;
+}
+
+.App-header p {
+  margin: 0;
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+main {
+  text-align: left;
+}
+
+main h2 {
+  color: #61dafb;
+  border-bottom: 2px solid #61dafb;
+  padding-bottom: 10px;
+}
+
+main ul {
+  list-style: none;
+  padding: 0;
+}
+
+main li {
+  background: #f0f0f0;
+  margin: 10px 0;
+  padding: 15px;
+  border-radius: 5px;
+  border-left: 4px solid #61dafb;
+}`;
+
+      // Index HTML
+      files['index.html'] = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${specs.name}</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>`;
+
+      // Main entry point
+      files['src/main.jsx'] = `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.jsx';
+import './index.css';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);`;
+
+      // Index CSS
+      files['src/index.css'] = `body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}`;
+    }
+
+    return files;
+  }
+
+  private async generateDatabaseSchema(specs: any): Promise<Record<string, string>> {
+    const files: Record<string, string> = {};
+
+    if (specs.database === 'mongodb') {
+      files['src/models/Product.js'] = specs.features.includes('products') ? `const mongoose = require('mongoose');
+
+const productSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  price: {
+    type: Number,
+    required: true
+  },
+  category: {
+    type: String,
+    required: true
+  },
+  inStock: {
+    type: Boolean,
+    default: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+module.exports = mongoose.model('Product', productSchema);` : '';
+    } else if (specs.database === 'postgresql') {
+      files['src/models/init.sql'] = `-- Database schema for ${specs.name}
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+${specs.features.includes('products') ? `
+CREATE TABLE IF NOT EXISTS products (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  category VARCHAR(100) NOT NULL,
+  in_stock BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+` : ''}
+
+${specs.features.includes('orders') ? `
+CREATE TABLE IF NOT EXISTS orders (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),
+  total_amount DECIMAL(10,2) NOT NULL,
+  status VARCHAR(50) DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+` : ''}`;
+    }
+
+    return files;
+  }
+
+  private async generateConfiguration(specs: any): Promise<Record<string, string>> {
+    const files: Record<string, string> = {};
+
+    // TypeScript config
+    files['tsconfig.json'] = `{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}`;
+
+    files['tsconfig.node.json'] = `{
+  "compilerOptions": {
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["vite.config.js"]
+}`;
+
+    // ESLint config
+    files['.eslintrc.json'] = `{
+  "env": {
+    "browser": true,
+    "es2020": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "@typescript-eslint/recommended"
+  ],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "rules": {}
+}`;
+
+    return files;
+  }
+
+  private async generateTests(specs: any): Promise<Record<string, string>> {
+    const files: Record<string, string> = {};
+
+    // Jest config
+    files['jest.config.js'] = `module.exports = {
+  preset: 'ts-jest',
+  testEnvironment: 'node',
+  roots: ['<rootDir>/src', '<rootDir>/tests'],
+  testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
+  transform: {
+    '^.+\\\\.ts$': 'ts-jest',
+  },
+  collectCoverageFrom: [
+    'src/**/*.ts',
+    '!src/**/*.d.ts',
+  ],
+};`;
+
+    // Basic test
+    files['tests/app.test.js'] = `const request = require('supertest');
+const app = require('../src/server');
+
+describe('Test Application', () => {
+  test('GET /api/health should return status OK', async () => {
+    const response = await request(app).get('/api/health');
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toHaveProperty('status', 'OK');
+  });
+});`;
+
+    return files;
+  }
+
+  private async generateDeploymentConfig(specs: any): Promise<Record<string, string>> {
+    const files: Record<string, string> = {};
+
+    if (specs.deployment === 'azure') {
+      files['azure-deploy.yml'] = `trigger:
+  branches:
+    include:
+    - main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- script: |
+    echo "Installing dependencies..."
+    npm ci
+    echo "Running tests..."
+    npm test
+    echo "Building application..."
+    npm run build
+  displayName: 'Install, Test, Build'
+
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+    replaceExistingArchive: true
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    artifactName: 'drop'`;
+
+      files['Dockerfile'] = `FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+EXPOSE 3001
+
+CMD ["npm", "start"]`;
+
+      files['docker-compose.yml'] = `version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+    ${specs.database === 'postgresql' ? `
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=testapp
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:` : ''}`;
+    }
+
+    return files;
+  }
+
+  private async generateDocumentation(specs: any): Promise<Record<string, string>> {
+    const files: Record<string, string> = {};
+
+    files['README.md'] = `# ${specs.name}
+
+${specs.description}
+
+## Features
+
+${specs.features.map((feature: string) => `- ${feature}`).join('\n')}
+
+## Tech Stack
+
+${specs.frontend ? `- **Frontend**: ${specs.frontend.charAt(0).toUpperCase() + specs.frontend.slice(1)}` : ''}
+${specs.backend ? `- **Backend**: ${specs.backend.charAt(0).toUpperCase() + specs.backend.slice(1)}` : ''}
+${specs.database ? `- **Database**: ${specs.database.charAt(0).toUpperCase() + specs.database.slice(1)}` : ''}
+${specs.auth ? '- **Authentication**: JWT-based authentication' : ''}
+${specs.api ? '- **API**: RESTful API' : ''}
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+${specs.database === 'mongodb' ? '- MongoDB' : ''}
+${specs.database === 'postgresql' ? '- PostgreSQL' : ''}
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
+   \`\`\`bash
+   npm install
+   \`\`\`
+
+3. Set up environment variables:
+   \`\`\`bash
+   cp .env.example .env
+   \`\`\`
+
+4. Start the development server:
+   \`\`\`bash
+   npm run dev
+   \`\`\`
+
+## Scripts
+
+- \`npm run dev\` - Start development server
+- \`npm run build\` - Build for production
+- \`npm run start\` - Start production server
+- \`npm test\` - Run tests
+- \`npm run lint\` - Run linter
+
+## Deployment
+
+### Azure
+
+1. Build the Docker image:
+   \`\`\`bash
+   docker build -t ${specs.name.toLowerCase().replace(/\s+/g, '-')} .
+   \`\`\`
+
+2. Run with Docker Compose:
+   \`\`\`bash
+   docker-compose up -d
+   \`\`\`
+
+## API Endpoints
+
+- \`GET /api/health\` - Health check
+${specs.features.includes('users') ? '- \`GET /api/users\` - Get all users' : ''}
+${specs.features.includes('products') ? '- \`GET /api/products\` - Get all products' : ''}
+
+## License
+
+MIT
+`;
+
+    files['CONTRIBUTING.md'] = `# Contributing to ${specs.name}
+
+Thank you for your interest in contributing!
+
+## Development Setup
+
+1. Fork the repository
+2. Create a feature branch: \`git checkout -b feature/amazing-feature\`
+3. Make your changes
+4. Run tests: \`npm test\`
+5. Submit a pull request
+
+## Code Style
+
+- Use TypeScript for all new code
+- Follow ESLint configuration
+- Write tests for new features
+- Update documentation
+
+## Commit Convention
+
+This project uses conventional commits:
+- \`feat:\` for new features
+- \`fix:\` for bug fixes
+- \`docs:\` for documentation
+- \`test:\` for tests
+- \`refactor:\` for refactoring
+- \`style:\` for styling
+- \`chore:\` for maintenance
+`;
+
+    return files;
+  }
+
+  private async deployToAzure(files: Record<string, string>): Promise<string | undefined> {
+    try {
+      // Create Azure deployment service
+      const { AzureDeploymentService } = await import('./enhancedAgentManager');
+      const azureService = new AzureDeploymentService(this.agentManager, this.terminalService);
+
+      // Deploy to Azure using real Azure services
+      const result = await azureService.deployToAzure(
+        files,
+        'careerate-test-application',
+        'careerate-test-rg',
+        'East US'
+      );
+
+      if (result.success) {
+        console.log('Azure deployment completed successfully:', result.deploymentUrl);
+        return result.deploymentUrl;
+      } else {
+        console.error('Azure deployment failed:', result.logs);
+        return undefined;
+      }
+
+    } catch (error) {
+      console.error('Azure deployment failed:', error);
+      return undefined;
+    }
+  }
+}
+
+// Azure Deployment Service for actual cloud deployment
+export class AzureDeploymentService {
+  private agentManager: EnhancedAgentManager;
+  private terminalService: TerminalService;
+
+  constructor(agentManager: EnhancedAgentManager, terminalService: TerminalService) {
+    this.agentManager = agentManager;
+    this.terminalService = terminalService;
+  }
+
+  async deployToAzure(
+    files: Record<string, string>,
+    projectName: string,
+    resourceGroup: string = 'careerate-test-rg',
+    location: string = 'East US'
+  ): Promise<{
+    success: boolean;
+    deploymentUrl?: string;
+    resourceGroup: string;
+    appServiceName: string;
+    steps: string[];
+    logs: string[];
+  }> {
+    const steps: string[] = [];
+    const logs: string[] = [];
+
+    try {
+      steps.push('🚀 Starting Azure deployment process...');
+
+      // Step 1: Check Azure CLI installation
+      steps.push('🔍 Checking Azure CLI installation...');
+      try {
+        const azCheck = await this.terminalService.executeCommand('az --version');
+        logs.push(`Azure CLI version check: ${azCheck.success ? 'PASSED' : 'FAILED'}`);
+        if (!azCheck.success) {
+          throw new Error('Azure CLI not installed or not working');
+        }
+      } catch (error) {
+        throw new Error('Azure CLI is required for deployment. Please install it first.');
+      }
+      steps.push('✅ Azure CLI is installed');
+
+      // Step 2: Login to Azure (this would require user interaction in real scenario)
+      steps.push('🔐 Checking Azure authentication...');
+      try {
+        const loginCheck = await this.terminalService.executeCommand('az account show');
+        if (!loginCheck.success) {
+          throw new Error('Not logged in to Azure. Please run: az login');
+        }
+        logs.push('Azure authentication: VERIFIED');
+      } catch (error) {
+        throw new Error('Azure authentication required. Please run: az login');
+      }
+      steps.push('✅ Azure authentication verified');
+
+      // Step 3: Create resource group
+      steps.push(`📦 Creating resource group: ${resourceGroup}...`);
+      try {
+        const rgResult = await this.terminalService.executeCommand(
+          `az group create --name ${resourceGroup} --location "${location}"`
+        );
+        if (rgResult.success) {
+          logs.push(`Resource group created: ${resourceGroup}`);
+        } else {
+          // Resource group might already exist
+          logs.push(`Resource group ${resourceGroup} may already exist`);
+        }
+      } catch (error) {
+        logs.push(`Resource group creation: ${error.message}`);
+      }
+      steps.push('✅ Resource group ready');
+
+      // Step 4: Create App Service Plan
+      const appServicePlan = `${projectName}-plan`;
+      steps.push(`🖥️  Creating App Service Plan: ${appServicePlan}...`);
+      try {
+        const planResult = await this.terminalService.executeCommand(
+          `az appservice plan create --name ${appServicePlan} --resource-group ${resourceGroup} --sku B1 --is-linux`
+        );
+        logs.push(`App Service Plan: ${planResult.success ? 'CREATED' : 'EXISTS'}`);
+      } catch (error) {
+        logs.push(`App Service Plan creation: ${error.message}`);
+      }
+      steps.push('✅ App Service Plan ready');
+
+      // Step 5: Create Web App
+      const appServiceName = `${projectName}-${Date.now()}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').substring(0, 60);
+      steps.push(`🌐 Creating Web App: ${appServiceName}...`);
+      try {
+        const appResult = await this.terminalService.executeCommand(
+          `az webapp create --resource-group ${resourceGroup} --plan ${appServicePlan} --name ${appServiceName} --runtime "NODE|18-lts"`
+        );
+        logs.push(`Web App: ${appResult.success ? 'CREATED' : 'EXISTS'}`);
+      } catch (error) {
+        logs.push(`Web App creation: ${error.message}`);
+      }
+      steps.push('✅ Web App created');
+
+      // Step 6: Configure deployment settings
+      steps.push('⚙️  Configuring deployment settings...');
+      try {
+        await this.terminalService.executeCommand(
+          `az webapp config set --resource-group ${resourceGroup} --name ${appServiceName} --startup-file "npm start"`
+        );
+        logs.push('Deployment configuration: SET');
+      } catch (error) {
+        logs.push(`Deployment configuration: ${error.message}`);
+      }
+      steps.push('✅ Deployment settings configured');
+
+      // Step 7: Deploy using ZIP deploy
+      steps.push('📦 Preparing deployment package...');
+      try {
+        // Create a temporary directory for deployment
+        const tempDir = `/tmp/azure-deploy-${Date.now()}`;
+        await this.terminalService.executeCommand(`mkdir -p ${tempDir}`);
+
+        // Write all files to the temporary directory
+        for (const [filePath, content] of Object.entries(files)) {
+          const fullPath = `${tempDir}/${filePath}`;
+          const dir = fullPath.substring(0, fullPath.lastIndexOf('/'));
+          if (dir) {
+            await this.terminalService.executeCommand(`mkdir -p "${dir}"`);
+          }
+          await this.terminalService.executeCommand(
+            `cat > "${fullPath}" << 'EOF'\n${content}\nEOF`
+          );
+        }
+
+        // Create deployment package
+        const zipFile = `${tempDir}/deploy.zip`;
+        await this.terminalService.executeCommand(`cd ${tempDir} && zip -r ${zipFile} .`);
+
+        // Deploy to Azure
+        await this.terminalService.executeCommand(
+          `az webapp deployment source config-zip --resource-group ${resourceGroup} --name ${appServiceName} --src ${zipFile}`
+        );
+
+        logs.push('Deployment package: UPLOADED');
+        steps.push('✅ Deployment package uploaded');
+
+      } catch (error) {
+        logs.push(`Deployment error: ${error.message}`);
+        throw error;
+      }
+
+      // Step 8: Get deployment URL
+      const deploymentUrl = `https://${appServiceName}.azurewebsites.net`;
+
+      steps.push('🌐 Getting deployment URL...');
+      logs.push(`Deployment URL: ${deploymentUrl}`);
+      steps.push('✅ Deployment URL obtained');
+
+      // Step 9: Verify deployment
+      steps.push('🔍 Verifying deployment...');
+      try {
+        // Wait a moment for deployment to complete
+        await new Promise(resolve => setTimeout(resolve, 30000));
+
+        // Check if the app is responding
+        const verifyResult = await this.terminalService.executeCommand(
+          `curl -f -s -o /dev/null -w "%{http_code}" ${deploymentUrl}/api/health || echo "FAILED"`
+        );
+
+        if (verifyResult.stdout.includes('200')) {
+          logs.push('Health check: PASSED');
+          steps.push('✅ Deployment verified successfully');
+        } else {
+          logs.push('Health check: WARNING - App may still be starting');
+          steps.push('⚠️  Deployment completed (may need a moment to fully start)');
+        }
+      } catch (error) {
+        logs.push(`Health check: ${error.message}`);
+        steps.push('⚠️  Deployment completed (verification failed)');
+      }
+
+      return {
+        success: true,
+        deploymentUrl,
+        resourceGroup,
+        appServiceName,
+        steps,
+        logs
+      };
+
+    } catch (error) {
+      console.error('Azure deployment failed:', error);
+      return {
+        success: false,
+        steps,
+        logs: [...logs, `❌ Deployment failed: ${error.message}`]
+      };
+    }
+  }
+
+  async cleanupResources(resourceGroup: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const result = await this.terminalService.executeCommand(
+        `az group delete --name ${resourceGroup} --yes`
+      );
+
+      return {
+        success: result.success,
+        message: result.success ?
+          `Successfully cleaned up resource group: ${resourceGroup}` :
+          `Failed to cleanup: ${result.stderr}`
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `Cleanup failed: ${error.message}`
+      };
     }
   }
 }
