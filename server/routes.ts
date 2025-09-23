@@ -4286,3 +4286,189 @@ app.post('/api/test-application/generate', isAuthenticated, async (req, res) => 
     });
   }
 });
+
+// Enhanced Complex Application Processing
+app.post('/api/ai/complex-request', isAuthenticated, async (req, res) => {
+  try {
+    const { query, projectId, workingDirectory, currentFiles, preferences } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    // Create all required services
+    const researchService = new (await import('./services/enhancedAgentManager')).ApplicationResearchService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService()
+    );
+
+    const multiCloudService = new (await import('./services/enhancedAgentManager')).MultiCloudDeploymentService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService()
+    );
+
+    const sreService = new (await import('./services/enhancedAgentManager')).AdvancedSREService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService()
+    );
+
+    const enhancedAIAssistant = new (await import('./services/enhancedAgentManager')).EnhancedAIAssistantService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService(),
+      researchService,
+      multiCloudService,
+      sreService
+    );
+
+    const context = {
+      projectId,
+      userId: req.user.id,
+      workingDirectory,
+      currentFiles,
+      preferences
+    };
+
+    const result = await enhancedAIAssistant.processComplexRequest(query, context);
+
+    res.json({
+      success: true,
+      response: result.response,
+      analysis: result.analysis,
+      generatedFiles: result.generatedFiles,
+      deploymentUrl: result.deploymentUrl,
+      monitoringSetup: result.monitoringSetup,
+      steps: result.steps
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: (error as Error).message
+    });
+  }
+});
+
+// Import Existing Codebase
+app.post('/api/codebase/import', isAuthenticated, async (req, res) => {
+  try {
+    const { source, projectId, workingDirectory } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    // Create enhanced AI assistant service
+    const researchService = new (await import('./services/enhancedAgentManager')).ApplicationResearchService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService()
+    );
+
+    const multiCloudService = new (await import('./services/enhancedAgentManager')).MultiCloudDeploymentService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService()
+    );
+
+    const sreService = new (await import('./services/enhancedAgentManager')).AdvancedSREService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService()
+    );
+
+    const enhancedAIAssistant = new (await import('./services/enhancedAgentManager')).EnhancedAIAssistantService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService(),
+      researchService,
+      multiCloudService,
+      sreService
+    );
+
+    const result = await enhancedAIAssistant.importExistingCodebase(
+      source,
+      projectId,
+      workingDirectory
+    );
+
+    res.json({
+      success: true,
+      message: result.message,
+      files: result.files,
+      analysis: result.analysis,
+      steps: result.steps
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: (error as Error).message
+    });
+  }
+});
+
+// SRE Incident Management
+app.post('/api/sre/incident', isAuthenticated, async (req, res) => {
+  try {
+    const { incident } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    const sreService = new (await import('./services/enhancedAgentManager')).AdvancedSREService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService()
+    );
+
+    const result = await sreService.handleIncident(incident);
+
+    res.json({
+      success: true,
+      result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: (error as Error).message
+    });
+  }
+});
+
+// Multi-Cloud Deployment
+app.post('/api/deploy/multi-cloud', isAuthenticated, async (req, res) => {
+  try {
+    const { provider, configuration, files, projectId } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated'
+      });
+    }
+
+    const multiCloudService = new (await import('./services/enhancedAgentManager')).MultiCloudDeploymentService(
+      enhancedAgentManager,
+      enhancedAgentManager.getTerminalService()
+    );
+
+    const result = await multiCloudService.deployToProvider(
+      provider,
+      configuration,
+      files
+    );
+
+    res.json({
+      success: true,
+      result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: (error as Error).message
+    });
+  }
+});
