@@ -185,7 +185,7 @@ export default function Dashboard() {
           <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 glass-pane rounded-full p-1 h-auto">
             <TabsTrigger value="agent" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground flex-1 sm:flex-initial">
               <Brain className="h-4 w-4 mr-2" />
-              AI Agent
+              Cara 🤖
             </TabsTrigger>
             <TabsTrigger value="projects" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground">
               <GitBranch className="h-4 w-4 mr-2" />
@@ -197,7 +197,7 @@ export default function Dashboard() {
             </TabsTrigger>
           </TabsList>
 
-          {/* AI Agent Tab - Main Interface */}
+          {/* Cara Tab - Main Interface */}
           <TabsContent value="agent" className="space-y-6">
             <div className="text-center mb-8">
               <h1 className="text-display text-4xl font-bold text-foreground mb-4">

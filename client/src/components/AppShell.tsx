@@ -50,7 +50,7 @@ const NavLink = ({ href, children, isPageLink = false }: { href: string; childre
     const [location] = useLocation();
     const isActive = location === href;
 
-    const commonClasses = "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300";
+    const commonClasses = "px-3 py-2 rounded-full text-sm font-medium transition-all duration-300";
 
     if (isPageLink) {
         return (
@@ -119,7 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <>
             <NavLink href="/dashboard" isPageLink>
                 <Brain className="h-4 w-4 mr-2" />
-                AI Agent
+                Cara 🤖
             </NavLink>
             <NavLink href="/projects" isPageLink>
                 <GitBranch className="h-4 w-4 mr-2" />
@@ -132,21 +132,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         </>
     );
 
-    // Dashboard-specific nav that mirrors the tabs: AI Agent, Projects, Overview
+    // Dashboard-specific nav that mirrors the tabs: Cara, Projects, Overview
     const DashboardNav = () => (
         <>
             <Link href="#agent">
                 <a className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
+                    "px-3 py-2 rounded-full text-sm font-medium transition-all duration-300",
                     activeDashTab === 'agent' ? "text-foreground bg-primary/10" : "text-foreground/70 hover:text-foreground hover:bg-primary/10"
                 )}>
                     <Brain className="h-4 w-4 mr-2 inline" />
-                    AI Agent
+                    Cara 🤖
                 </a>
             </Link>
             <Link href="#projects">
                 <a className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
+                    "px-3 py-2 rounded-full text-sm font-medium transition-all duration-300",
                     activeDashTab === 'projects' ? "text-foreground bg-primary/10" : "text-foreground/70 hover:text-foreground hover:bg-primary/10"
                 )}>
                     <GitBranch className="h-4 w-4 mr-2 inline" />
@@ -155,7 +155,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
             <Link href="#overview">
                 <a className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium transition-all duration-300",
+                    "px-3 py-2 rounded-full text-sm font-medium transition-all duration-300",
                     activeDashTab === 'overview' ? "text-foreground bg-primary/10" : "text-foreground/70 hover:text-foreground hover:bg-primary/10"
                 )}>
                     <BarChart3 className="h-4 w-4 mr-2 inline" />
@@ -209,7 +209,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     )}>
                         <Logo />
 
-                        <div className="hidden md:flex items-center gap-2">
+                        <div className="hidden md:flex items-center gap-1">
                             {isAuthenticated ? (isOnDashboard ? <DashboardNav /> : <AuthenticatedNav />) : <UnauthenticatedNav />}
                         </div>
 

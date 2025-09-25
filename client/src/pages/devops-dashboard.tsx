@@ -208,7 +208,7 @@ export default function DevOpsDashboard() {
               data-testid="button-initialize-agents"
             >
               <Rocket className="mr-2 h-4 w-4" />
-              Initialize AI Agents
+              Initialize Cara Agents
             </Button>
           )}
         </div>
@@ -217,7 +217,7 @@ export default function DevOpsDashboard() {
         <div className="grid md:grid-cols-4 gap-6">
           <Card data-testid="card-agents-status">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">AI Agents</CardTitle>
+              <CardTitle className="text-sm font-medium">Cara Agents</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -292,13 +292,13 @@ export default function DevOpsDashboard() {
         {/* Main Content Tabs */}
         <Tabs defaultValue="agents" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="agents" data-testid="tab-agents">AI Agents</TabsTrigger>
+            <TabsTrigger value="agents" data-testid="tab-agents">Cara Agents</TabsTrigger>
             <TabsTrigger value="deployments" data-testid="tab-deployments">Deployments</TabsTrigger>
             <TabsTrigger value="incidents" data-testid="tab-incidents">Incidents</TabsTrigger>
             <TabsTrigger value="metrics" data-testid="tab-metrics">Performance</TabsTrigger>
           </TabsList>
 
-          {/* AI Agents Tab */}
+          {/* Cara Agents Tab */}
           <TabsContent value="agents" className="space-y-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {agents.map((agent: Agent) => (
@@ -352,16 +352,16 @@ export default function DevOpsDashboard() {
               <Card className="text-center py-12">
                 <CardContent>
                   <Activity className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">No AI Agents Configured</h3>
+                  <h3 className="text-xl font-semibold mb-2">No Cara Agents Configured</h3>
                   <p className="text-muted-foreground mb-6">
-                    Initialize AI agents to enable autonomous infrastructure management.
+                    Initialize Cara agents to enable autonomous infrastructure management.
                   </p>
                   <Button 
                     onClick={() => initializeAgentsMutation.mutate()}
                     disabled={initializeAgentsMutation.isPending}
                   >
                     <Rocket className="mr-2 h-4 w-4" />
-                    {initializeAgentsMutation.isPending ? "Initializing..." : "Initialize AI Agents"}
+                    {initializeAgentsMutation.isPending ? "Initializing..." : "Initialize Cara Agents"}
                   </Button>
                 </CardContent>
               </Card>

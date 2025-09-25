@@ -80,7 +80,7 @@ export default function EnterpriseDashboard() {
   const { toast } = useToast();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
-  // Fetch AI Agents status
+  // Fetch Cara Agents status
   const { data: agentsData, isLoading: agentsLoading } = useQuery({
     queryKey: ['ai-agents-status'],
     queryFn: async () => {
@@ -132,7 +132,7 @@ export default function EnterpriseDashboard() {
     }
   });
 
-  // Deploy AI Agent mutation
+  // Deploy Cara Agent mutation
   const deployAgentMutation = useMutation({
     mutationFn: async ({ projectId, repositoryUrl, requirements }: {
       projectId: string;
@@ -150,7 +150,7 @@ export default function EnterpriseDashboard() {
     },
     onSuccess: () => {
       toast({
-        title: "AI Agent Deployed",
+        title: "Cara Agent Deployed",
         description: "DevOps automation agent is now managing your infrastructure"
       });
     }
@@ -198,7 +198,7 @@ export default function EnterpriseDashboard() {
                 <Bot className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Active AI Agents</p>
+                <p className="text-sm text-muted-foreground">Active Cara Agents</p>
                 <p className="text-2xl font-bold">{activeAgents}/{totalAgents}</p>
               </div>
             </div>
@@ -250,13 +250,13 @@ export default function EnterpriseDashboard() {
 
       <Tabs defaultValue="agents" className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="agents">AI Agents</TabsTrigger>
+          <TabsTrigger value="agents">Cara Agents</TabsTrigger>
           <TabsTrigger value="migrations">Enterprise Migrations</TabsTrigger>
           <TabsTrigger value="security">Security & Compliance</TabsTrigger>
           <TabsTrigger value="analytics">Advanced Analytics</TabsTrigger>
         </TabsList>
 
-        {/* AI Agents Tab */}
+        {/* Cara Agents Tab */}
         <TabsContent value="agents" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Agents List */}
@@ -330,7 +330,7 @@ export default function EnterpriseDashboard() {
                             })}
                             disabled={deployAgentMutation.isPending}
                           >
-                            {deployAgentMutation.isPending ? 'Deploying...' : 'Deploy AI Agent'}
+                            {deployAgentMutation.isPending ? 'Deploying...' : 'Deploy Cara Agent'}
                           </Button>
                         </div>
                       )}
