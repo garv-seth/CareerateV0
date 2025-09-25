@@ -23,7 +23,7 @@ az acr build --registry $ACR_NAME --image $IMAGE_NAME . || { echo "❌ ACR build
 
 # 1) Pull actual secret values from Key Vault and define/refresh Container App secrets
 echo "🔐 Pulling secrets from Key Vault and updating Container App..."
-KV_NAME="careeeratesecretsvault"
+KV_NAME="careeratesecretsvault"
 sanitize() { echo -n "$1" | tr -d '\r\n'; }
 AZ_TENANT_ID=$(sanitize "$(az keyvault secret show --vault-name $KV_NAME --name AZURE-TENANT-ID --query value -o tsv)")
 AZ_CLIENT_ID=$(sanitize "$(az keyvault secret show --vault-name $KV_NAME --name AZURE-CLIENT-ID --query value -o tsv)")
