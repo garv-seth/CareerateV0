@@ -30,8 +30,11 @@ import {
   type StreamingUpdate
 } from "./services/ai";
 import { agentManager } from "./services/agentManager";
-import { enhancedAgentManager } from "./services/enhancedAgentManager";
+import { createEnhancedAgentManager } from "./services/enhancedAgentManager";
 import { legacyAssessmentService } from "./services/legacyAssessment";
+
+// Create the enhanced agent manager instance
+const enhancedAgentManager = createEnhancedAgentManager();
 import { integrationService } from "./services/integrationService";
 import { repositoryIntegrationService } from "./services/repositoryIntegrationService";
 import { apiConnectorManager, ApiConnectorFactory } from "./services/apiConnectorFramework";

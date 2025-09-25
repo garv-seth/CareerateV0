@@ -275,24 +275,24 @@ export class EnhancedAgentManager {
       execute: this.executeWebSearchTool.bind(this)
     });
 
-    // File system tools
-    this.availableTools.set('read_file', {
-      name: 'read_file',
-      description: 'Read a file from the project',
-      execute: this.executeReadFileTool.bind(this)
-    });
+    // File system tools - temporarily disabled until methods are implemented
+    // this.availableTools.set('read_file', {
+    //   name: 'read_file',
+    //   description: 'Read a file from the project',
+    //   execute: this.executeReadFileTool.bind(this)
+    // });
 
-    this.availableTools.set('write_file', {
-      name: 'write_file',
-      description: 'Write content to a file',
-      execute: this.executeWriteFileTool.bind(this)
-    });
+    // this.availableTools.set('write_file', {
+    //   name: 'write_file',
+    //   description: 'Write content to a file',
+    //   execute: this.executeWriteFileTool.bind(this)
+    // });
 
-    this.availableTools.set('list_files', {
-      name: 'list_files',
-      description: 'List files in a directory',
-      execute: this.executeListFilesTool.bind(this)
-    });
+    // this.availableTools.set('list_files', {
+    //   name: 'list_files',
+    //   description: 'List files in a directory',
+    //   execute: this.executeListFilesTool.bind(this)
+    // });
 
     // Terminal and execution tools
     this.availableTools.set('run_terminal_command', {
@@ -301,31 +301,33 @@ export class EnhancedAgentManager {
       execute: this.executeTerminalCommandTool.bind(this)
     });
 
-    this.availableTools.set('install_package', {
-      name: 'install_package',
-      description: 'Install npm packages',
-      execute: this.executeInstallPackageTool.bind(this)
-    });
+    // Package installation tool - temporarily disabled until method is implemented
+    // this.availableTools.set('install_package', {
+    //   name: 'install_package',
+    //   description: 'Install npm packages',
+    //   execute: this.executeInstallPackageTool.bind(this)
+    // });
 
-    // Integration tools
-    this.availableTools.set('get_integrations', {
-      name: 'get_integrations',
-      description: 'Get available integrations',
-      execute: this.executeGetIntegrationsTool.bind(this)
-    });
+    // Integration tools - temporarily disabled until methods are implemented
+    // this.availableTools.set('get_integrations', {
+    //   name: 'get_integrations',
+    //   description: 'Get available integrations',
+    //   execute: this.executeGetIntegrationsTool.bind(this)
+    // });
 
-    // Analysis tools
-    this.availableTools.set('analyze_code', {
-      name: 'analyze_code',
-      description: 'Analyze code quality and security',
-      execute: this.executeCodeAnalysisTool.bind(this)
-    });
+    // Analysis tools - temporarily disabled until methods are implemented
+    // this.availableTools.set('analyze_code', {
+    //   name: 'analyze_code',
+    //   description: 'Analyze code quality and security',
+    //   execute: this.executeCodeAnalysisTool.bind(this)
+    // });
 
-    this.availableTools.set('generate_tests', {
-      name: 'generate_tests',
-      description: 'Generate test cases',
-      execute: this.executeGenerateTestsTool.bind(this)
-    });
+    // Test generation tool - temporarily disabled until method is implemented
+    // this.availableTools.set('generate_tests', {
+    //   name: 'generate_tests',
+    //   description: 'Generate test cases',
+    //   execute: this.executeGenerateTestsTool.bind(this)
+    // });
   }
 
   async initialize(projectId: string): Promise<void> {
@@ -3600,4 +3602,7 @@ Please provide a comprehensive response to the user about what was accomplished.
   }
 }
 
-export const enhancedAgentManager = new EnhancedAgentManager();
+// Factory function to create EnhancedAgentManager instance
+export function createEnhancedAgentManager() {
+  return new EnhancedAgentManager();
+}
