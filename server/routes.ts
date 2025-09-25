@@ -3832,6 +3832,446 @@ test('renders learn react link', () => {
     }
   });
 
+  // OAuth Routes - moved from top-level
+  app.get('/api/auth/:service', async (req, res) => {
+    try {
+      const { service } = req.params;
+      const { projectId } = req.query;
+      const state = randomUUID();
+
+      const result = await integrationService.getOAuthAuthorizationUrl(
+        service,
+        state,
+        projectId as string
+      );
+
+      res.json({
+        success: true,
+        authorizationUrl: result.url,
+        state: state
+      });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  app.post('/api/auth/:service/callback', async (req, res) => {
+    try {
+      const { service } = req.params;
+      const { code, state } = req.body;
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      const result = await integrationService.exchangeOAuthCode(service, code, state);
+
+      // Create integration from OAuth
+      const integrationData = await integrationService.createOAuthIntegration(
+        service,
+        result.tokenResponse,
+        result.userInfo,
+        req.user.id,
+        req.body.projectId
+      );
+
+      // Store integration and secrets
+      const integration = await storage.createIntegration(integrationData.integration);
+
+      for (const secret of integrationData.secrets) {
+        secret.integrationId = integration.id;
+        await storage.createIntegrationSecret(secret);
+      }
+
+      res.json({
+        success: true,
+        message: `Successfully connected to ${service}`,
+        integration: {
+          id: integration.id,
+          name: integration.name,
+          type: integration.type,
+          status: 'active'
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  // Get OAuth providers
+  app.get('/api/auth/providers', (req, res) => {
+    const providers = integrationService.getAvailableOAuthProviders();
+    res.json({ success: true, providers });
+  });
+
+  // AI Assistant Routes
+  app.post('/api/ai/assistant', isAuthenticated, async (req, res) => {
+    try {
+      const { query, projectId, workingDirectory, currentFiles } = req.body;
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      const context = {
+        projectId,
+        userId: req.user.id,
+        workingDirectory,
+        currentFiles
+      };
+
+      // Create AI assistant service instance
+      const aiAssistant = new (await import('./services/enhancedAgentManager')).AIAssistantService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService()
+      );
+
+      const result = await aiAssistant.processUserQuery(query, context);
+
+      res.json({
+        success: true,
+        response: result.response,
+        actions: result.actions,
+        agentTasks: result.agentTasks
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  // Get connected accounts
+  app.get('/api/integrations/accounts', isAuthenticated, async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      const accounts = await integrationService.getConnectedAccounts(req.user.id);
+      res.json({
+        success: true,
+        accounts: accounts.map(account => ({
+          ...account,
+          // Don't send sensitive data to frontend
+          integration: {
+            ...account.integration,
+            configuration: undefined,
+            secrets: undefined
+          }
+        }))
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  // Terminal command execution for agents
+  app.post('/api/terminal/execute', isAuthenticated, async (req, res) => {
+    try {
+      const { command, workingDirectory, projectId } = req.body;
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      const terminalService = enhancedAgentManager.getTerminalService();
+      const result = await terminalService.executeCommand(
+        command,
+        workingDirectory || process.cwd(),
+        { USER: req.user.email },
+        30000
+      );
+
+      res.json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  // Get terminal command history
+  app.get('/api/terminal/history', isAuthenticated, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const terminalService = enhancedAgentManager.getTerminalService();
+      const history = terminalService.getCommandHistory(limit);
+
+      res.json({
+        success: true,
+        history
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  // Test Application Generation
+  app.post('/api/test-application/generate', isAuthenticated, async (req, res) => {
+    try {
+      const specifications = req.body;
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      // Create a temporary working directory
+      const workingDirectory = `/tmp/testapp-${Date.now()}`;
+
+      // Create test application generator
+      const { TestApplicationGenerator } = await import('./services/enhancedAgentManager');
+      const generator = new TestApplicationGenerator(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService(),
+        'test-project',
+        workingDirectory
+      );
+
+      // Generate the application
+      const result = await generator.generateCompleteApplication(specifications);
+
+      if (result.success) {
+        res.json({
+          success: true,
+          message: result.message,
+          files: result.files,
+          deploymentUrl: result.deploymentUrl,
+          steps: result.steps
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: result.message,
+          steps: result.steps
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  // Enhanced Complex Application Processing
+  app.post('/api/ai/complex-request', isAuthenticated, async (req, res) => {
+    try {
+      const { query, projectId, workingDirectory, currentFiles, preferences } = req.body;
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      // Create all required services
+      const researchService = new (await import('./services/enhancedAgentManager')).ApplicationResearchService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService()
+      );
+
+      const multiCloudService = new (await import('./services/enhancedAgentManager')).MultiCloudDeploymentService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService()
+      );
+
+      const sreService = new (await import('./services/enhancedAgentManager')).AdvancedSREService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService()
+      );
+
+      const enhancedAIAssistant = new (await import('./services/enhancedAgentManager')).EnhancedAIAssistantService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService(),
+        researchService,
+        multiCloudService,
+        sreService
+      );
+
+      const context = {
+        projectId,
+        userId: req.user.id,
+        workingDirectory,
+        currentFiles,
+        preferences
+      };
+
+      const result = await enhancedAIAssistant.processComplexRequest(query, context);
+
+      res.json({
+        success: true,
+        response: result.response,
+        analysis: result.analysis,
+        generatedFiles: result.generatedFiles,
+        deploymentUrl: result.deploymentUrl,
+        monitoringSetup: result.monitoringSetup,
+        steps: result.steps
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  // Import Existing Codebase
+  app.post('/api/codebase/import', isAuthenticated, async (req, res) => {
+    try {
+      const { source, projectId, workingDirectory } = req.body;
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      // Create enhanced AI assistant service
+      const researchService = new (await import('./services/enhancedAgentManager')).ApplicationResearchService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService()
+      );
+
+      const multiCloudService = new (await import('./services/enhancedAgentManager')).MultiCloudDeploymentService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService()
+      );
+
+      const sreService = new (await import('./services/enhancedAgentManager')).AdvancedSREService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService()
+      );
+
+      const enhancedAIAssistant = new (await import('./services/enhancedAgentManager')).EnhancedAIAssistantService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService(),
+        researchService,
+        multiCloudService,
+        sreService
+      );
+
+      const result = await enhancedAIAssistant.importExistingCodebase(
+        source,
+        projectId,
+        workingDirectory
+      );
+
+      res.json({
+        success: true,
+        message: result.message,
+        files: result.files,
+        analysis: result.analysis,
+        steps: result.steps
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  // SRE Incident Management
+  app.post('/api/sre/incident', isAuthenticated, async (req, res) => {
+    try {
+      const { incident } = req.body;
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      const sreService = new (await import('./services/enhancedAgentManager')).AdvancedSREService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService()
+      );
+
+      const result = await sreService.handleIncident(incident);
+
+      res.json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
+  // Multi-Cloud Deployment
+  app.post('/api/deploy/multi-cloud', isAuthenticated, async (req, res) => {
+    try {
+      const { provider, configuration, files, projectId } = req.body;
+
+      if (!req.user) {
+        return res.status(401).json({
+          success: false,
+          message: 'User not authenticated'
+        });
+      }
+
+      const multiCloudService = new (await import('./services/enhancedAgentManager')).MultiCloudDeploymentService(
+        enhancedAgentManager,
+        enhancedAgentManager.getTerminalService()
+      );
+
+      const result = await multiCloudService.deployToProvider(
+        provider,
+        configuration,
+        files
+      );
+
+      res.json({
+        success: true,
+        result
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: (error as Error).message
+      });
+    }
+  });
+
   return server;
 }
 
@@ -4034,444 +4474,3 @@ async function testTwilioIntegration(credentials: any) {
 
 // Export the function for use in other modules
 export { testTwilioIntegration };
-
-// OAuth Routes
-app.get('/api/auth/:service', async (req, res) => {
-  try {
-    const { service } = req.params;
-    const { projectId } = req.query;
-    const state = randomUUID();
-
-    const result = await integrationService.getOAuthAuthorizationUrl(
-      service,
-      state,
-      projectId as string
-    );
-
-    res.json({
-      success: true,
-      authorizationUrl: result.url,
-      state: state
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-app.post('/api/auth/:service/callback', async (req, res) => {
-  try {
-    const { service } = req.params;
-    const { code, state } = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-    }
-
-    const result = await integrationService.exchangeOAuthCode(service, code, state);
-
-    // Create integration from OAuth
-    const integrationData = await integrationService.createOAuthIntegration(
-      service,
-      result.tokenResponse,
-      result.userInfo,
-      req.user.id,
-      req.body.projectId
-    );
-
-    // Store integration and secrets
-    const integration = await storage.createIntegration(integrationData.integration);
-
-    for (const secret of integrationData.secrets) {
-      secret.integrationId = integration.id;
-      await storage.createIntegrationSecret(secret);
-    }
-
-    res.json({
-      success: true,
-      message: `Successfully connected to ${service}`,
-      integration: {
-        id: integration.id,
-        name: integration.name,
-        service: integration.service,
-        status: integration.status
-      },
-      userInfo: result.userInfo
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-// Get OAuth providers
-app.get('/api/auth/providers', (req, res) => {
-  const providers = integrationService.getAvailableOAuthProviders();
-  res.json({ success: true, providers });
-});
-
-// AI Assistant Routes
-app.post('/api/ai/assistant', isAuthenticated, async (req, res) => {
-  try {
-    const { query, projectId, workingDirectory, currentFiles } = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-    }
-
-    const context = {
-      projectId,
-      userId: req.user.id,
-      workingDirectory,
-      currentFiles
-    };
-
-    // Create AI assistant service instance
-    const aiAssistant = new (await import('./services/enhancedAgentManager')).AIAssistantService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService()
-    );
-
-    const result = await aiAssistant.processUserQuery(query, context);
-
-    res.json({
-      success: true,
-      response: result.response,
-      actions: result.actions,
-      agentTasks: result.agentTasks
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-// Get connected accounts
-app.get('/api/integrations/accounts', isAuthenticated, async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-    }
-
-    const accounts = await integrationService.getConnectedAccounts(req.user.id);
-    res.json({
-      success: true,
-      accounts: accounts.map(account => ({
-        ...account,
-        // Don't send sensitive data to frontend
-        integration: {
-          ...account.integration,
-          configuration: undefined,
-          secrets: undefined
-        }
-      }))
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-// Terminal command execution for agents
-app.post('/api/terminal/execute', isAuthenticated, async (req, res) => {
-  try {
-    const { command, workingDirectory, projectId } = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-    }
-
-    const terminalService = enhancedAgentManager.getTerminalService();
-    const result = await terminalService.executeCommand(
-      command,
-      workingDirectory || process.cwd(),
-      { USER: req.user.email },
-      30000
-    );
-
-    res.json({
-      success: true,
-      result
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-// Get terminal command history
-app.get('/api/terminal/history', isAuthenticated, async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit as string) || 10;
-    const terminalService = enhancedAgentManager.getTerminalService();
-    const history = terminalService.getCommandHistory(limit);
-
-    res.json({
-      success: true,
-      history
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-// Test Application Generation
-app.post('/api/test-application/generate', isAuthenticated, async (req, res) => {
-  try {
-    const specifications = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-    }
-
-    // Create a temporary working directory
-    const workingDirectory = `/tmp/testapp-${Date.now()}`;
-
-    // Create test application generator
-    const { TestApplicationGenerator } = await import('./services/enhancedAgentManager');
-    const generator = new TestApplicationGenerator(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService(),
-      'test-project',
-      workingDirectory
-    );
-
-    // Generate the application
-    const result = await generator.generateCompleteApplication(specifications);
-
-    if (result.success) {
-      res.json({
-        success: true,
-        message: result.message,
-        files: result.files,
-        deploymentUrl: result.deploymentUrl,
-        steps: result.steps
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        message: result.message,
-        steps: result.steps
-      });
-    }
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-// Enhanced Complex Application Processing
-app.post('/api/ai/complex-request', isAuthenticated, async (req, res) => {
-  try {
-    const { query, projectId, workingDirectory, currentFiles, preferences } = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-    }
-
-    // Create all required services
-    const researchService = new (await import('./services/enhancedAgentManager')).ApplicationResearchService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService()
-    );
-
-    const multiCloudService = new (await import('./services/enhancedAgentManager')).MultiCloudDeploymentService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService()
-    );
-
-    const sreService = new (await import('./services/enhancedAgentManager')).AdvancedSREService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService()
-    );
-
-    const enhancedAIAssistant = new (await import('./services/enhancedAgentManager')).EnhancedAIAssistantService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService(),
-      researchService,
-      multiCloudService,
-      sreService
-    );
-
-    const context = {
-      projectId,
-      userId: req.user.id,
-      workingDirectory,
-      currentFiles,
-      preferences
-    };
-
-    const result = await enhancedAIAssistant.processComplexRequest(query, context);
-
-    res.json({
-      success: true,
-      response: result.response,
-      analysis: result.analysis,
-      generatedFiles: result.generatedFiles,
-      deploymentUrl: result.deploymentUrl,
-      monitoringSetup: result.monitoringSetup,
-      steps: result.steps
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-// Import Existing Codebase
-app.post('/api/codebase/import', isAuthenticated, async (req, res) => {
-  try {
-    const { source, projectId, workingDirectory } = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-    }
-
-    // Create enhanced AI assistant service
-    const researchService = new (await import('./services/enhancedAgentManager')).ApplicationResearchService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService()
-    );
-
-    const multiCloudService = new (await import('./services/enhancedAgentManager')).MultiCloudDeploymentService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService()
-    );
-
-    const sreService = new (await import('./services/enhancedAgentManager')).AdvancedSREService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService()
-    );
-
-    const enhancedAIAssistant = new (await import('./services/enhancedAgentManager')).EnhancedAIAssistantService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService(),
-      researchService,
-      multiCloudService,
-      sreService
-    );
-
-    const result = await enhancedAIAssistant.importExistingCodebase(
-      source,
-      projectId,
-      workingDirectory
-    );
-
-    res.json({
-      success: true,
-      message: result.message,
-      files: result.files,
-      analysis: result.analysis,
-      steps: result.steps
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-// SRE Incident Management
-app.post('/api/sre/incident', isAuthenticated, async (req, res) => {
-  try {
-    const { incident } = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-    }
-
-    const sreService = new (await import('./services/enhancedAgentManager')).AdvancedSREService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService()
-    );
-
-    const result = await sreService.handleIncident(incident);
-
-    res.json({
-      success: true,
-      result
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
-
-// Multi-Cloud Deployment
-app.post('/api/deploy/multi-cloud', isAuthenticated, async (req, res) => {
-  try {
-    const { provider, configuration, files, projectId } = req.body;
-
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not authenticated'
-      });
-    }
-
-    const multiCloudService = new (await import('./services/enhancedAgentManager')).MultiCloudDeploymentService(
-      enhancedAgentManager,
-      enhancedAgentManager.getTerminalService()
-    );
-
-    const result = await multiCloudService.deployToProvider(
-      provider,
-      configuration,
-      files
-    );
-
-    res.json({
-      success: true,
-      result
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: (error as Error).message
-    });
-  }
-});
