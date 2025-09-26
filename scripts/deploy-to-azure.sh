@@ -7,7 +7,7 @@ echo "🚀 Deploying Careerate to Azure Container Apps..."
 RESOURCE_GROUP="Careerate"
 CONTAINER_APP_NAME="careerate-web"
 ACR_NAME="careerateacr"
-IMAGE_NAME="careerate-app:v0.0.21" # Increment version
+IMAGE_NAME="careerate-app:v0.0.26" # Increment version
 
 # Check if logged in to Azure
 echo "📋 Checking Azure login status..."
@@ -17,13 +17,16 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "🔨 Building application locally..."
+npm run build || { echo "❌ Local build failed!"; exit 1; }
+
 # Build image directly in Azure Container Registry
 echo "☁️ Building image in Azure Container Registry..."
 az acr build --registry $ACR_NAME --image $IMAGE_NAME . || { echo "❌ ACR build failed!"; exit 1; }
 
 # 1) Pull actual secret values from Key Vault and define/refresh Container App secrets
 echo "🔐 Pulling secrets from Key Vault and updating Container App..."
-KV_NAME="careeratesecretsvault"
+KV_NAME="CareeerateSecretsVault"  # Updated from query
 sanitize() { echo -n "$1" | tr -d '\r\n'; }
 AZ_TENANT_ID=$(sanitize "$(az keyvault secret show --vault-name $KV_NAME --name AZURE-TENANT-ID --query value -o tsv)")
 AZ_CLIENT_ID=$(sanitize "$(az keyvault secret show --vault-name $KV_NAME --name AZURE-CLIENT-ID --query value -o tsv)")
