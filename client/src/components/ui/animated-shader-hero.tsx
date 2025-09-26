@@ -287,21 +287,29 @@ void main(){gl_Position=position;}`;
     const canvas = canvasRef.current;
     const dpr = Math.max(1, 0.5 * window.devicePixelRatio);
 
-    rendererRef.current = new WebGLRenderer(canvas, dpr);
-    pointersRef.current = new PointerHandler(canvas, dpr);
+    try {
+      rendererRef.current = new WebGLRenderer(canvas, dpr);
+      pointersRef.current = new PointerHandler(canvas, dpr);
 
-    rendererRef.current.setup();
-    rendererRef.current.init();
+      rendererRef.current.setup();
+      rendererRef.current.init();
 
-    resize();
+      resize();
 
-    if (rendererRef.current.test(defaultShaderSource) === null) {
-      rendererRef.current.updateShader(defaultShaderSource);
+      if (rendererRef.current.test(defaultShaderSource) === null) {
+        rendererRef.current.updateShader(defaultShaderSource);
+      }
+
+      loop(0);
+
+      window.addEventListener('resize', resize);
+    } catch (error) {
+      console.warn('WebGL shader failed to initialize, using fallback background:', error);
+      // Hide canvas and show fallback gradient background
+      if (canvas) {
+        canvas.style.display = 'none';
+      }
     }
-
-    loop(0);
-
-    window.addEventListener('resize', resize);
 
     return () => {
       window.removeEventListener('resize', resize);
@@ -328,7 +336,7 @@ const Hero: React.FC<HeroProps> = ({
   const canvasRef = useShaderBackground();
 
   return (
-    <div className={`relative w-full h-screen overflow-hidden bg-black ${className}`}>
+    <div className={`relative w-full h-screen overflow-hidden bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 ${className}`}>
       <style jsx>{`
         @keyframes fade-in-down {
           from {

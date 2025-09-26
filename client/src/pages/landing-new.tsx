@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sparkles, Code, Cloud, Shield, Brain, Globe, Users, Database, Terminal, Activity } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { GradientDots } from "@/components/ui/gradient-dots";
-import Hero from "@/components/ui/animated-shader-hero";
+import Hero from "@/components/ui/simple-hero";
 
 const FeatureCard = ({ icon: Icon, title, description, colorClass }: { icon: React.ElementType, title: string, description: string, colorClass: string }) => (
     <div className="glass-pane rounded-3xl p-6 flex flex-col items-start text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10">
