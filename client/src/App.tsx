@@ -65,6 +65,7 @@ function Router() {
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/enterprise" component={EnterpriseDashboard} />
           <Route path="/account" component={AccountSettings} />
+          <Route path="/settings" component={AccountSettings} />
           {/* Vibe Coding and Hosting Routes */}
           <Route path="/projects/:id/coding" component={VibeCoding} />
           <Route path="/projects/:id/hosting" component={Deploy} />

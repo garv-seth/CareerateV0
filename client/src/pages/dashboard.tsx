@@ -7,7 +7,6 @@ import {
   Activity, BarChart3, Terminal, MessageSquare, Rocket, Star,
   ChevronRight, Clock, TrendingUp, Users, Brain, Cpu, Server
 } from "lucide-react";
-import Hero from "@/components/ui/animated-shader-hero";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -218,29 +217,42 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* Hero Section */}
+      {/* Hero Section - Gradient Background for Authenticated Users */}
       {activeTab === 'agent' && (
-        <Hero
-          trustBadge={{
-            text: "Trusted by forward-thinking development teams.",
-            icons: ["🤖"]
-          }}
-          headline={{
-            line1: "What will you",
-            line2: "build today? 🚀"
-          }}
-          subtitle="Describe your idea in natural language and our AI agents will handle everything from code to deployment."
-          buttons={{
-            primary: {
-              text: "Start Building Now",
-              onClick: handleGetStarted
-            },
-            secondary: {
-              text: "View Projects",
-              onClick: handleWatchDemo
-            }
-          }}
-        />
+        <div className="relative w-full h-[60vh] min-h-[500px] overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 animate-pulse"></div>
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-white px-4">
+            <div className="text-center space-y-6 max-w-5xl mx-auto">
+              <div className="space-y-2">
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">
+                  What will you
+                </h1>
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-secondary via-primary to-secondary bg-clip-text text-transparent">
+                  build today? 🚀
+                </h1>
+              </div>
+              <div className="max-w-3xl mx-auto">
+                <p className="text-lg md:text-xl lg:text-2xl text-foreground/90 font-light leading-relaxed">
+                  Describe your idea in natural language and our AI agents will handle everything from code to deployment.
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
+                <button
+                  onClick={handleGetStarted}
+                  className="px-8 py-4 bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-primary-foreground rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/25"
+                >
+                  Start Building Now
+                </button>
+                <button
+                  onClick={handleWatchDemo}
+                  className="px-8 py-4 bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 text-foreground rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+                >
+                  View Projects
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <AppShell>

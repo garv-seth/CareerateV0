@@ -152,10 +152,6 @@ export default function LandingNew() {
     <div className="min-h-screen bg-background text-foreground">
       {/* New Animated Shader Hero */}
       <Hero
-        trustBadge={{
-          text: "Trusted by forward-thinking development teams.",
-          icons: ["🤖"]
-        }}
         headline={{
           line1: "Let Ideas Flow.",
           line2: "Agents Handle The Rest."
@@ -173,15 +169,18 @@ export default function LandingNew() {
         }}
       />
 
-      {/* Rest of the page with updated AppShell */}
-      <AppShell>
-        <main>
-          <Features />
-          <Pricing />
-          <Docs />
-          <CTA />
-        </main>
-      </AppShell>
+      {/* Smooth Transition from Hero */}
+      <div className="relative -mt-32 pt-32 bg-gradient-to-b from-transparent via-background/50 to-background">
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-background/80 to-background"></div>
+        <AppShell>
+          <main className="relative z-10">
+            <Features />
+            <Pricing />
+            <Docs />
+            <CTA />
+          </main>
+        </AppShell>
+      </div>
     </div>
   );
 }

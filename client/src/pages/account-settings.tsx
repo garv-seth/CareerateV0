@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { AppShell } from "@/components/AppShell";
 
 export default function AccountSettings() {
   const { toast } = useToast();
@@ -96,63 +97,44 @@ export default function AccountSettings() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <Sparkles className="h-8 w-8 text-purple-400 animate-spin mx-auto mb-4" />
-          <p className="text-white/70">Loading your profile...</p>
+      <AppShell>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <Sparkles className="h-8 w-8 text-primary animate-spin mx-auto mb-4" />
+            <p className="text-foreground/70">Loading your profile...</p>
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Header */}
-      <header className="border-b border-white/10 bg-black/20 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link href="/dashboard" className="flex items-center space-x-2 text-white/70 hover:text-white transition-colors">
-                <ArrowLeft className="h-4 w-4" />
-                <span>Dashboard</span>
-              </Link>
-              <Separator orientation="vertical" className="h-6 bg-white/20" />
-              <h1 className="text-2xl font-bold text-white">Account Settings</h1>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                <Activity className="h-3 w-3 mr-1" />
-                Online
-              </Badge>
-              <Button 
-                variant="outline" 
-                className="border-white/20 text-white hover:bg-white/10"
-                onClick={() => window.location.href = '/api/logout'}
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
+    <AppShell>
       <div className="max-w-4xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <Link href="/dashboard" className="flex items-center space-x-2 text-foreground/70 hover:text-foreground transition-colors mb-6">
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back to Dashboard</span>
+          </Link>
+          <h1 className="text-3xl font-bold text-foreground mb-2">Account Settings</h1>
+          <p className="text-foreground/60">Manage your account preferences and settings</p>
+        </div>
+
         <Tabs defaultValue="profile" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-4 bg-black/20 border-white/10">
-            <TabsTrigger value="profile" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+          <TabsList className="grid w-full grid-cols-4 glass-pane">
+            <TabsTrigger value="profile" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
               <User className="h-4 w-4 mr-2" />
               Profile
             </TabsTrigger>
-            <TabsTrigger value="security" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+            <TabsTrigger value="security" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
               <Shield className="h-4 w-4 mr-2" />
               Security
             </TabsTrigger>
-            <TabsTrigger value="billing" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+            <TabsTrigger value="billing" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
               <CreditCard className="h-4 w-4 mr-2" />
               Billing
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="data-[state=active]:bg-purple-500 data-[state=active]:text-white">
+            <TabsTrigger value="preferences" className="data-[state=active]:bg-primary/20 data-[state=active]:text-foreground">
               <Settings className="h-4 w-4 mr-2" />
               Preferences
             </TabsTrigger>
@@ -160,18 +142,18 @@ export default function AccountSettings() {
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
-            <Card className="bg-black/40 border-white/20 backdrop-blur-md">
+            <Card className="glass-pane rounded-3xl">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-white">Profile Information</CardTitle>
-                    <CardDescription className="text-white/70">
+                    <CardTitle className="text-foreground">Profile Information</CardTitle>
+                    <CardDescription className="text-foreground/70">
                       Manage your account details and public profile
                     </CardDescription>
                   </div>
                   <Button
                     variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10"
+                    className="border-border text-foreground hover:bg-primary/10 rounded-full"
                     onClick={() => setIsEditing(!isEditing)}
                   >
                     <Edit className="h-4 w-4 mr-2" />
@@ -182,56 +164,56 @@ export default function AccountSettings() {
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-white font-medium">Full Name</Label>
+                    <Label className="text-foreground font-medium">Full Name</Label>
                     <Input
                       value={isEditing ? formData.name : user?.name || ""}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       disabled={!isEditing}
-                      className="bg-white/5 border-white/20 text-white placeholder:text-white/50 disabled:opacity-60"
+                      className="glass-pane rounded-lg text-foreground placeholder:text-foreground/50 disabled:opacity-60"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-white font-medium">Email</Label>
+                    <Label className="text-foreground font-medium">Email</Label>
                     <Input
                       value={user?.email || ""}
                       disabled
-                      className="bg-white/5 border-white/20 text-white/60 disabled:opacity-60"
+                      className="glass-pane rounded-lg text-foreground/60 disabled:opacity-60"
                     />
-                    <p className="text-xs text-white/50">Email cannot be changed</p>
+                    <p className="text-xs text-foreground/50">Email cannot be changed</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-white font-medium">Bio</Label>
+                  <Label className="text-foreground font-medium">Bio</Label>
                   <Textarea
                     value={isEditing ? formData.bio : user?.metadata?.bio || ""}
                     onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                     disabled={!isEditing}
                     placeholder="Tell us about yourself..."
-                    className="bg-white/5 border-white/20 text-white placeholder:text-white/50 disabled:opacity-60 resize-none"
+                    className="glass-pane rounded-lg text-foreground placeholder:text-foreground/50 disabled:opacity-60 resize-none"
                     rows={3}
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-white font-medium">Company</Label>
+                    <Label className="text-foreground font-medium">Company</Label>
                     <Input
                       value={isEditing ? formData.company : user?.metadata?.company || ""}
                       onChange={(e) => setFormData({ ...formData, company: e.target.value })}
                       disabled={!isEditing}
                       placeholder="Your company"
-                      className="bg-white/5 border-white/20 text-white placeholder:text-white/50 disabled:opacity-60"
+                      className="glass-pane rounded-lg text-foreground placeholder:text-foreground/50 disabled:opacity-60"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-white font-medium">Location</Label>
+                    <Label className="text-foreground font-medium">Location</Label>
                     <Input
                       value={isEditing ? formData.location : user?.metadata?.location || ""}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                       disabled={!isEditing}
                       placeholder="Your location"
-                      className="bg-white/5 border-white/20 text-white placeholder:text-white/50 disabled:opacity-60"
+                      className="glass-pane rounded-lg text-foreground placeholder:text-foreground/50 disabled:opacity-60"
                     />
                   </div>
                 </div>
@@ -241,14 +223,14 @@ export default function AccountSettings() {
                     <Button
                       variant="outline"
                       onClick={() => setIsEditing(false)}
-                      className="border-white/20 text-white hover:bg-white/10"
+                      className="border-border text-foreground hover:bg-primary/10 rounded-full"
                     >
                       Cancel
                     </Button>
                     <Button
                       onClick={handleSaveProfile}
                       disabled={updateProfileMutation.isPending}
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                      className="bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-primary-foreground rounded-full"
                     >
                       {updateProfileMutation.isPending ? (
                         <>
@@ -270,48 +252,48 @@ export default function AccountSettings() {
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-6">
-            <Card className="bg-black/40 border-white/20 backdrop-blur-md">
+            <Card className="glass-pane rounded-3xl">
               <CardHeader>
-                <CardTitle className="text-white">Security Settings</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className="text-foreground">Security Settings</CardTitle>
+                <CardDescription className="text-foreground/70">
                   Manage your account security and authentication
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-lg glass-pane">
                     <div>
-                      <h3 className="font-medium text-white">Two-Factor Authentication</h3>
-                      <p className="text-sm text-white/60">Add an extra layer of security to your account</p>
+                      <h3 className="font-medium text-foreground">Two-Factor Authentication</h3>
+                      <p className="text-sm text-foreground/60">Add an extra layer of security to your account</p>
                     </div>
                     <Switch />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-lg glass-pane">
                     <div>
-                      <h3 className="font-medium text-white">Login Notifications</h3>
-                      <p className="text-sm text-white/60">Get notified when someone logs into your account</p>
+                      <h3 className="font-medium text-foreground">Login Notifications</h3>
+                      <p className="text-sm text-foreground/60">Get notified when someone logs into your account</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-lg glass-pane">
                     <div>
-                      <h3 className="font-medium text-white">API Key Access</h3>
-                      <p className="text-sm text-white/60">Personal API key for programmatic access</p>
+                      <h3 className="font-medium text-foreground">API Key Access</h3>
+                      <p className="text-sm text-foreground/60">Personal API key for programmatic access</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Input
                         type={showApiKey ? "text" : "password"}
                         value="sk_live_..."
                         disabled
-                        className="w-48 bg-white/5 border-white/20 text-white/60 text-xs font-mono"
+                        className="w-48 glass-pane text-foreground/60 text-xs font-mono"
                       />
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowApiKey(!showApiKey)}
-                        className="text-white/70 hover:text-white hover:bg-white/10"
+                        className="text-foreground/70 hover:text-foreground hover:bg-primary/10 rounded-full"
                       >
                         {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
@@ -319,19 +301,19 @@ export default function AccountSettings() {
                   </div>
                 </div>
 
-                <Separator className="bg-white/20" />
+                <Separator className="bg-border" />
 
                 <div className="space-y-4">
-                  <h3 className="font-medium text-white">Connected Accounts</h3>
+                  <h3 className="font-medium text-foreground">Connected Accounts</h3>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                    <div className="flex items-center justify-between p-4 rounded-lg glass-pane">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
                           <span className="text-white text-sm font-bold">GH</span>
                         </div>
                         <div>
-                          <p className="font-medium text-white">GitHub</p>
-                          <p className="text-sm text-white/60">Connected as @{user?.metadata?.github_username || 'username'}</p>
+                          <p className="font-medium text-foreground">GitHub</p>
+                          <p className="text-sm text-foreground/60">Connected as @{user?.metadata?.github_username || 'username'}</p>
                         </div>
                       </div>
                       <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
@@ -346,45 +328,45 @@ export default function AccountSettings() {
 
           {/* Billing Tab */}
           <TabsContent value="billing" className="space-y-6">
-            <Card className="bg-black/40 border-white/20 backdrop-blur-md">
+            <Card className="glass-pane rounded-3xl">
               <CardHeader>
-                <CardTitle className="text-white">Subscription & Billing</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className="text-foreground">Subscription & Billing</CardTitle>
+                <CardDescription className="text-foreground/70">
                   Manage your subscription plan and billing information
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="p-6 rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30">
+                <div className="p-6 rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/30">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-xl font-bold text-white">
+                      <h3 className="text-xl font-bold text-foreground">
                         {subscription?.plan?.displayName || "Free Plan"}
                       </h3>
-                      <p className="text-white/70">
+                      <p className="text-foreground/70">
                         ${subscription?.plan?.monthlyPrice || 0}/month
                       </p>
                     </div>
-                    <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                    <Badge className="bg-primary/20 text-primary border-primary/30">
                       {subscription?.status || "Active"}
                     </Badge>
                   </div>
-                  
+
                   {subscription?.usage && (
                     <div className="mt-4 space-y-3">
-                      <h4 className="font-medium text-white">Usage This Month</h4>
+                      <h4 className="font-medium text-foreground">Usage This Month</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-white/70">Projects</span>
-                            <span className="text-white">
+                            <span className="text-foreground/70">Projects</span>
+                            <span className="text-foreground">
                               {subscription.usage.projects?.usage || 0} / {subscription.usage.projects?.limit === -1 ? "∞" : subscription.usage.projects?.limit || 0}
                             </span>
                           </div>
                         </div>
                         <div>
                           <div className="flex justify-between text-sm">
-                            <span className="text-white/70">AI Generations</span>
-                            <span className="text-white">
+                            <span className="text-foreground/70">AI Generations</span>
+                            <span className="text-foreground">
                               {subscription.usage.aiGenerations?.usage || 0} / {subscription.usage.aiGenerations?.limit === -1 ? "∞" : subscription.usage.aiGenerations?.limit || 0}
                             </span>
                           </div>
@@ -395,11 +377,11 @@ export default function AccountSettings() {
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                  <Button variant="outline" className="border-border text-foreground hover:bg-primary/10 rounded-full">
                     <CreditCard className="h-4 w-4 mr-2" />
                     Manage Payment Methods
                   </Button>
-                  <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white">
+                  <Button className="bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-primary-foreground rounded-full">
                     Upgrade Plan
                   </Button>
                 </div>
@@ -409,58 +391,58 @@ export default function AccountSettings() {
 
           {/* Preferences Tab */}
           <TabsContent value="preferences" className="space-y-6">
-            <Card className="bg-black/40 border-white/20 backdrop-blur-md">
+            <Card className="glass-pane rounded-3xl">
               <CardHeader>
-                <CardTitle className="text-white">Preferences</CardTitle>
-                <CardDescription className="text-white/70">
+                <CardTitle className="text-foreground">Preferences</CardTitle>
+                <CardDescription className="text-foreground/70">
                   Customize your Careerate experience
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-lg glass-pane">
                     <div>
-                      <h3 className="font-medium text-white">Email Notifications</h3>
-                      <p className="text-sm text-white/60">Receive emails about deployments and important updates</p>
+                      <h3 className="font-medium text-foreground">Email Notifications</h3>
+                      <p className="text-sm text-foreground/60">Receive emails about deployments and important updates</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-lg glass-pane">
                     <div>
-                      <h3 className="font-medium text-white">Desktop Notifications</h3>
-                      <p className="text-sm text-white/60">Show browser notifications for real-time events</p>
+                      <h3 className="font-medium text-foreground">Desktop Notifications</h3>
+                      <p className="text-sm text-foreground/60">Show browser notifications for real-time events</p>
                     </div>
                     <Switch />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-lg glass-pane">
                     <div>
-                      <h3 className="font-medium text-white">Auto-Deploy</h3>
-                      <p className="text-sm text-white/60">Automatically deploy when code is pushed to main branch</p>
+                      <h3 className="font-medium text-foreground">Auto-Deploy</h3>
+                      <p className="text-sm text-foreground/60">Automatically deploy when code is pushed to main branch</p>
                     </div>
                     <Switch />
                   </div>
 
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-white/5">
+                  <div className="flex items-center justify-between p-4 rounded-lg glass-pane">
                     <div>
-                      <h3 className="font-medium text-white">AI Suggestions</h3>
-                      <p className="text-sm text-white/60">Get proactive AI recommendations for code improvements</p>
+                      <h3 className="font-medium text-foreground">AI Suggestions</h3>
+                      <p className="text-sm text-foreground/60">Get proactive AI recommendations for code improvements</p>
                     </div>
                     <Switch defaultChecked />
                   </div>
                 </div>
 
-                <Separator className="bg-white/20" />
+                <Separator className="bg-border" />
 
                 <div className="space-y-4">
-                  <h3 className="font-medium text-white">Danger Zone</h3>
+                  <h3 className="font-medium text-foreground">Danger Zone</h3>
                   <Alert className="border-red-500/30 bg-red-500/10">
                     <AlertDescription className="text-red-300">
                       Once you delete your account, there is no going back. Please be certain.
                     </AlertDescription>
                   </Alert>
-                  <Button variant="destructive" className="bg-red-600 hover:bg-red-700">
+                  <Button variant="destructive" className="bg-red-600 hover:bg-red-700 rounded-full">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete Account
                   </Button>
@@ -470,6 +452,6 @@ export default function AccountSettings() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </AppShell>
   );
 }

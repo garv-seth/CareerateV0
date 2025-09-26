@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AppShell } from "@/components/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -251,7 +252,8 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-8" data-testid="integrations-page">
+    <AppShell>
+      <div className="container mx-auto p-6 space-y-8" data-testid="integrations-page">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight" data-testid="page-title">
@@ -283,7 +285,7 @@ export default function IntegrationsPage() {
 
       {/* Health Overview Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card data-testid="card-total-integrations">
+        <Card className="glass-pane rounded-2xl" data-testid="card-total-integrations">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Integrations</CardTitle>
             <Database className="h-4 w-4 text-muted-foreground" />
@@ -298,7 +300,7 @@ export default function IntegrationsPage() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-healthy-integrations">
+        <Card className="glass-pane rounded-2xl" data-testid="card-healthy-integrations">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Healthy</CardTitle>
             <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -316,7 +318,7 @@ export default function IntegrationsPage() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-degraded-integrations">
+        <Card className="glass-pane rounded-2xl" data-testid="card-degraded-integrations">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Degraded</CardTitle>
             <AlertCircle className="h-4 w-4 text-yellow-600" />
@@ -334,7 +336,7 @@ export default function IntegrationsPage() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-unhealthy-integrations">
+        <Card className="glass-pane rounded-2xl" data-testid="card-unhealthy-integrations">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Unhealthy</CardTitle>
             <XCircle className="h-4 w-4 text-red-600" />
@@ -395,9 +397,9 @@ export default function IntegrationsPage() {
           </div>
         ) : (
           filteredIntegrations.map((integration: Integration) => (
-            <Card 
-              key={integration.id} 
-              className="cursor-pointer hover:shadow-md transition-shadow"
+            <Card
+              key={integration.id}
+              className="glass-pane rounded-2xl cursor-pointer hover:-translate-y-1 transition-all duration-200"
               onClick={() => setSelectedIntegration(integration)}
               data-testid={`card-integration-${integration.service}`}
             >
@@ -711,6 +713,7 @@ export default function IntegrationsPage() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </AppShell>
   );
 }
