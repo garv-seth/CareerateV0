@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { 
-  Plus, Play, Code, Settings, User, Search, FileCode, Globe, Database, 
+import {
+  Plus, Play, Code, Settings, User, Search, FileCode, Globe, Database,
   Smartphone, Bot, Send, Sparkles, Zap, GitBranch, Cloud, Shield,
   Activity, BarChart3, Terminal, MessageSquare, Rocket, Star,
   ChevronRight, Clock, TrendingUp, Users, Brain, Cpu, Server
 } from "lucide-react";
+import Hero from "@/components/ui/animated-shader-hero";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -205,21 +206,49 @@ export default function Dashboard() {
     return `${Math.floor(diffInSeconds / 604800)} week${Math.floor(diffInSeconds / 604800) > 1 ? 's' : ''} ago`;
   };
 
-  return (
-    <AppShell>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+  const handleGetStarted = () => {
+    // Focus on the prompt textarea
+    promptRef.current?.focus();
+  };
 
-          {/* Cara Tab - Main Interface */}
-          <TabsContent value="agent" className="space-y-6">
-            <div className="text-center mb-8">
-              <h1 className="text-display text-4xl font-bold text-foreground mb-4">
-                What will you build today?
-              </h1>
-              <p className="text-xl text-foreground/70 max-w-2xl mx-auto">
-                Describe your idea in natural language and our AI agents will handle everything from code to deployment.
-              </p>
-            </div>
+  const handleWatchDemo = () => {
+    // Scroll to projects or features section
+    setActiveTab('projects');
+  };
+
+  return (
+    <>
+      {/* Hero Section */}
+      {activeTab === 'agent' && (
+        <Hero
+          trustBadge={{
+            text: "Trusted by forward-thinking development teams.",
+            icons: ["🤖"]
+          }}
+          headline={{
+            line1: "What will you",
+            line2: "build today?"
+          }}
+          subtitle="Describe your idea in natural language and our AI agents will handle everything from code to deployment."
+          buttons={{
+            primary: {
+              text: "Start Building Now",
+              onClick: handleGetStarted
+            },
+            secondary: {
+              text: "View Projects",
+              onClick: handleWatchDemo
+            }
+          }}
+        />
+      )}
+
+      <AppShell>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+
+            {/* Cara Tab - Main Interface */}
+            <TabsContent value="agent" className="space-y-6">
 
             {/* Main Agent Prompt Interface */}
             <Card className="glass-pane rounded-3xl">
@@ -671,6 +700,7 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AppShell>
+      </AppShell>
+    </>
   );
 }
