@@ -227,7 +227,7 @@ export default function Dashboard() {
           }}
           headline={{
             line1: "What will you",
-            line2: "build today?"
+            line2: "build today? 🚀"
           }}
           subtitle="Describe your idea in natural language and our AI agents will handle everything from code to deployment."
           buttons={{
