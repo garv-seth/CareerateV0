@@ -43,7 +43,6 @@ import {
   type InsertAgentTask,
   type AgentCommunication,
   type InsertAgentCommunication
-
 } from "@shared/schema";
 
 // Recent Activity Type
@@ -164,7 +163,6 @@ export interface RecentActivity {
   type AlertNotification,
   type InsertAlertNotification
   */
-} from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql } from "drizzle-orm";
 
