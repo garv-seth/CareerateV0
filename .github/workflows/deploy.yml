@@ -29,7 +29,12 @@ jobs:
         cache: 'npm'
 
     - name: Install dependencies
-      run: npm ci
+      run: |
+        echo "📦 Installing all dependencies (including devDependencies for build)..."
+        NODE_ENV=development npm ci
+        echo "🔍 Verifying vite installation..."
+        npm list vite || echo "Vite not found after install"
+        ls -la node_modules/.bin/vite || echo "Vite binary not found"
 
     # Temporarily disabled type check to fix deployment
     # - name: Run type check
@@ -37,12 +42,8 @@ jobs:
 
     - name: Build application
       run: |
-        echo "🔍 Checking node_modules/vite..."
-        ls -la node_modules/.bin/vite || echo "vite not found in .bin"
-        echo "📋 NPM list (vite):"
-        npm list vite || echo "vite not in dependencies"
-        echo "🏗️ Building with npx to ensure vite is available..."
-        npx vite build && npx esbuild server/index.ts --platform=node --packages=external --bundle --format=cjs --outfile=dist/index.cjs --define:import.meta.dirname=__dirname
+        echo "🏗️ Building application..."
+        npm run build
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
