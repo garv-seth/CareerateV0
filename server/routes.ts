@@ -216,6 +216,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get recent activity for authenticated user
+  app.get("/api/recent-activity", isAuthenticated, async (req, res) => {
+    try {
+      const userId = getUserId(req);
+      const limit = parseInt(req.query.limit as string) || 10;
+      const recentActivity = await storage.getRecentActivity(userId, limit);
+      res.json(recentActivity);
+    } catch (error) {
+      console.error('Get recent activity error:', error);
+      res.status(500).json({ message: "Failed to get recent activity" });
+    }
+  });
+
   // Create new project for authenticated user (with usage tracking)
   app.post("/api/projects", isAuthenticated, projectCreationMiddleware, async (req, res) => {
     try {

@@ -73,6 +73,10 @@ export default function Dashboard() {
     queryKey: ["/api/projects"],
   });
 
+  const { data: recentActivity = [], isLoading: isActivityLoading } = useQuery({
+    queryKey: ["/api/recent-activity"],
+  });
+
   const createProjectMutation = useMutation({
     mutationFn: async (projectData: { name: string; description: string; framework: string }) => {
       const response = await fetch("/api/projects", {
@@ -178,24 +182,33 @@ export default function Dashboard() {
     return 'react';
   };
 
+  const getActivityColor = (type: string): string => {
+    switch (type) {
+      case 'project_created': return 'bg-blue-400';
+      case 'code_generated': return 'bg-green-400';
+      case 'integration_connected': return 'bg-purple-400';
+      case 'repository_connected': return 'bg-orange-400';
+      case 'agent_task_completed': return 'bg-pink-400';
+      default: return 'bg-gray-400';
+    }
+  };
+
+  const formatTimeAgo = (date: string | Date): string => {
+    const now = new Date();
+    const past = new Date(date);
+    const diffInSeconds = Math.floor((now.getTime() - past.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hour${Math.floor(diffInSeconds / 3600) > 1 ? 's' : ''} ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} day${Math.floor(diffInSeconds / 86400) > 1 ? 's' : ''} ago`;
+    return `${Math.floor(diffInSeconds / 604800)} week${Math.floor(diffInSeconds / 604800) > 1 ? 's' : ''} ago`;
+  };
+
   return (
     <AppShell>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 glass-pane rounded-full p-1 h-auto">
-            <TabsTrigger value="agent" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground flex-1 sm:flex-initial">
-              <Brain className="h-4 w-4 mr-2" />
-              Cara 🤖
-            </TabsTrigger>
-            <TabsTrigger value="projects" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground">
-              <GitBranch className="h-4 w-4 mr-2" />
-              Projects
-            </TabsTrigger>
-            <TabsTrigger value="overview" className="rounded-full data-[state=active]:bg-primary/20 data-[state=active]:text-primary-foreground">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
-          </TabsList>
 
           {/* Cara Tab - Main Interface */}
           <TabsContent value="agent" className="space-y-6">
@@ -298,23 +311,37 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-foreground/5">
-                    <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                    <span className="text-foreground/80 text-sm">AI generated React dashboard component</span>
-                    <span className="text-foreground/50 text-xs ml-auto">2 min ago</span>
+                {isActivityLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center space-x-3 p-3 rounded-lg bg-foreground/5 animate-pulse">
+                        <div className="w-2 h-2 bg-foreground/20 rounded-full"></div>
+                        <div className="h-3 bg-foreground/20 rounded flex-1"></div>
+                        <div className="h-3 w-16 bg-foreground/20 rounded"></div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-foreground/5">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                    <span className="text-foreground/80 text-sm">Deployed to Azure Container Apps</span>
-                    <span className="text-foreground/50 text-xs ml-auto">1 hour ago</span>
+                ) : recentActivity.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentActivity.slice(0, 5).map((activity: any) => (
+                      <div key={activity.id} className="flex items-center space-x-3 p-3 rounded-lg bg-foreground/5">
+                        <div className={`w-2 h-2 ${getActivityColor(activity.type)} rounded-full`}></div>
+                        <div className="flex-1">
+                          <span className="text-foreground/80 text-sm">{activity.title}</span>
+                          {activity.description && (
+                            <div className="text-foreground/60 text-xs mt-1">{activity.description}</div>
+                          )}
+                        </div>
+                        <span className="text-foreground/50 text-xs ml-auto">{formatTimeAgo(activity.createdAt)}</span>
+                      </div>
+                    ))}
                   </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg bg-foreground/5">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                    <span className="text-foreground/80 text-sm">Connected GitHub repository</span>
-                    <span className="text-foreground/50 text-xs ml-auto">3 hours ago</span>
+                ) : (
+                  <div className="text-center py-8 text-foreground/60">
+                    <p className="text-sm">No recent activity yet</p>
+                    <p className="text-xs mt-1">Create a project or generate code to see your activity here</p>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

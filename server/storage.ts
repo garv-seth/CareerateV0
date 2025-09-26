@@ -44,6 +44,20 @@ import {
   type AgentCommunication,
   type InsertAgentCommunication
 
+} from "@shared/schema";
+
+// Recent Activity Type
+export interface RecentActivity {
+  id: string;
+  type: 'project_created' | 'code_generated' | 'integration_connected' | 'agent_task_completed' | 'repository_connected';
+  title: string;
+  description?: string;
+  projectId?: string;
+  projectName?: string;
+  createdAt: Date;
+  metadata?: Record<string, any>;
+}
+
   // ====================================================================
   // COMMENTED OUT - THESE TABLES/TYPES ARE NOT YET DEFINED IN SCHEMA.TS
   // ====================================================================
@@ -597,6 +611,9 @@ export interface IStorage {
   // getFileMessages(sessionId: string, fileName: string, limit?: number): Promise<CollaborationMessage[]>;
   // updateCollaborationMessage(id: string, updates: Partial<CollaborationMessage>): Promise<CollaborationMessage | undefined>;
   // deleteCollaborationMessage(id: string): Promise<boolean>;
+
+  // Recent activity operations
+  getRecentActivity(userId: string, limit?: number): Promise<RecentActivity[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2774,6 +2791,154 @@ export class DatabaseStorage implements IStorage {
     return updatedNotification;
   }
   */
+
+  // Recent activity operations
+  async getRecentActivity(userId: string, limit: number = 10): Promise<RecentActivity[]> {
+    const activities: RecentActivity[] = [];
+
+    // Get recent projects
+    const recentProjects = await db.select()
+      .from(projects)
+      .where(eq(projects.userId, userId))
+      .orderBy(desc(projects.createdAt))
+      .limit(5);
+
+    for (const project of recentProjects) {
+      activities.push({
+        id: `project_${project.id}`,
+        type: 'project_created',
+        title: 'Created new project',
+        description: project.name,
+        projectId: project.id,
+        projectName: project.name,
+        createdAt: project.createdAt || new Date(),
+        metadata: { framework: project.framework }
+      });
+    }
+
+    // Get recent code generations
+    const recentCodeGenerations = await db.select({
+      id: codeGenerations.id,
+      projectId: codeGenerations.projectId,
+      prompt: codeGenerations.prompt,
+      status: codeGenerations.status,
+      createdAt: codeGenerations.createdAt,
+      projectName: projects.name
+    })
+      .from(codeGenerations)
+      .leftJoin(projects, eq(codeGenerations.projectId, projects.id))
+      .where(eq(codeGenerations.userId, userId))
+      .orderBy(desc(codeGenerations.createdAt))
+      .limit(5);
+
+    for (const generation of recentCodeGenerations) {
+      activities.push({
+        id: `code_${generation.id}`,
+        type: 'code_generated',
+        title: 'AI generated code',
+        description: generation.prompt?.substring(0, 100) + (generation.prompt && generation.prompt.length > 100 ? '...' : ''),
+        projectId: generation.projectId || undefined,
+        projectName: generation.projectName || undefined,
+        createdAt: generation.createdAt || new Date(),
+        metadata: { status: generation.status }
+      });
+    }
+
+    // Get recent integrations
+    const recentIntegrations = await db.select({
+      id: integrations.id,
+      name: integrations.name,
+      service: integrations.service,
+      projectId: integrations.projectId,
+      createdAt: integrations.createdAt,
+      projectName: projects.name
+    })
+      .from(integrations)
+      .leftJoin(projects, eq(integrations.projectId, projects.id))
+      .where(eq(integrations.userId, userId))
+      .orderBy(desc(integrations.createdAt))
+      .limit(3);
+
+    for (const integration of recentIntegrations) {
+      activities.push({
+        id: `integration_${integration.id}`,
+        type: 'integration_connected',
+        title: 'Connected integration',
+        description: `Connected ${integration.service} (${integration.name})`,
+        projectId: integration.projectId || undefined,
+        projectName: integration.projectName || undefined,
+        createdAt: integration.createdAt || new Date(),
+        metadata: { service: integration.service }
+      });
+    }
+
+    // Get recent repository connections
+    const recentRepositories = await db.select({
+      id: repositoryConnections.id,
+      repositoryName: repositoryConnections.repositoryName,
+      provider: repositoryConnections.provider,
+      projectId: repositoryConnections.projectId,
+      createdAt: repositoryConnections.createdAt,
+      projectName: projects.name
+    })
+      .from(repositoryConnections)
+      .leftJoin(integrations, eq(repositoryConnections.integrationId, integrations.id))
+      .leftJoin(projects, eq(repositoryConnections.projectId, projects.id))
+      .where(eq(integrations.userId, userId))
+      .orderBy(desc(repositoryConnections.createdAt))
+      .limit(3);
+
+    for (const repo of recentRepositories) {
+      activities.push({
+        id: `repo_${repo.id}`,
+        type: 'repository_connected',
+        title: 'Connected repository',
+        description: `Connected ${repo.provider} repository: ${repo.repositoryName}`,
+        projectId: repo.projectId || undefined,
+        projectName: repo.projectName || undefined,
+        createdAt: repo.createdAt || new Date(),
+        metadata: { provider: repo.provider, repository: repo.repositoryName }
+      });
+    }
+
+    // Get recent completed agent tasks
+    const recentAgentTasks = await db.select({
+      id: agentTasks.id,
+      description: agentTasks.description,
+      taskType: agentTasks.taskType,
+      status: agentTasks.status,
+      projectId: agentTasks.projectId,
+      completedAt: agentTasks.completedAt,
+      projectName: projects.name
+    })
+      .from(agentTasks)
+      .leftJoin(projects, eq(agentTasks.projectId, projects.id))
+      .leftJoin(aiAgents, eq(agentTasks.agentId, aiAgents.id))
+      .where(and(
+        eq(projects.userId, userId),
+        eq(agentTasks.status, 'completed')
+      ))
+      .orderBy(desc(agentTasks.completedAt))
+      .limit(3);
+
+    for (const task of recentAgentTasks) {
+      activities.push({
+        id: `agent_task_${task.id}`,
+        type: 'agent_task_completed',
+        title: 'Agent task completed',
+        description: task.description,
+        projectId: task.projectId,
+        projectName: task.projectName || undefined,
+        createdAt: task.completedAt || new Date(),
+        metadata: { taskType: task.taskType, status: task.status }
+      });
+    }
+
+    // Sort by createdAt descending and limit
+    return activities
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, limit);
+  }
 }
 
 export const storage = new DatabaseStorage();

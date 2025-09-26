@@ -2,32 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Sparkles, Code, Cloud, Shield, Brain, Globe, Users, Database, Terminal, Activity } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { GradientDots } from "@/components/ui/gradient-dots";
-
-const Hero = () => (
-  <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden">
-    {/* Animated gradient dots as the sole background to avoid banding */}
-    <GradientDots className="z-0 opacity-25 pointer-events-none" duration={22} colorCycleDuration={12} spacing={12} dotSize={7} />
-
-    <div className="relative z-10 container mx-auto text-center px-4">
-      <h1 className="text-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tighter mb-6">
-        Let Ideas Flow. Agents Handle The Rest.
-      </h1>
-      <p className="max-w-3xl mx-auto text-base sm:text-lg md:text-xl text-foreground/70 mb-10">
-        Describe what you want. Our autonomous agents design, code, test, deploy, and maintain—across clouds and stacks—so you can ship in hours, not months.
-      </p>
-      <div className="flex flex-wrap justify-center items-center gap-4">
-        <Button size="lg" className="rounded-full px-8 py-6 text-base font-semibold bg-primary/15 text-primary-foreground hover:bg-primary/25 transition-all duration-300 hover:scale-105 shadow-lg shadow-primary/10">
-          Start Building Now
-          <ArrowRight className="ml-2 h-5 w-5" />
-        </Button>
-        <Button size="lg" variant="ghost" className="rounded-full px-8 py-6 text-base font-semibold text-foreground/80 hover:bg-primary/10">
-          Watch Demo
-          <Play className="ml-2 h-5 w-5" />
-        </Button>
-      </div>
-    </div>
-  </section>
-);
+import Hero from "@/components/ui/animated-shader-hero";
 
 const FeatureCard = ({ icon: Icon, title, description, colorClass }: { icon: React.ElementType, title: string, description: string, colorClass: string }) => (
     <div className="glass-pane rounded-3xl p-6 flex flex-col items-start text-left transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10">
@@ -163,15 +138,50 @@ const Footer = () => (
 
 
 export default function LandingNew() {
+  const handleGetStarted = () => {
+    // Scroll to pricing section
+    document.querySelector('#pricing')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleWatchDemo = () => {
+    // Scroll to features section
+    document.querySelector('#features')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <AppShell>
-      <main>
-        <Hero />
-        <Features />
-        <Pricing />
-        <Docs />
-        <CTA />
-      </main>
-    </AppShell>
+    <div className="min-h-screen bg-background text-foreground">
+      {/* New Animated Shader Hero */}
+      <Hero
+        trustBadge={{
+          text: "Trusted by forward-thinking development teams.",
+          icons: ["🤖"]
+        }}
+        headline={{
+          line1: "Let Ideas Flow.",
+          line2: "Agents Handle The Rest."
+        }}
+        subtitle="Describe what you want. Our autonomous agents design, code, test, deploy, and maintain—across clouds and stacks—so you can ship in hours, not months."
+        buttons={{
+          primary: {
+            text: "Start Building Now",
+            onClick: handleGetStarted
+          },
+          secondary: {
+            text: "Watch Demo",
+            onClick: handleWatchDemo
+          }
+        }}
+      />
+
+      {/* Rest of the page with updated AppShell */}
+      <AppShell>
+        <main>
+          <Features />
+          <Pricing />
+          <Docs />
+          <CTA />
+        </main>
+      </AppShell>
+    </div>
   );
 }

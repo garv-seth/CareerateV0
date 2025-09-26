@@ -29,15 +29,35 @@ const Footer = () => (
                 <h3 className="text-display font-semibold text-lg mb-2">Careerate</h3>
                 <p className="text-sm text-foreground/60">The future of development is autonomous.</p>
             </div>
-            {['Platform', 'Company', 'Resources', 'Legal'].map(section => (
-                <div key={section}>
-                    <h4 className="font-semibold mb-4">{section}</h4>
-                    <ul className="space-y-3">
-                        <li><a href="#" className="text-sm text-foreground/60 hover:text-foreground transition">Link 1</a></li>
-                        <li><a href="#" className="text-sm text-foreground/60 hover:text-foreground transition">Link 2</a></li>
-                    </ul>
-                </div>
-            ))}
+            <div>
+                <h4 className="font-semibold mb-4">Platform</h4>
+                <ul className="space-y-3">
+                    <li><Link href="#features"><a className="text-sm text-foreground/60 hover:text-foreground transition">Features</a></Link></li>
+                    <li><Link href="#pricing"><a className="text-sm text-foreground/60 hover:text-foreground transition">Pricing</a></Link></li>
+                    <li><Link href="/integrations"><a className="text-sm text-foreground/60 hover:text-foreground transition">Integrations</a></Link></li>
+                </ul>
+            </div>
+            <div>
+                <h4 className="font-semibold mb-4">Company</h4>
+                <ul className="space-y-3">
+                    <li><a href="#about" className="text-sm text-foreground/60 hover:text-foreground transition">About</a></li>
+                    <li><a href="#contact" className="text-sm text-foreground/60 hover:text-foreground transition">Contact</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 className="font-semibold mb-4">Resources</h4>
+                <ul className="space-y-3">
+                    <li><a href="#docs" className="text-sm text-foreground/60 hover:text-foreground transition">Documentation</a></li>
+                    <li><a href="#support" className="text-sm text-foreground/60 hover:text-foreground transition">Support</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 className="font-semibold mb-4">Legal</h4>
+                <ul className="space-y-3">
+                    <li><Link href="/privacy"><a className="text-sm text-foreground/60 hover:text-foreground transition">Privacy Policy</a></Link></li>
+                    <li><Link href="/terms"><a className="text-sm text-foreground/60 hover:text-foreground transition">Terms of Service</a></Link></li>
+                </ul>
+            </div>
          </div>
          <div className="border-t border-white/10 pt-8 text-center text-sm text-foreground/60">
           <p>© {new Date().getFullYear()} Careerate. All rights reserved.</p>
@@ -119,7 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <>
             <NavLink href="/dashboard" isPageLink>
                 <Brain className="h-4 w-4 mr-2" />
-                Cara 🤖
+                Cara
             </NavLink>
             <NavLink href="/projects" isPageLink>
                 <GitBranch className="h-4 w-4 mr-2" />
@@ -141,7 +161,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     activeDashTab === 'agent' ? "text-foreground bg-primary/10" : "text-foreground/70 hover:text-foreground hover:bg-primary/10"
                 )}>
                     <Brain className="h-4 w-4 mr-2 inline" />
-                    Cara 🤖
+                    Cara
                 </a>
             </Link>
             <Link href="#projects">
