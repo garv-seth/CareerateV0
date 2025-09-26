@@ -36,7 +36,13 @@ jobs:
     #   run: npm run check
 
     - name: Build application
-      run: npm run build
+      run: |
+        echo "🔍 Checking node_modules/vite..."
+        ls -la node_modules/.bin/vite || echo "vite not found in .bin"
+        echo "📋 NPM list (vite):"
+        npm list vite || echo "vite not in dependencies"
+        echo "🏗️ Building with npx to ensure vite is available..."
+        npx vite build && npx esbuild server/index.ts --platform=node --packages=external --bundle --format=cjs --outfile=dist/index.cjs --define:import.meta.dirname=__dirname
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
