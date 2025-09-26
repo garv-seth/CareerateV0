@@ -61,7 +61,7 @@ const SimpleHero: React.FC<SimpleHeroProps> = ({
         <div className="text-center space-y-6 max-w-5xl mx-auto px-4">
           {/* Main Heading with Animation */}
           <div className="space-y-2">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-white via-purple-200 to-cyan-200 bg-clip-text text-transparent opacity-0"
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-white via-purple-100 to-cyan-100 bg-clip-text text-transparent opacity-0"
                 style={{
                   animation: 'fadeInUp 0.8s ease-out 0.4s forwards'
                 }}>
