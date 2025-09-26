@@ -10,6 +10,33 @@ app.use('/api/webhooks/stripe', express.raw({type: 'application/json'}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add cache-busting and deployment info headers
+app.use((req, res, next) => {
+  // Add deployment tracking headers
+  const deployTimestamp = process.env.DEPLOY_TIMESTAMP || new Date().toISOString();
+  const gitCommit = process.env.GIT_COMMIT || 'unknown';
+  const cacheBust = process.env.CACHE_BUST || Date.now().toString();
+
+  res.setHeader('X-Deploy-Timestamp', deployTimestamp);
+  res.setHeader('X-Git-Commit', gitCommit);
+  res.setHeader('X-Cache-Bust', cacheBust);
+
+  // Prevent caching for HTML files to ensure latest app shell
+  if (req.path === '/' || req.path.endsWith('.html')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+
+  // Allow caching for static assets but with validation
+  if (req.path.includes('/assets/') || req.path.endsWith('.js') || req.path.endsWith('.css')) {
+    res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+    res.setHeader('ETag', `"${gitCommit}-${cacheBust}"`);
+  }
+
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -40,9 +67,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Add a simple health check route
+// Add a simple health check route with deployment info
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString(), version: 'v0.0.23' });
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    version: 'v0.0.24',
+    deployTimestamp: process.env.DEPLOY_TIMESTAMP || 'unknown',
+    gitCommit: process.env.GIT_COMMIT || 'unknown',
+    cacheBust: process.env.CACHE_BUST || 'unknown'
+  });
 });
 
 (async () => {

@@ -12,6 +12,7 @@ env:
   RESOURCE_GROUP: Careerate
   CONTAINER_APP_NAME: careerate-web
   CONTAINER_APP_ENV: careerate-agents-env
+  NODE_ENV: production
 
 jobs:
   build:
@@ -52,9 +53,15 @@ jobs:
       with:
         context: .
         push: true
+        build-args: |
+          DEPLOY_TIMESTAMP=${{ env.DEPLOY_TIMESTAMP }}
+          GIT_COMMIT=${{ github.sha }}
+          CACHE_BUST=${{ github.run_number }}
         tags: |
           ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:latest
           ${{ env.AZURE_CONTAINER_REGISTRY }}.azurecr.io/${{ env.CONTAINER_NAME }}:${{ github.sha }}
+      env:
+        DEPLOY_TIMESTAMP: ${{ github.event.head_commit.timestamp }}
 
   deploy:
     needs: build
@@ -76,3 +83,112 @@ jobs:
         containerAppEnvironment: ${{ env.CONTAINER_APP_ENV }}
         targetPort: 5000
         ingress: external
+
+    - name: Force Container App Restart and Cache Invalidation
+      run: |
+        echo "🚀 Forcing container app restart to ensure latest deployment..."
+
+        # Update container app with forced restart
+        az containerapp update \
+          --name ${{ env.CONTAINER_APP_NAME }} \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --revision-suffix $(date +%Y%m%d%H%M%S) \
+          --set-env-vars "DEPLOY_TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)" \
+          --set-env-vars "GIT_COMMIT=${{ github.sha }}" \
+          --set-env-vars "CACHE_BUST=$(date +%s)"
+
+        echo "✅ Container app updated with new revision"
+
+        # Wait for deployment to complete
+        echo "⏳ Waiting for deployment to be ready..."
+        sleep 30
+
+        # Get the app URL and verify deployment
+        APP_URL=$(az containerapp show --name ${{ env.CONTAINER_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query "properties.configuration.ingress.fqdn" -o tsv)
+        echo "🌐 App URL: https://$APP_URL"
+
+        # Test the deployment
+        echo "🔍 Testing deployment..."
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$APP_URL" || echo "000")
+        if [ "$HTTP_STATUS" = "200" ]; then
+          echo "✅ Deployment verification successful! App is responding correctly."
+        else
+          echo "⚠️ Deployment verification returned HTTP $HTTP_STATUS - may still be starting up"
+        fi
+
+        echo "🎉 Deployment complete! Latest changes should be visible now."
+        echo "💡 If you still see old content, try hard refresh (Ctrl+F5) or incognito mode."
+
+    - name: Comprehensive Deployment Verification
+      run: |
+        echo "🔍 Running comprehensive deployment verification..."
+
+        APP_URL="https://careerate-web.politetree-6f564ad5.westus2.azurecontainerapps.io"
+        MAX_RETRIES=10
+        RETRY_COUNT=0
+
+        echo "🌐 Testing app at: $APP_URL"
+
+        # Function to test endpoint
+        test_endpoint() {
+          local url=$1
+          local expected_status=$2
+          local description=$3
+
+          echo "  Testing $description..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$url" || echo "000")
+
+          if [ "$HTTP_STATUS" = "$expected_status" ]; then
+            echo "  ✅ $description: HTTP $HTTP_STATUS"
+            return 0
+          else
+            echo "  ❌ $description: HTTP $HTTP_STATUS (expected $expected_status)"
+            return 1
+          fi
+        }
+
+        # Wait for deployment to be ready with retries
+        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+          echo "🔄 Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES"
+
+          # Test main endpoints
+          if test_endpoint "$APP_URL" "200" "Landing page" && \
+             test_endpoint "$APP_URL/api/health" "200" "Health check"; then
+
+            echo "✅ All endpoints responding correctly!"
+
+            # Get deployment info from health endpoint
+            echo "📊 Deployment Information:"
+            curl -s "$APP_URL/api/health" | jq '.' || echo "Could not parse health response"
+
+            # Verify correct commit is deployed
+            DEPLOYED_COMMIT=$(curl -s "$APP_URL/api/health" | jq -r '.gitCommit // "unknown"')
+            EXPECTED_COMMIT="${{ github.sha }}"
+
+            if [ "$DEPLOYED_COMMIT" = "$EXPECTED_COMMIT" ]; then
+              echo "✅ Correct commit deployed: $DEPLOYED_COMMIT"
+            else
+              echo "⚠️ Commit mismatch - Expected: $EXPECTED_COMMIT, Deployed: $DEPLOYED_COMMIT"
+            fi
+
+            # Test that we can get cache-busting headers
+            echo "🗂️ Cache Control Headers:"
+            curl -s -I "$APP_URL" | grep -E "(Cache-Control|X-Deploy-Timestamp|X-Git-Commit|X-Cache-Bust)" || echo "No cache headers found"
+
+            echo "🎯 Deployment verification successful!"
+            exit 0
+          fi
+
+          RETRY_COUNT=$((RETRY_COUNT + 1))
+          if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+            echo "⏳ Waiting 15 seconds before retry..."
+            sleep 15
+          fi
+        done
+
+        echo "❌ Deployment verification failed after $MAX_RETRIES attempts"
+        echo "🔧 Manual verification steps:"
+        echo "  1. Check Azure Container Apps logs"
+        echo "  2. Verify container is running: az containerapp show --name careerate-web --resource-group Careerate"
+        echo "  3. Check health endpoint manually: curl $APP_URL/api/health"
+        exit 1

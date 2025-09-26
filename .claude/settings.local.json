@@ -50,7 +50,8 @@
       "Read(//c/**)",
       "Bash(npm start)",
       "Bash(set NODE_ENV=production)",
-      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_1mix0VasGQBp@ep-calm-breeze-aeomoglq.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require\" npm run dev)"
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_1mix0VasGQBp@ep-calm-breeze-aeomoglq.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require\" npm run dev)",
+      "Bash(git rev-parse:*)"
     ],
     "deny": [],
     "ask": []

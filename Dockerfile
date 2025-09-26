@@ -29,6 +29,9 @@ ENV FORCE_COLOR=0
 FROM base AS runner
 WORKDIR /app
 
+# Install curl for health checks
+RUN apk add --no-cache curl
+
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
@@ -51,6 +54,18 @@ EXPOSE 5000
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=5000
+
+# Add build information as environment variables
+ARG DEPLOY_TIMESTAMP
+ARG GIT_COMMIT
+ARG CACHE_BUST
+ENV DEPLOY_TIMESTAMP=${DEPLOY_TIMESTAMP}
+ENV GIT_COMMIT=${GIT_COMMIT}
+ENV CACHE_BUST=${CACHE_BUST}
+
+# Add health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:5000/api/health || exit 1
 
 # Start the application
 CMD ["npm", "start"]
