@@ -416,9 +416,9 @@ const Hero: React.FC<HeroProps> = ({
             </h1>
           </div>
 
-          {/* Subtitle with Animation */}
-          <div className="max-w-3xl mx-auto animate-fade-in-up animation-delay-600">
-            <p className="text-lg md:text-xl lg:text-2xl text-foreground/90 font-light leading-relaxed">
+          {/* Subtitle with Animation - Repositioned */}
+          <div className="max-w-2xl mx-auto mt-8 animate-fade-in-up animation-delay-600">
+            <p className="text-xl md:text-2xl lg:text-3xl text-foreground/95 font-medium leading-tight">
               {subtitle}
             </p>
           </div>
@@ -429,7 +429,7 @@ const Hero: React.FC<HeroProps> = ({
               {buttons.primary && (
                 <button
                   onClick={buttons.primary.onClick}
-                  className="px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/25"
+                  className="px-10 py-5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-full font-bold text-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-orange-500/40 shadow-xl shadow-orange-500/20"
                 >
                   {buttons.primary.text}
                 </button>
@@ -437,7 +437,7 @@ const Hero: React.FC<HeroProps> = ({
               {buttons.secondary && (
                 <button
                   onClick={buttons.secondary.onClick}
-                  className="px-8 py-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 hover:border-orange-500/50 text-white rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+                  className="px-10 py-5 bg-white/10 hover:bg-white/20 border-2 border-white/40 hover:border-white/60 text-white rounded-full font-bold text-xl transition-all duration-300 hover:scale-105 backdrop-blur-sm shadow-lg shadow-black/20 hover:shadow-xl hover:shadow-white/10"
                 >
                   {buttons.secondary.text}
                 </button>

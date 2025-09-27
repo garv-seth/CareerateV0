@@ -61,7 +61,7 @@ const Pricing = () => (
             <ul className="space-y-2 text-sm flex-1">
               {tier.features.map(f => <li key={f} className="text-foreground/70">• {f}</li>)}
             </ul>
-            <Button className="mt-6 rounded-full bg-primary/15 hover:bg-primary/25">Get Started</Button>
+            <Button className="mt-6 rounded-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold shadow-lg shadow-orange-500/20 hover:shadow-xl hover:shadow-orange-500/30 transition-all duration-300">Get Started</Button>
           </div>
         ))}
       </div>
@@ -101,7 +101,7 @@ const CTA = () => (
                     <p className="max-w-2xl mx-auto text-lg text-foreground/70 mb-8">
                         Join thousands of developers using AI agents to build, deploy, and scale applications faster than ever before.
                     </p>
-                    <Button size="lg" className="rounded-full px-8 py-6 text-base font-semibold bg-primary/15 text-primary-foreground hover:bg-primary/25 transition-all duration-300 hover:scale-105 shadow-lg shadow-primary/10">
+                    <Button size="lg" className="rounded-full px-10 py-6 text-xl font-bold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white transition-all duration-300 hover:scale-105 shadow-xl shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40">
                       <Sparkles className="mr-2 h-5 w-5" />
                       Start Building Free
                     </Button>
@@ -156,7 +156,7 @@ export default function LandingNew() {
           line1: "Let Ideas Flow.",
           line2: "Agents Handle The Rest."
         }}
-        subtitle="Describe what you want. Our autonomous agents design, code, test, deploy, and maintain—across clouds and stacks—so you can ship in hours, not months."
+        subtitle="Ship in hours, not months. AI agents handle everything."
         buttons={{
           primary: {
             text: "Start Building Now",
@@ -169,31 +169,22 @@ export default function LandingNew() {
         }}
       />
 
-      {/* Smooth Dynamic Transition from Hero */}
+      {/* Professional Dynamic Background Transition */}
       <div className="relative">
-        {/* Dynamic Background Transition Overlay */}
-        <div className="absolute inset-x-0 top-0 h-40 z-20 overflow-hidden">
-          <div className="w-full h-full bg-gradient-to-b from-transparent via-orange-500/10 to-background opacity-90"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-600/5 to-background/95"></div>
-          {/* Flowing transition waves */}
-          <svg className="absolute bottom-0 w-full h-20" viewBox="0 0 1200 80" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="rgba(251, 146, 60, 0.1)" />
-                <stop offset="50%" stopColor="rgba(245, 101, 101, 0.05)" />
-                <stop offset="100%" stopColor="hsl(var(--background))" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M0,40 C300,60 600,20 900,40 C1050,50 1150,30 1200,40 L1200,80 L0,80 Z"
-              fill="url(#waveGradient)"
-              className="animate-wave-flow"
-            />
-          </svg>
+        {/* Subtle gradient transition overlay */}
+        <div className="absolute inset-x-0 top-0 h-32 z-20">
+          <div className="w-full h-full bg-gradient-to-b from-transparent via-orange-500/5 to-background"></div>
         </div>
 
-        {/* Content Section */}
-        <div className="relative bg-background">
+        {/* Dynamic Background Content Section */}
+        <div className="relative">
+          {/* Subtle animated background orbs */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-20 left-1/4 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl animate-pulse-subtle"></div>
+            <div className="absolute top-40 right-1/3 w-80 h-80 bg-amber-500/4 rounded-full blur-3xl animate-pulse-subtle" style={{animationDelay: '2s'}}></div>
+            <div className="absolute bottom-20 left-1/3 w-72 h-72 bg-orange-600/3 rounded-full blur-3xl animate-pulse-subtle" style={{animationDelay: '4s'}}></div>
+          </div>
+
           <AppShell>
             <main className="relative z-10 pt-16">
               <Features />
