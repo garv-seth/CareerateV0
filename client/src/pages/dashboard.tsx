@@ -217,43 +217,6 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* Hero Section - Gradient Background for Authenticated Users */}
-      {activeTab === 'agent' && (
-        <div className="relative w-full h-[60vh] min-h-[500px] overflow-hidden bg-gradient-to-br from-orange-900/20 via-amber-900/30 to-orange-900/20 backdrop-blur-sm">
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-amber-500/10 animate-pulse"></div>
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-white px-4">
-            <div className="text-center space-y-6 max-w-5xl mx-auto">
-              <div className="space-y-2">
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-clip-text text-transparent">
-                  What will you
-                </h1>
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 bg-clip-text text-transparent">
-                  build today? 🚀
-                </h1>
-              </div>
-              <div className="max-w-3xl mx-auto">
-                <p className="text-lg md:text-xl lg:text-2xl text-foreground/90 font-light leading-relaxed">
-                  Describe your idea in natural language and our AI agents will handle everything from code to deployment.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
-                <button
-                  onClick={handleGetStarted}
-                  className="px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/25"
-                >
-                  Start Building Now
-                </button>
-                <button
-                  onClick={handleWatchDemo}
-                  className="px-8 py-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 hover:border-orange-500/50 text-foreground rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 backdrop-blur-sm"
-                >
-                  View Projects
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <AppShell>
         {/* Dynamic Background Effects */}
@@ -269,6 +232,16 @@ export default function Dashboard() {
 
             {/* Cara Tab - Main Interface */}
             <TabsContent value="agent" className="space-y-6">
+
+              {/* Header Section */}
+              <div className="text-center mb-8">
+                <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-clip-text text-transparent mb-4">
+                  What will you build today? 🚀
+                </h1>
+                <p className="text-lg text-foreground/80 max-w-2xl mx-auto">
+                  Describe your idea in natural language and our AI agents will handle everything from code to deployment.
+                </p>
+              </div>
 
             {/* Main Agent Prompt Interface */}
             <Card className="glass-pane rounded-3xl">

@@ -137,17 +137,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     const AuthenticatedNav = () => (
         <>
-            <NavLink href="/dashboard" isPageLink>
+            <NavLink href="/#agent" isPageLink>
                 <Brain className="h-4 w-4 mr-2" />
                 Cara
             </NavLink>
-            <NavLink href="/projects" isPageLink>
+            <NavLink href="/#projects" isPageLink>
                 <GitBranch className="h-4 w-4 mr-2" />
                 Projects
             </NavLink>
-            <NavLink href="/monitoring" isPageLink>
+            <NavLink href="/#overview" isPageLink>
                 <BarChart3 className="h-4 w-4 mr-2" />
-                Monitoring
+                Overview
             </NavLink>
         </>
     );
@@ -189,9 +189,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2">
             {isAuthenticated ? (
                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="rounded-full">
-                        <Link href="/settings"><Settings className="h-5 w-5 text-foreground/70" /></Link>
-                    </Button>
                      <Button variant="ghost" size="icon" className="rounded-full">
                         <Link href="/account"><User className="h-5 w-5 text-foreground/70" /></Link>
                     </Button>

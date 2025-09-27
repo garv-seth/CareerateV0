@@ -112,7 +112,7 @@ export default function AccountSettings() {
     <AppShell>
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="mb-8">
-          <Link href="/dashboard" className="flex items-center space-x-2 text-foreground/70 hover:text-foreground transition-colors mb-6">
+          <Link href="/#agent" className="flex items-center space-x-2 text-foreground/70 hover:text-foreground transition-colors mb-6">
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Dashboard</span>
           </Link>
