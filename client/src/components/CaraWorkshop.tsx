@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarContent, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   Play, Save, Download, Upload, Bot, MessageSquare, Terminal, FileText,
   GitBranch, Settings, Zap, Brain, Code, Database, Server, Sparkles,
@@ -391,8 +391,7 @@ export default function CaraWorkshop({ projectId }: { projectId: string }) {
           <div className="h-full flex flex-col">
             <div className="flex items-center gap-2 mb-4">
               <Avatar className="h-8 w-8">
-                <AvatarContent>🧠</AvatarContent>
-                <AvatarFallback>CA</AvatarFallback>
+                <AvatarFallback>🧠</AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-semibold text-foreground">Cara</p>
