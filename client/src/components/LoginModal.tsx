@@ -46,17 +46,15 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
           <Button
             onClick={() => handleLogin('microsoft')}
             disabled={isLoading}
-            className="w-full h-12 text-sm font-semibold rounded-full bg-white text-[#1F1F1F] hover:bg-white/90 flex items-center justify-center gap-3 border border-border"
+            className="w-full h-12 text-sm font-semibold rounded-full bg-white text-[#1F1F1F] hover:bg-white/90 flex items-center justify-center gap-3 border border-border relative"
             data-testid="login-microsoft"
           >
-            <span className="absolute left-5 inline-flex items-center" aria-hidden>
-              <svg width="20" height="20" viewBox="0 0 24 24">
-                <rect width="10" height="10" x="1" y="1" fill="#F25022"/>
-                <rect width="10" height="10" x="13" y="1" fill="#7FBA00"/>
-                <rect width="10" height="10" x="1" y="13" fill="#00A4EF"/>
-                <rect width="10" height="10" x="13" y="13" fill="#FFB900"/>
-              </svg>
-            </span>
+            <svg width="20" height="20" viewBox="0 0 24 24" className="flex-shrink-0">
+              <rect width="10" height="10" x="1" y="1" fill="#F25022"/>
+              <rect width="10" height="10" x="13" y="1" fill="#7FBA00"/>
+              <rect width="10" height="10" x="1" y="13" fill="#00A4EF"/>
+              <rect width="10" height="10" x="13" y="13" fill="#FFB900"/>
+            </svg>
             <span>{isLoading ? 'Connecting…' : 'Sign in with Microsoft'}</span>
           </Button>
 

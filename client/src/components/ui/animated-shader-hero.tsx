@@ -404,9 +404,8 @@ const Hero: React.FC<HeroProps> = ({
       />
 
       {/* Hero Content Overlay */}
-      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-white">
-
-        <div className="text-center space-y-6 max-w-5xl mx-auto px-4">
+      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-white min-h-screen">
+        <div className="text-center space-y-8 max-w-6xl mx-auto px-4 -mt-16">
           {/* Main Heading with Animation */}
           <div className="space-y-2">
             <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent animate-fade-in-up animation-delay-200">

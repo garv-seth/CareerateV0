@@ -169,11 +169,39 @@ export default function LandingNew() {
         }}
       />
 
-      {/* Smooth Transition from Hero */}
-      <div className="relative -mt-32 pt-32 bg-gradient-to-b from-transparent via-background/50 to-background">
-        <div className="absolute inset-0 bg-gradient-to-b from-purple-900/20 via-background/80 to-background"></div>
-        <AppShell>
-          <main className="relative z-10">
+      {/* Liquid Glass Transition from Hero */}
+      <div className="relative">
+        {/* Liquid Glass Overlay */}
+        <div className="absolute inset-x-0 top-0 h-32 z-20">
+          <svg className="w-full h-full" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="liquidGlass" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="rgba(255,255,255,0.05)" />
+                <stop offset="50%" stopColor="rgba(255,255,255,0.02)" />
+                <stop offset="100%" stopColor="rgba(9,9,11,0.95)" />
+              </linearGradient>
+              <filter id="glassBlur">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5"/>
+                <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.8 0"/>
+              </filter>
+            </defs>
+            <path
+              d="M0,60 C150,100 350,0 600,60 C850,120 1050,20 1200,60 L1200,120 L0,120 Z"
+              fill="url(#liquidGlass)"
+              filter="url(#glassBlur)"
+              className="animate-pulse-subtle"
+            />
+            <path
+              d="M0,80 C200,120 400,40 600,80 C800,120 1000,40 1200,80 L1200,120 L0,120 Z"
+              fill="rgba(9,9,11,0.98)"
+            />
+          </svg>
+        </div>
+
+        {/* Content Section with Glass Morphism */}
+        <div className="relative bg-background">
+          <AppShell>
+            <main className="relative z-10 pt-16">
             <Features />
             <Pricing />
             <Docs />
