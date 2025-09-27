@@ -40,6 +40,7 @@ import { repositoryIntegrationService } from "./services/repositoryIntegrationSe
 import { apiConnectorManager, ApiConnectorFactory } from "./services/apiConnectorFramework";
 import { encryptionService, secretsManager } from "./services/encryptionService";
 import { collaborationServer } from "./services/collaborationServer";
+import agentsRouter from "./src/routes/agents.js";
 import { subscriptionService } from "./services/subscriptionService"; // Subscription management service
 import { 
   projectCreationMiddleware,
@@ -215,6 +216,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(404).json({ message: "Project not found" });
     }
   });
+
+  // Agent Communication Routes (A2A Protocol)
+  app.use("/api/agents", agentsRouter);
 
   // Get recent activity for authenticated user
   app.get("/api/recent-activity", isAuthenticated, async (req, res) => {
