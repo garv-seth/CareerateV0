@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import OpenAI from 'openai';
-import { isAuthenticated } from '../middleware/auth.js';
+import { isAuthenticated } from '../../azureAuth.js';
 
 const router = Router();
 
