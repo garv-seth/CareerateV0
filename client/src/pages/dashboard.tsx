@@ -219,15 +219,15 @@ export default function Dashboard() {
     <>
       {/* Hero Section - Gradient Background for Authenticated Users */}
       {activeTab === 'agent' && (
-        <div className="relative w-full h-[60vh] min-h-[500px] overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/10 animate-pulse"></div>
+        <div className="relative w-full h-[60vh] min-h-[500px] overflow-hidden bg-gradient-to-br from-orange-900/20 via-amber-900/30 to-orange-900/20 backdrop-blur-sm">
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-amber-500/10 animate-pulse"></div>
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-white px-4">
             <div className="text-center space-y-6 max-w-5xl mx-auto">
               <div className="space-y-2">
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-primary via-secondary to-primary bg-clip-text text-transparent">
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-orange-500 via-amber-500 to-orange-500 bg-clip-text text-transparent">
                   What will you
                 </h1>
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-secondary via-primary to-secondary bg-clip-text text-transparent">
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 bg-clip-text text-transparent">
                   build today? 🚀
                 </h1>
               </div>
@@ -239,13 +239,13 @@ export default function Dashboard() {
               <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
                 <button
                   onClick={handleGetStarted}
-                  className="px-8 py-4 bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 text-primary-foreground rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary/25"
+                  className="px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-orange-500/25"
                 >
                   Start Building Now
                 </button>
                 <button
                   onClick={handleWatchDemo}
-                  className="px-8 py-4 bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 text-foreground rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 backdrop-blur-sm"
+                  className="px-8 py-4 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 hover:border-orange-500/50 text-foreground rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 backdrop-blur-sm"
                 >
                   View Projects
                 </button>

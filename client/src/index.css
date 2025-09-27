@@ -4,27 +4,27 @@
 
 @layer base {
   :root {
-    /* Base Colors (Dark Mode Default) */
-    --background: 257 50% 5%; /* #1E0E3F Deep Indigo */
-    --foreground: 220 13% 98%; /* #F8FAFC Off-White */
-    
-    /* Accent Colors */
-    --primary: 252 94% 77%; /* #A78BFA Lavender */
-    --primary-foreground: 220 13% 98%; /* Off-White for text on primary */
-    
-    --secondary: 290 92% 75%; /* #E879F9 Pinkish */
-    --secondary-foreground: 220 13% 98%;
+    /* Base Colors (Dynamic Background Theme) */
+    --background: 20 14% 4%; /* #0A0807 Deep warm black */
+    --foreground: 39 100% 97%; /* #FFFAF0 Warm off-white */
 
-    /* Neutral Colors */
-    --muted: 226 34% 65%; /* #94A3B8 Slate-400 */
-    --muted-foreground: 226 34% 65%;
-    
-    /* Other semantic colors */
-    --card: 257 50% 10% / 0.5; /* Indigo at 50% opacity for glass effect */
+    /* Accent Colors - Inspired by Dynamic Background */
+    --primary: 25 95% 53%; /* #F97316 Vibrant orange */
+    --primary-foreground: 20 14% 4%; /* Dark text on primary */
+
+    --secondary: 45 93% 47%; /* #F59E0B Rich amber */
+    --secondary-foreground: 20 14% 4%; /* Dark text on secondary */
+
+    /* Neutral Colors - Warm tones */
+    --muted: 24 10% 35%; /* #635856 Warm gray */
+    --muted-foreground: 39 22% 70%; /* #C7B299 Warm muted text */
+
+    /* Other semantic colors - Warm theme */
+    --card: 25 25% 8% / 0.6; /* Warm dark with transparency */
     --card-foreground: var(--foreground);
-    --border: 252 94% 77% / 0.2; /* Lavender at 20% opacity */
-    --input: 252 94% 77% / 0.2;
-    --ring: 252 94% 77%;
+    --border: 25 35% 25% / 0.3; /* Warm border */
+    --input: 25 35% 25% / 0.3;
+    --ring: 25 95% 53%; /* Orange ring */
 
     --radius: 0.75rem;
 
@@ -35,27 +35,27 @@
   }
 
   .light {
-    /* Base Colors (Light Mode) */
-    --background: 220 13% 98%; /* #F8FAFC Off-White */
-    --foreground: 222 47% 11%; /* #0F172A Slate-900 */
-    
-    /* Accent Colors */
-    --primary: 262 84% 59%; /* #7C3AED Violet */
-    --primary-foreground: 220 13% 98%;
-    
-    --secondary: 334 82% 66%; /* #F472B6 Rose */
-    --secondary-foreground: 220 13% 98%;
+    /* Base Colors (Light Mode - Warm Theme) */
+    --background: 39 100% 98%; /* #FFFCF5 Warm cream white */
+    --foreground: 20 14% 10%; /* #1A1614 Warm dark text */
 
-    /* Neutral Colors */
-    --muted: 223 39% 47%; /* #64748B Slate-500 */
-    --muted-foreground: 223 39% 47%;
-    
-    /* Other semantic colors */
-    --card: 220 13% 95% / 0.5; /* Off-white at 50% opacity for glass effect */
+    /* Accent Colors - Warm light mode */
+    --primary: 20 91% 48%; /* #EA580C Deep orange */
+    --primary-foreground: 39 100% 98%; /* Light text on primary */
+
+    --secondary: 43 96% 56%; /* #EAB308 Warm amber */
+    --secondary-foreground: 20 14% 10%; /* Dark text on secondary */
+
+    /* Neutral Colors - Warm light tones */
+    --muted: 30 10% 65%; /* #B5A89A Warm gray */
+    --muted-foreground: 25 15% 40%; /* #6B5B52 Warm muted text */
+
+    /* Other semantic colors - Warm light theme */
+    --card: 39 40% 95% / 0.7; /* Warm light card */
     --card-foreground: var(--foreground);
-    --border: 262 84% 59% / 0.2; /* Violet at 20% opacity */
-    --input: 262 84% 59% / 0.2;
-    --ring: 262 84% 59%;
+    --border: 25 35% 75% / 0.4; /* Warm light border */
+    --input: 25 35% 75% / 0.4;
+    --ring: 20 91% 48%; /* Orange ring */
   }
 
   *, ::before, ::after {
@@ -75,11 +75,11 @@
 
 @layer utilities {
   .glass-pane {
-    background: hsl(var(--card) / 0.1);
-    -webkit-backdrop-filter: blur(16px);
-    backdrop-filter: blur(16px);
+    background: hsl(var(--card) / 0.15);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     border: 1px solid hsl(var(--border));
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(251, 146, 60, 0.08), 0 4px 16px 0 rgba(245, 101, 101, 0.04);
   }
 
   .text-display {
@@ -100,5 +100,22 @@
 
   .animate-pulse-subtle {
     animation: pulse-subtle 4s ease-in-out infinite;
+  }
+
+  /* Wave Flow Animation */
+  @keyframes wave-flow {
+    0%, 100% {
+      transform: translateX(0) scaleY(1);
+    }
+    33% {
+      transform: translateX(-10px) scaleY(1.05);
+    }
+    66% {
+      transform: translateX(10px) scaleY(0.95);
+    }
+  }
+
+  .animate-wave-flow {
+    animation: wave-flow 6s ease-in-out infinite;
   }
 }

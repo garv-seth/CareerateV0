@@ -12,8 +12,8 @@ const Logo = () => (
             <path d="M20 0L24.4903 15.5097L40 20L24.4903 24.4903L20 40L15.5097 24.4903L0 20L15.5097 15.5097L20 0Z" fill="url(#logo-gradient)"/>
             <defs>
                 <linearGradient id="logo-gradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#A78BFA"/>
-                    <stop offset="1" stopColor="#E879F9"/>
+                    <stop stopColor="#F97316"/>
+                    <stop offset="1" stopColor="#F59E0B"/>
                 </linearGradient>
             </defs>
         </svg>

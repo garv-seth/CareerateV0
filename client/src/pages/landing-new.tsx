@@ -169,36 +169,30 @@ export default function LandingNew() {
         }}
       />
 
-      {/* Liquid Glass Transition from Hero */}
+      {/* Smooth Dynamic Transition from Hero */}
       <div className="relative">
-        {/* Liquid Glass Overlay */}
-        <div className="absolute inset-x-0 top-0 h-32 z-20">
-          <svg className="w-full h-full" viewBox="0 0 1200 120" preserveAspectRatio="none">
+        {/* Dynamic Background Transition Overlay */}
+        <div className="absolute inset-x-0 top-0 h-40 z-20 overflow-hidden">
+          <div className="w-full h-full bg-gradient-to-b from-transparent via-orange-500/10 to-background opacity-90"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-amber-600/5 to-background/95"></div>
+          {/* Flowing transition waves */}
+          <svg className="absolute bottom-0 w-full h-20" viewBox="0 0 1200 80" preserveAspectRatio="none">
             <defs>
-              <linearGradient id="liquidGlass" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.05)" />
-                <stop offset="50%" stopColor="rgba(255,255,255,0.02)" />
-                <stop offset="100%" stopColor="rgba(9,9,11,0.95)" />
+              <linearGradient id="waveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="rgba(251, 146, 60, 0.1)" />
+                <stop offset="50%" stopColor="rgba(245, 101, 101, 0.05)" />
+                <stop offset="100%" stopColor="hsl(var(--background))" />
               </linearGradient>
-              <filter id="glassBlur">
-                <feGaussianBlur in="SourceGraphic" stdDeviation="1.5"/>
-                <feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.8 0"/>
-              </filter>
             </defs>
             <path
-              d="M0,60 C150,100 350,0 600,60 C850,120 1050,20 1200,60 L1200,120 L0,120 Z"
-              fill="url(#liquidGlass)"
-              filter="url(#glassBlur)"
-              className="animate-pulse-subtle"
-            />
-            <path
-              d="M0,80 C200,120 400,40 600,80 C800,120 1000,40 1200,80 L1200,120 L0,120 Z"
-              fill="rgba(9,9,11,0.98)"
+              d="M0,40 C300,60 600,20 900,40 C1050,50 1150,30 1200,40 L1200,80 L0,80 Z"
+              fill="url(#waveGradient)"
+              className="animate-wave-flow"
             />
           </svg>
         </div>
 
-        {/* Content Section with Glass Morphism */}
+        {/* Content Section */}
         <div className="relative bg-background">
           <AppShell>
             <main className="relative z-10 pt-16">
