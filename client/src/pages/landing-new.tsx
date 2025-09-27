@@ -202,12 +202,13 @@ export default function LandingNew() {
         <div className="relative bg-background">
           <AppShell>
             <main className="relative z-10 pt-16">
-            <Features />
-            <Pricing />
-            <Docs />
-            <CTA />
-          </main>
-        </AppShell>
+              <Features />
+              <Pricing />
+              <Docs />
+              <CTA />
+            </main>
+          </AppShell>
+        </div>
       </div>
     </div>
   );
